@@ -1,0 +1,7 @@
+{
+    "printWidth": 99,
+    "tabWidth": 4,
+    "singleQuote": false,
+    "trailingComma": "all",
+    "arrowParens": "avoid"
+}
