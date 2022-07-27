@@ -32,4 +32,6 @@ interface Comptroller {
             uint256,
             uint256
         );
+        
+    function oracle() external view returns(address);
 }

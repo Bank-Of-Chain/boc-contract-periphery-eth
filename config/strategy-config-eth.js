@@ -1,5 +1,11 @@
 const strategiesList = [
     {
+        name: 'AuraWstETHWETHStrategy',
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    },
+    {
         name: 'UniswapV2StEthWEthStrategy',
         profitLimitRatio: 100,
         lossLimitRatio: 100,

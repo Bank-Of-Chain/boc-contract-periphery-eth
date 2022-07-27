@@ -1,5 +1,11 @@
 const strategiesList = [
     {
+        name: "Aura3PoolStrategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    },
+    {
         name: "ConvexIronBankEurStrategy",
         profitLimitRatio: 100,
         lossLimitRatio: 100,

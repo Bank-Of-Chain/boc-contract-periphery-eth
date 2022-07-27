@@ -75,8 +75,9 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
     // IronBank
     Comptroller public constant comptroller =
         Comptroller(0xAB1c342C7bf5Ec5F02ADEA1c2270670bCa144CbB);
-    IPriceOracle public constant priceOracle =
-        IPriceOracle(0x6B96c414ce762578c3E7930da9114CffC88704Cb);
+    // IPriceOracle public constant priceOracle =
+    //     IPriceOracle(0x6B96c414ce762578c3E7930da9114CffC88704Cb);
+    IPriceOracle public priceOracle;
 
     // borrow factor
     uint256 public borrowFactor;
@@ -146,6 +147,8 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
         _wants[0] = collateralToken;
 
         _initialize(_vault, _harvester, uint16(ProtocolEnum.Convex), _wants);
+
+        priceOracle = IPriceOracle(comptroller.oracle());
 
         borrowFactor = 8300;
         maxCollateralRate = 7500;
