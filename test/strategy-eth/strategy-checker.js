@@ -57,7 +57,7 @@ async function _topUpFamilyBucket() {
     // stETH
     if (contains(wants, MFC.stETH_ADDRESS)) {
         console.log('top up stETH');
-        await topUp.topUpStEthByAddress(amount.multipliedBy(1e18), investor);
+        await topUp.topUpSTETHByAddress(amount.multipliedBy(1e18), investor);
     }
     // wstETH
     if (contains(wants, MFC.wstETH_ADDRESS)) {
