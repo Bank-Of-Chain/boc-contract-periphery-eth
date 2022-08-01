@@ -41,6 +41,12 @@ const strategiesList = [
         lossLimitRatio: 100,
         addToVault: true,
     },
+    {
+        name: 'YearnV2YETHStrategy',
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    },
 ]
 
 exports.strategiesList = strategiesList;
