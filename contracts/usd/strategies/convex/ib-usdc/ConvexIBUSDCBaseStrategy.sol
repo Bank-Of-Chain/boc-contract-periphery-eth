@@ -518,41 +518,6 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
         underlyingPart = (underlyingPartRatio * underlyingTokenAmount) / BPS;
         forexPart = underlyingTokenAmount - underlyingPart;
         console.log("underlyingPart:%s,forexPart:%s", underlyingPart, forexPart);
-        //----by token amount ratio
-        // ICurveMini curvePool = ICurveMini(curvePool);
-        // uint256 forexPooledAmount = curvePool.balances(0);
-        // uint256 underlyingPooledAmount = curvePool.balances(1) * 1e12; //multi 1e12 for normalized decimals
-        // console.log("curve ratio forex:%s,usdc:%s", forexPooledAmount, underlyingPooledAmount);
-
-        // (, uint256 rate) = comptroller.markets(address(collateralCToken));
-        // uint256 rebate = (1e18 * _collateralTokenPrice() * rate * borrowFactor) /
-        //     BPS /
-        //     1e18 /
-        //     _borrowTokenPrice();
-        // underlyingPart =
-        //     ((underlyingTokenAmount * underlyingPooledAmount)) /
-        //     ((forexPooledAmount * rebate) / 1e18 + underlyingPooledAmount);
-        // forexPart = underlyingTokenAmount - underlyingPart;
-
-        // console.log("rebate:%s,underlyingPart:%s,forexPart:%s", rebate, underlyingPart, forexPart);
-
-        //----by token value ratio
-        // ICurveMini curvePool = ICurveMini(curvePool);
-        // uint256 forexPooledValue = (curvePool.balances(0) * _borrowTokenPrice()) /
-        //     decimalUnitOfToken(borrowCToken.underlying());
-        // uint256 underlyingPooledValue = (curvePool.balances(1) * _collateralTokenPrice()) /
-        //     decimalUnitOfToken(collateralToken);
-        // console.log("curve ratio forex:%s,usdc:%s", forexPooledValue, underlyingPooledValue);
-
-        // (, uint256 rate) = comptroller.markets(address(collateralCToken));
-        // uint256 rebate = (1e18 * _collateralTokenPrice() * rate * borrowFactor) /
-        //     BPS /
-        //     1e18 /
-        //     _borrowTokenPrice();
-        // underlyingPart =
-        //     ((underlyingTokenAmount * underlyingPooledValue)) /
-        //     ((forexPooledValue * rebate) / 1e18 + underlyingPooledValue);
-        // forexPart = underlyingTokenAmount - underlyingPart;
     }
 
     function _invest(uint256 ibTokenAmount, uint256 underlyingTokenAmount) internal {
@@ -600,7 +565,7 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
         uint256 totalLp = balanceOfToken(getRewardPool());
         address collateralToken = getCollateralToken();
         //exit add collateral
-        uint256 exitCollateral = (((spaceValue * 1e18) / rate) *
+        uint256 exitCollateral = ((((spaceValue * 1e18) * borrowFactor) / rate / BPS) *
             decimalUnitOfToken(collateralToken)) / _collateralTokenPrice();
         uint256 exchangeRateMantissa = CTokenInterface(collaterCTokenAddr).exchangeRateStored();
         uint256 exitCollateralC = (exitCollateral *
@@ -626,7 +591,7 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
         uint256 totalLp = balanceOfToken(getRewardPool());
         //need add collateral
         address collateralToken = getCollateralToken();
-        uint256 needCollateral = (((overflowValue * 1e18) / rate) *
+        uint256 needCollateral = ((((overflowValue * 1e18) * BPS) / rate / borrowFactor) *
             decimalUnitOfToken(collateralToken)) / _collateralTokenPrice();
         address curvePool = getCurvePool();
         uint256 allUnderlying = ICurveMini(curvePool).calc_withdraw_one_coin(totalLp, 1);
@@ -642,12 +607,6 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
 
     function rebalance() external isKeeper {
         (uint256 space, uint256 overflow) = borrowInfo();
-
-        // //========temp code========
-        // uint256 borrowAvaible = _currentBorrowAvaible();
-        // uint256 currentBorrow = borrowCToken.borrowBalanceStored(address(this));
-        // overflow = currentBorrow / 2;
-        // //========temp code========
         console.log("rebalance space:%s,overflow:%s", space, overflow);
         if (space > 0) {
             exitCollateralInvestToCurvePool(space);
