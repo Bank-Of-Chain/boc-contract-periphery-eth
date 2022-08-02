@@ -6,5 +6,6 @@ enum ProtocolEnum {
     UniswapV2,
     Convex,
     Aura,
-    UniswapV3
+    UniswapV3,
+    YearnV2
 }
