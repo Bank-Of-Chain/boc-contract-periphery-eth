@@ -562,10 +562,9 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
         uint256 spaceValue = (space * _borrowTokenPrice()) / borrowTokenDecimals;
         address collaterCTokenAddr = address(getCollateralCToken());
         (, uint256 rate) = comptroller.markets(collaterCTokenAddr);
-        uint256 totalLp = balanceOfToken(getRewardPool());
         address collateralToken = getCollateralToken();
         //exit add collateral
-        uint256 exitCollateral = ((((spaceValue * 1e18) * borrowFactor) / rate / BPS) *
+        uint256 exitCollateral = ((((spaceValue * 1e18) * BPS) / rate / borrowFactor) *
             decimalUnitOfToken(collateralToken)) / _collateralTokenPrice();
         uint256 exchangeRateMantissa = CTokenInterface(collaterCTokenAddr).exchangeRateStored();
         uint256 exitCollateralC = (exitCollateral *
@@ -600,7 +599,6 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
         IConvex(BOOSTER).withdraw(getPId(), removeLp);
         ICurveMini(curvePool).remove_liquidity_one_coin(removeLp, 1, 0);
         uint256 underlyingBalance = balanceOfToken(collateralToken);
-        console.log("add collateral:", underlyingBalance);
         // add collateral
         _mintCollateralCToken(underlyingBalance);
     }
@@ -611,21 +609,37 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
         if (space > 0) {
             exitCollateralInvestToCurvePool(space);
         } else if (overflow > 0) {
-            //If collateral already exceeds the limit as a percentage of total assets, it is necessary to start reducing foreign exchange debt
+            //If collateral already exceeds the limit as a percentage of total assets, 
+            //it is necessary to start reducing foreign exchange debt
             if (collateralRate() < maxCollateralRate) {
                 increaseCollateral(overflow);
             } else {
                 address rewardPool = getRewardPool();
                 uint256 totalLp = balanceOfToken(rewardPool);
-                uint256 removeLp = (totalLp * forexReduceStep) / BPS;
-                IConvexReward(rewardPool).withdraw(removeLp, false);
-                IConvex(BOOSTER).withdraw(getPId(), removeLp);
-                ICurveMini(getCurvePool()).remove_liquidity_one_coin(removeLp, 0, 0);
+                uint256 borrowAvaible = _currentBorrowAvaible();
+                uint256 reduceLp = totalLp * overflow / borrowAvaible;
+                _redeem(reduceLp);
                 uint256 exitForex = balanceOfToken(getIronBankForex());
                 if (exitForex > 0) {
                     _repayForex(exitForex);
                     console.log("exitForex:", exitForex);
                 }
+                uint256 underlyingBalance = balanceOfToken(getCollateralToken());
+                // add collateral
+                _mintCollateralCToken(underlyingBalance);
+                console.log("add collateral:", underlyingBalance);
+                
+                // address rewardPool = getRewardPool();
+                // uint256 totalLp = balanceOfToken(rewardPool);
+                // uint256 removeLp = (totalLp * forexReduceStep) / BPS;
+                // IConvexReward(rewardPool).withdraw(removeLp, false);
+                // IConvex(BOOSTER).withdraw(getPId(), removeLp);
+                // ICurveMini(getCurvePool()).remove_liquidity_one_coin(removeLp, 0, 0);
+                // uint256 exitForex = balanceOfToken(getIronBankForex());
+                // if (exitForex > 0) {
+                //     _repayForex(exitForex);
+                //     console.log("exitForex:", exitForex);
+                // }
             }
         }
     }
@@ -666,7 +680,7 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
             // repayAmount = MathUpgradeable.min(repayAmount, borrowTokenBalance);
             console.log("Current Debts:%s", currentBorrow);
             address curvePool = getCurvePool();
-            //资不抵债时，将USDC换成债务token
+            //if assets < debts，use USDC swap to borrow token
             if (borrowTokenBalance < repayAmount) {
                 uint256 underlyingBalance = balanceOfToken(getCollateralToken());
                 uint256 reserve = ICurveMini(curvePool).get_dy(1, 0, underlyingBalance);
