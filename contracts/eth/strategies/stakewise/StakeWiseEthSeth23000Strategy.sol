@@ -69,20 +69,13 @@ contract StakeWiseEthSeth23000Strategy is UniswapV3BaseStrategy {
             (,, tickLower, tickUpper) = getSpecifiedRangesOfTick(tick);
         }
         (uint256 amount0, uint256 amount1) = super.getAmountsForLiquidity(tickLower, tickUpper, pool.liquidity());
-        console.log('StakeWiseBaseStrategy depositTo3rdPool amount0: %d, amount1: %d', amount0, amount1);
-
         uint256 quoteAmountOut = IQuoter(uniswapV3Quoter).quoteExactInputSingle(wETH, sETH2, 3000, _amounts[0], 0);
         uint256 depositSeth2ToWethAmount = _amounts[0] * amount1 / (amount1 + amount0 * quoteAmountOut / _amounts[0]);
         uint256 depositWethAmount = _amounts[0] - depositSeth2ToWethAmount;
-        console.log('StakeWiseBaseStrategy depositTo3rdPool quoteAmountOut: ', quoteAmountOut);
-        console.log('StakeWiseBaseStrategy depositTo3rdPool depositSeth2ToWethAmount: ', depositSeth2ToWethAmount);
-        console.log('StakeWiseBaseStrategy depositTo3rdPool depositWethAmount: ', depositWethAmount);
         IERC20(wETH).approve(uniswapV3Router, 0);
         IERC20(wETH).approve(uniswapV3Router, depositSeth2ToWethAmount);
         IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(wETH, sETH2, 3000, address(this), block.timestamp, depositSeth2ToWethAmount, 0, 0);
         uint256 amountOut = IUniswapV3(uniswapV3Router).exactInputSingle(params);
-        console.log('StakeWiseBaseStrategy depositTo3rdPool after swap balanceOfToken(wETH): ', balanceOfToken(wETH));
-        console.log('StakeWiseBaseStrategy depositTo3rdPool after swap balanceOfToken(sETH2): ', balanceOfToken(sETH2));
         _assets = new address[](2);
         _assets[0] = token0;
         _assets[1] = token1;
@@ -90,28 +83,17 @@ contract StakeWiseEthSeth23000Strategy is UniswapV3BaseStrategy {
         _ratios[0] = balanceOfToken(wETH);
         _ratios[1] = balanceOfToken(sETH2);
         super.depositTo3rdPool(_assets, _amounts);
-        console.log('StakeWiseBaseStrategy depositTo3rdPool after depositTo3rdPool balanceOfToken(wETH): ', balanceOfToken(wETH));
-        console.log('StakeWiseBaseStrategy depositTo3rdPool after depositTo3rdPool balanceOfToken(sETH2): ', balanceOfToken(sETH2));
     }
 
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool before withdrawFrom3rdPool balanceOfToken(wETH): ', balanceOfToken(wETH));
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool before withdrawFrom3rdPool balanceOfToken(sETH2): ', balanceOfToken(sETH2));
         super.withdrawFrom3rdPool(_withdrawShares, _totalShares);
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool after withdrawFrom3rdPool balanceOfToken(wETH): ', balanceOfToken(wETH));
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool after withdrawFrom3rdPool balanceOfToken(sETH2): ', balanceOfToken(sETH2));
         IERC20(sETH2).approve(uniswapV3Router, 0);
         IERC20(sETH2).approve(uniswapV3Router, balanceOfToken(sETH2));
         IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(sETH2, wETH, 3000, address(this), block.timestamp, balanceOfToken(sETH2), 0, 0);
         uint256 amountOut = IUniswapV3(uniswapV3Router).exactInputSingle(params);
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool after swap balanceOfToken(wETH): ', balanceOfToken(wETH));
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool after swap balanceOfToken(sETH2): ', balanceOfToken(sETH2));
     }
 
     function claimRewards() internal override returns (bool isWorth, address[] memory assets, uint256[] memory amounts) {
-        console.log('StakeWiseBaseStrategy claimRewards balanceOfToken(rETH2): ', balanceOfToken(rETH2));
-        console.log('StakeWiseBaseStrategy claimRewards balanceOfToken(swise): ', balanceOfToken(swise));
-
         super.claimRewards();
     }
 }

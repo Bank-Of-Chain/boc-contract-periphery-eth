@@ -253,15 +253,13 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
         balance0 = balanceOfToken(token0);
         balance1 = balanceOfToken(token1);
         if (balance0 > 0 || balance1 > 0) {
-            int24 bidLower = tickFloor - limitThreshold;
-            int24 askUpper = tickCeil + limitThreshold;
             console.log('UniswapV3BaseStrategy rebalance limit mintNewPosition before balance0: %d, balance1: %d', balance0, balance1);
             // Place bid or ask order on Uniswap depending on which token is left
-            if (getLiquidityForAmounts(bidLower, tickFloor, balance0, balance1) > getLiquidityForAmounts(tickCeil, askUpper, balance0, balance1)) {
-                mintNewPosition(bidLower, tickFloor, balance0, balance1, false);
+            if (getLiquidityForAmounts(tickFloor - limitThreshold, tickFloor, balance0, balance1) > getLiquidityForAmounts(tickCeil, tickCeil + limitThreshold, balance0, balance1)) {
+                mintNewPosition(tickFloor - limitThreshold, tickFloor, balance0, balance1, false);
                 console.log('UniswapV3BaseStrategy rebalance limit bid mintNewPosition');
             } else {
-                mintNewPosition(tickCeil, askUpper, balance0, balance1, false);
+                mintNewPosition(tickCeil, tickCeil + limitThreshold, balance0, balance1, false);
                 console.log('UniswapV3BaseStrategy rebalance limit ask mintNewPosition');
             }
             console.log('UniswapV3BaseStrategy rebalance limit mintNewPosition after balance0: %d, balance1: %d', balanceOfToken(token0), balanceOfToken(token1));

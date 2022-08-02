@@ -68,8 +68,6 @@ contract StakeWiseReth2Seth2500Strategy is UniswapV3BaseStrategy {
             (,, tickLower, tickUpper) = getSpecifiedRangesOfTick(tick);
         }
         (uint256 amount0, uint256 amount1) = super.getAmountsForLiquidity(tickLower, tickUpper, pool.liquidity());
-        console.log('StakeWiseBaseStrategy depositTo3rdPool amount0: %d, amount1: %d', amount0, amount1);
-
 
         IERC20(wETH).approve(uniswapV3Router, 0);
         IERC20(wETH).approve(uniswapV3Router, _amounts[0]);
@@ -80,15 +78,10 @@ contract StakeWiseReth2Seth2500Strategy is UniswapV3BaseStrategy {
         uint256 reth2QuoteAmountOut = IQuoter(uniswapV3Quoter).quoteExactInputSingle(sETH2, rETH2, 500, _amounts[0], 0);
         uint256 depositReth2ToSeth2Amount = seth2Amount * amount0 / (amount0 + amount1 * reth2QuoteAmountOut / seth2Amount);
         uint256 depositSeth2Amount = _amounts[0] - depositReth2ToSeth2Amount;
-        console.log('StakeWiseBaseStrategy depositTo3rdPool reth2QuoteAmountOut: ', reth2QuoteAmountOut);
-        console.log('StakeWiseBaseStrategy depositTo3rdPool depositReth2ToSeth2Amount: ', depositReth2ToSeth2Amount);
-        console.log('StakeWiseBaseStrategy depositTo3rdPool depositSeth2Amount: ', depositSeth2Amount);
         IERC20(sETH2).approve(uniswapV3Router, 0);
         IERC20(sETH2).approve(uniswapV3Router, depositReth2ToSeth2Amount);
         params = IUniswapV3.ExactInputSingleParams(sETH2, rETH2, 500, address(this), block.timestamp, depositReth2ToSeth2Amount, 0, 0);
         uint256 amountOut = IUniswapV3(uniswapV3Router).exactInputSingle(params);
-        console.log('StakeWiseBaseStrategy depositTo3rdPool after swap balanceOfToken(rETH2): ', balanceOfToken(rETH2));
-        console.log('StakeWiseBaseStrategy depositTo3rdPool after swap balanceOfToken(sETH2): ', balanceOfToken(sETH2));
         _assets = new address[](2);
         _assets[0] = token0;
         _assets[1] = token1;
@@ -96,16 +89,10 @@ contract StakeWiseReth2Seth2500Strategy is UniswapV3BaseStrategy {
         _ratios[0] = balanceOfToken(rETH2);
         _ratios[1] = balanceOfToken(sETH2);
         super.depositTo3rdPool(_assets, _amounts);
-        console.log('StakeWiseBaseStrategy depositTo3rdPool after depositTo3rdPool balanceOfToken(rETH2): ', balanceOfToken(rETH2));
-        console.log('StakeWiseBaseStrategy depositTo3rdPool after depositTo3rdPool balanceOfToken(sETH2): ', balanceOfToken(sETH2));
     }
 
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool before withdrawFrom3rdPool balanceOfToken(rETH2): ', balanceOfToken(rETH2));
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool before withdrawFrom3rdPool balanceOfToken(sETH2): ', balanceOfToken(sETH2));
         super.withdrawFrom3rdPool(_withdrawShares, _totalShares);
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool after withdrawFrom3rdPool balanceOfToken(rETH2): ', balanceOfToken(rETH2));
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool after withdrawFrom3rdPool balanceOfToken(sETH2): ', balanceOfToken(sETH2));
         IERC20(rETH2).approve(uniswapV3Router, 0);
         uint256 rETH2Amount = balanceOfToken(rETH2);
         IERC20(rETH2).approve(uniswapV3Router, rETH2Amount);
@@ -117,14 +104,9 @@ contract StakeWiseReth2Seth2500Strategy is UniswapV3BaseStrategy {
         IERC20(sETH2).approve(uniswapV3Router, sETH2Amount);
         params = IUniswapV3.ExactInputSingleParams(sETH2, wETH, 3000, address(this), block.timestamp, sETH2Amount, 0, 0);
         IUniswapV3(uniswapV3Router).exactInputSingle(params);
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool after swap balanceOfToken(rETH2): ', balanceOfToken(rETH2));
-        console.log('StakeWiseBaseStrategy withdrawFrom3rdPool after swap balanceOfToken(sETH2): ', balanceOfToken(sETH2));
     }
 
     function claimRewards() internal override returns (bool isWorth, address[] memory assets, uint256[] memory amounts) {
-        console.log('StakeWiseBaseStrategy claimRewards balanceOfToken(rETH2): ', balanceOfToken(rETH2));
-        console.log('StakeWiseBaseStrategy claimRewards balanceOfToken(swise): ', balanceOfToken(swise));
-
         super.claimRewards();
     }
 }
