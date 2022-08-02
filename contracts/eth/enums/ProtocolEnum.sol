@@ -7,5 +7,6 @@ enum ProtocolEnum {
     Convex,
     Aura,
     UniswapV3,
+    StakeWise,
     YearnV2
 }

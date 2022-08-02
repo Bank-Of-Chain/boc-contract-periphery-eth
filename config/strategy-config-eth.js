@@ -42,6 +42,18 @@ const strategiesList = [
         addToVault: true,
     },
     {
+        name: 'StakeWiseEthSeth23000Strategy',
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    },
+    {
+        name: 'StakeWiseReth2Seth2500Strategy',
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+    },
+    {
         name: 'YearnV2YETHStrategy',
         profitLimitRatio: 100,
         lossLimitRatio: 100,
