@@ -156,8 +156,10 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
     {
         (uint256 amount0, uint256 amount1) = nonfungiblePositionManager.decreaseLiquidity(_params);
         console.log('__removeLiquidity,amount0:%d,amount1:%d',amount0,amount1);
-        (amount0,amount1) = __collect(_params.tokenId, uint128(amount0), uint128(amount1));
-        console.log('__collect,amount0:%d,amount1:%d',amount0,amount1);
+        if (amount0 > 0 || amount1 > 0) {
+            (amount0,amount1) = __collect(_params.tokenId, uint128(amount0), uint128(amount1));
+            console.log('__collect,amount0:%d,amount1:%d',amount0,amount1);
+        }
         return (amount0,amount1);
     }
 

@@ -131,7 +131,7 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
         return (amount0, amount1);
     }
 
-    function getPositionDetail() public view override returns (address[] memory _tokens, uint256[] memory _amounts, bool isETH, uint256 ethValue) {
+    function getPositionDetail() public view virtual override returns (address[] memory _tokens, uint256[] memory _amounts, bool isETH, uint256 ethValue) {
         _tokens = wants;
         _amounts = new uint256[](2);
         _amounts[0] = balanceOfToken(token0);
@@ -276,16 +276,18 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
         int24 askUpper = tickCeil + limitThreshold;
         balance0 = balanceOfToken(token0);
         balance1 = balanceOfToken(token1);
-        console.log('UniswapV3BaseStrategy rebalance limit mintNewPosition before balance0: %d, balance1: %d', balance0, balance1);
-        // Place bid or ask order on Uniswap depending on which token is left
-        if (getLiquidityForAmounts(bidLower, tickFloor, balance0, balance1) > getLiquidityForAmounts(tickCeil, askUpper, balance0, balance1)) {
-            mintNewPosition(bidLower, tickFloor, balance0, balance1, false);
-            console.log('UniswapV3BaseStrategy rebalance limit bid mintNewPosition');
-        } else {
-            mintNewPosition(tickCeil, askUpper, balance0, balance1, false);
-            console.log('UniswapV3BaseStrategy rebalance limit ask mintNewPosition');
+        if (balance0 > 0 || balance1 > 0) {
+            console.log('UniswapV3BaseStrategy rebalance limit mintNewPosition before balance0: %d, balance1: %d', balance0, balance1);
+            // Place bid or ask order on Uniswap depending on which token is left
+            if (getLiquidityForAmounts(tickFloor - limitThreshold, tickFloor, balance0, balance1) > getLiquidityForAmounts(tickCeil, tickCeil + limitThreshold, balance0, balance1)) {
+                mintNewPosition(tickFloor - limitThreshold, tickFloor, balance0, balance1, false);
+                console.log('UniswapV3BaseStrategy rebalance limit bid mintNewPosition');
+            } else {
+                mintNewPosition(tickCeil, tickCeil + limitThreshold, balance0, balance1, false);
+                console.log('UniswapV3BaseStrategy rebalance limit ask mintNewPosition');
+            }
+            console.log('UniswapV3BaseStrategy rebalance limit mintNewPosition after balance0: %d, balance1: %d', balanceOfToken(token0), balanceOfToken(token1));
         }
-        console.log('UniswapV3BaseStrategy rebalance limit mintNewPosition after balance0: %d, balance1: %d', balanceOfToken(token0), balanceOfToken(token1));
         lastTimestamp = block.timestamp;
         lastTick = tick;
     }

@@ -74,6 +74,16 @@ async function _topUpFamilyBucket() {
         console.log('top up sETH');
         await topUp.topUpSEthByAddress(amount.multipliedBy(1e18), investor);
     }
+    // sETH2
+    if (contains(wants, MFC.sETH2_ADDRESS)) {
+        console.log('top up sETH2');
+        await topUp.topUpSEth2ByAddress(amount.multipliedBy(1e18), investor);
+    }
+    // rETH2
+    if (contains(wants, MFC.rETH2_ADDRESS)) {
+        console.log('top up rETH2');
+        await topUp.topUpREth2ByAddress(amount.multipliedBy(1e18), investor);
+    }
 }
 
 async function decimals(asset) {

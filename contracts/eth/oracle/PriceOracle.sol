@@ -35,8 +35,12 @@ contract PriceOracle is IPriceOracle, Initializable {
     address private constant rETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
     address private constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address private constant sETH = 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb;
+    address public constant sETH2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;
+    address internal constant rETH2 = 0x20BC832ca081b91433ff6c17f85701B6e92486c5;
 
     address private constant weth_reth_uni_v3_pool = 0xf0E02Cf61b31260fd5AE527d58Be16312BDA59b1;
+    address private constant weth_seth2_uni_v3_pool = 0x7379e81228514a1D2a6Cf7559203998E20598346;
+    address private constant reth2_seth2_uni_v3_pool = 0xa9ffb27d36901F87f1D0F20773f7072e38C5bfbA;
 
     function initialize() public initializer {}
 
@@ -72,6 +76,19 @@ contract PriceOracle is IPriceOracle, Initializable {
         return 1 ether;
     }
 
+    function sEth2PriceInEth() public view override returns (uint256) {
+        uint256 twapPrice = getTwapPrice(weth_seth2_uni_v3_pool, 3600);
+        twapPrice = 1e18 * 1e18 / twapPrice;
+        return (1 ether + twapPrice) / 2;
+    }
+
+    function rEth2PriceInEth() public view override returns (uint256) {
+        uint256 reth2ToSeth2TwapPrice = getTwapPrice(reth2_seth2_uni_v3_pool, 3600);
+        uint256 ethToSeth2TwapPrice = getTwapPrice(weth_seth2_uni_v3_pool, 3600);
+        uint256 twapPrice = reth2ToSeth2TwapPrice * 1e18 / ethToSeth2TwapPrice;
+        return (1 ether + twapPrice) / 2;
+    }
+
     function ethPriceInUsd() public view override returns (uint256) {
         return uint256(eth_usd_aggregator.latestAnswer());
     }
@@ -92,6 +109,14 @@ contract PriceOracle is IPriceOracle, Initializable {
         return (wEthPriceInEth() * ethPriceInUsd()) / 1e8;
     }
 
+    function sEth2PriceInUsd() external view override returns (uint256) {
+        return (sEth2PriceInEth() * ethPriceInUsd()) / 1e8;
+    }
+
+    function rEth2PriceInUsd() public view override returns (uint256) {
+        return (rEth2PriceInEth() * ethPriceInUsd()) / 1e8;
+    }
+
     function priceInEth(address _asset) public view override returns (uint256) {
         if (_asset == ETHToken.NATIVE_TOKEN) {
             return 1e18;
@@ -105,6 +130,10 @@ contract PriceOracle is IPriceOracle, Initializable {
             return wEthPriceInEth();
         } else if (_asset == sETH) {
             return sEthPriceInEth();
+        } else if (_asset == sETH2) {
+            return sEth2PriceInEth();
+        } else if (_asset == rETH2) {
+            return rEth2PriceInEth();
         } else {
             assert(false);
         }
@@ -154,7 +183,7 @@ contract PriceOracle is IPriceOracle, Initializable {
         int24 twap = int24((tickCumulatives[1] - tickCumulatives[0]) / int32(_twapDuration));
 
         uint256 priceSqrt = (TickMath.getSqrtRatioAtTick(twap) * 1e18) / 2**96;
-        console.log("reth priceSqrt:", priceSqrt);
+        console.log("getTwapPrice priceSqrt:", priceSqrt);
         uint256 twapPrice = priceSqrt**2 / 1e18;
         return twapPrice;
     }

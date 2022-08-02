@@ -446,6 +446,28 @@ async function topUpSEthByAddress(amount = new BigNumber(10 ** 18), to) {
 }
 
 /**
+ * Top up a certain amount of sETH2 for a certain address(default 10 ** 18)
+ */
+async function topUpSEth2ByAddress(amount = new BigNumber(10 ** 18), to) {
+    if (isEmpty(to)) return 0;
+    const accounts = await ethers.getSigners();
+    await send.ether(accounts[0].address, addresses.sETH2_WHALE_ADDRESS, 10 ** 18);
+    await impersonates([addresses.sETH2_WHALE_ADDRESS]);
+    return topUpMain(addresses.sETH2_ADDRESS, addresses.sETH2_WHALE_ADDRESS, to, amount);
+}
+
+/**
+ * Top up a certain amount of rETH2 for a certain address(default 10 ** 18)
+ */
+async function topUpREth2ByAddress(amount = new BigNumber(10 ** 18), to) {
+    if (isEmpty(to)) return 0;
+    const accounts = await ethers.getSigners();
+    await send.ether(accounts[0].address, addresses.rETH2_WHALE_ADDRESS, 10 ** 18);
+    await impersonates([addresses.rETH2_WHALE_ADDRESS]);
+    return topUpMain(addresses.rETH2_ADDRESS, addresses.rETH2_WHALE_ADDRESS, to, amount);
+}
+
+/**
  * tranfer Back Dai
  * @param {*} address
  */
@@ -524,6 +546,8 @@ module.exports = {
     topUpWstEthByAddress,
     topUpRocketPoolEthByAddress,
     topUpSEthByAddress,
+    topUpSEth2ByAddress,
+    topUpREth2ByAddress,
     tranferBackUsdc,
     tranferBackDai,
     tranferBackUsdt,
