@@ -47,7 +47,7 @@ const config = {
         hardhat: {
             forking: {
                 url: 'https://eth-mainnet.alchemyapi.io/v2/' + keys.alchemyKey.dev,
-                blockNumber: 15138124, // <-- edit here
+                blockNumber: 15222222, // <-- edit here
             },
             blockGasLimit: DEFAULT_BLOCK_GAS_LIMIT,
             timeout: 1800000,
@@ -88,9 +88,9 @@ const config = {
         rinkeby: {
             url: 'https://arb-mainnet.g.alchemy.com/v2/QyRoYoT8DwdeaCQC9PYwPtPKbworxRyf',
             // accounts : accounts(), //must mnemonic
-            //看源码，这里我们输入 HardhatNetworkHDAccountsUserConfig 对象，即为通过助记词查找钱包地址。
+            // Looking at the source code, here we enter the HardhatNetworkHDAccountsUserConfig object, which is to find the wallet address through the mnemonic.
             accounts: {
-                mnemonic: 'crystal cat chest increase abuse interest mesh alley negative frost agent anchor',
+                mnemonic: 'XXXXX',
             },
         },
     },
