@@ -63,6 +63,7 @@
     "deploy_v1.5.3-add-strategies": "yarn topup && npm run grant && hardhat run scripts/deploy_v1.5.3-add-strategies.js --network localhost",
     "grant": "hardhat run scripts/grant.js --network localhost",
     "lend": "hardhat run scripts/simple-lend.js --network localhost",
+    "uniswap-v3-swap": "hardhat run scripts/uniswap-v3-swap.js --network localhost",
     "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
     "release": "hardhat run scripts/deploy.js --network mainnet",
     "release_v1.5.3:mainnet": "hardhat run scripts/deploy_v1.5.3-add-strategies.js --network mainnet",
