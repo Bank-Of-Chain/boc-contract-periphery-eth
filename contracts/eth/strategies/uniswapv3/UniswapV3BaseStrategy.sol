@@ -193,7 +193,7 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
                 rebalance(tick);
             } else {
                 console.log('UniswapV3BaseStrategy depositTo3rdPool addLiquidity');
-                //添加流动性
+                //add liquidity
                 INonfungiblePositionManager.IncreaseLiquidityParams memory params = INonfungiblePositionManager.IncreaseLiquidityParams({
                 tokenId : baseMintInfo.tokenId,
                 amount0Desired : balanceOfToken(token0),
