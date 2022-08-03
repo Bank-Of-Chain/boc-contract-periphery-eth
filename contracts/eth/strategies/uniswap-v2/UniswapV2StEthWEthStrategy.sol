@@ -23,6 +23,7 @@ contract UniswapV2StEthWEthStrategy is ETHBaseStrategy, UniswapV2LiquidityAction
         _wants[0] = stETH;
         _wants[1] = wETH;
         _initialize(_vault, uint16(ProtocolEnum.UniswapV2), _wants);
+        _initializeUniswapV2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     }
 
     function getVersion() external pure virtual override returns (string memory) {
