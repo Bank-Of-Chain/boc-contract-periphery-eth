@@ -146,8 +146,5 @@ contract Convex3CrvStrategy is ConvexBaseStrategy {
             }
             CURVE_POOL.remove_liquidity_one_coin(liquidity, index, 0);
         }
-        console.log("DAI balance:", balanceOfToken(wants[0]));
-        console.log("USDC balance:", balanceOfToken(wants[1]));
-        console.log("USDT balance:", balanceOfToken(wants[2]));
     }
 }

@@ -120,7 +120,5 @@ contract ConvexCompoundStrategy is ConvexBaseStrategy {
         if (usdcBalance > 0) {
             ICToken(cUSDC).redeem(usdcBalance);
         }
-        console.log("usdcBalance:%d", balanceOfToken(wants[0]));
-        console.log("daiBalance:%d", balanceOfToken(wants[1]));
     }
 }

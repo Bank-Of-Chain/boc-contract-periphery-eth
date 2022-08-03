@@ -286,8 +286,6 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         }
         BALANCER_VAULT.exitPool(poolKey, address(this), recipient, exitRequest);
 
-        console.log('WSTETH balance:',balanceOfToken(WSTETH));
-        console.log('WETH balance:',balanceOfToken(WETH));
     }
 
     function claimRewards()

@@ -187,9 +187,5 @@ abstract contract Convex3CRVBaseStrategy is ConvexBaseStrategy {
             ICurveLiquidityPool(POOL3).remove_liquidity_one_coin(balanceOf3Crv, index, 0);
         }
 
-        console.log('DAI balance:',balanceOfToken(wants[0]));
-        console.log('USDC balance:',balanceOfToken(wants[1]));
-        console.log('USDT balance:',balanceOfToken(wants[2]));
-        console.log('Other balance:',balanceOfToken(wants[3]));
     }
 }

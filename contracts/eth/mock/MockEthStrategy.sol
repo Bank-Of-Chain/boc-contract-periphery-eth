@@ -20,7 +20,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         mock3rdPool = Mock3rdEthPool(payable(_mock3rdPool));
 
         address[] memory _wants = new address[](2);
-        _wants[0] = NATIVE_TOKEN;
+        _wants[0] = ETHToken.NATIVE_TOKEN;
         _wants[1] = stETH;
         super._initialize(_vault, 23, _wants);
     }
@@ -56,7 +56,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         OutputInfo memory info = outputsInfo[0];
         info.outputCode = 0;
         info.outputTokens = new address[](2);
-        info.outputTokens[0] = NATIVE_TOKEN;
+        info.outputTokens[0] = ETHToken.NATIVE_TOKEN;
         info.outputTokens[1] = stETH;
     }
 

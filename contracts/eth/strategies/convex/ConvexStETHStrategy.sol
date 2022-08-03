@@ -34,7 +34,7 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
 
     function getConvexWants() internal pure override returns (address[] memory) {
         address[] memory _wants = new address[](2);
-        _wants[0] = NATIVE_TOKEN;
+        _wants[0] = ETHToken.NATIVE_TOKEN;
         _wants[1] = stETH;
         return _wants;
     }
@@ -84,7 +84,7 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         OutputInfo memory info1 = outputsInfo[1];
         info1.outputCode = 1;
         info1.outputTokens = new address[](1);
-        info1.outputTokens[0] = NATIVE_TOKEN;
+        info1.outputTokens[0] = ETHToken.NATIVE_TOKEN;
 
         OutputInfo memory info2 = outputsInfo[2];
         info2.outputCode = 2;
@@ -161,7 +161,5 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         } else if (_outputCode == 2){
             pool.remove_liquidity_one_coin(liquidity,1,0);
         }
-        console.log('balanceOf NATIVE_TOKEN:', balanceOfToken(NATIVE_TOKEN));
-        console.log('balanceOf stETH:', balanceOfToken(stETH));
     }
 }

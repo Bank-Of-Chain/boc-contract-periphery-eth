@@ -170,7 +170,5 @@ contract ConvexrETHwstETHStrategy is ConvexBaseStrategy {
         } else if (_outputCode == 2){
             pool.remove_liquidity_one_coin(liquidity,1,0);
         }
-        console.log('rETH balance:',balanceOfToken(rETH));
-        console.log('wstETH balance:',balanceOfToken(wstETH));
     }
 }

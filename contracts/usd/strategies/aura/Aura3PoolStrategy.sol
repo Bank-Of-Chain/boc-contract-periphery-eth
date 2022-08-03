@@ -246,9 +246,6 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
             });
         }
         BALANCER_VAULT.exitPool(poolKey, address(this), recipient, exitRequest);
-        console.log('DAI balance:',balanceOfToken(DAI));
-        console.log('USDC balance:',balanceOfToken(USDC));
-        console.log('USDT balance:',balanceOfToken(USDT));
     }
 
     function claimRewards()
