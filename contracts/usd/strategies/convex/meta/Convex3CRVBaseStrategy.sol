@@ -4,10 +4,10 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../../../external/curve/ICurveLiquidityPool.sol";
-import "../../../external/yearn/IYearnVault.sol";
+import "../../../../external/curve/ICurveLiquidityPool.sol";
+import "../../../../external/yearn/IYearnVault.sol";
 
-import "./ConvexBaseStrategy.sol";
+import "../ConvexBaseStrategy.sol";
 
 abstract contract Convex3CRVBaseStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -53,6 +53,40 @@ abstract contract Convex3CRVBaseStrategy is ConvexBaseStrategy {
         for (uint256 i = 0; i < 3; i++) {
             _ratios[i] = (ICurveLiquidityPool(POOL3).balances(i) * crv3Amount) / crv3Supply;
         }
+    }
+
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        address[] memory _wants = wants;
+        outputsInfo = new OutputInfo[](5);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = _wants; //other
+
+        OutputInfo memory info1 = outputsInfo[1];
+        info1.outputCode = 1;
+        info1.outputTokens = new address[](1);
+        info1.outputTokens[0] = _wants[0];
+
+        OutputInfo memory info2 = outputsInfo[2];
+        info2.outputCode = 2;
+        info2.outputTokens = new address[](1);
+        info2.outputTokens[0] = _wants[1];
+
+        OutputInfo memory info3 = outputsInfo[3];
+        info3.outputCode = 3;
+        info3.outputTokens = new address[](1);
+        info3.outputTokens[0] = _wants[2];
+
+        OutputInfo memory info4 = outputsInfo[4];
+        info3.outputCode = 4;
+        info3.outputTokens = new address[](1);
+        info3.outputTokens[0] = _wants[3];
     }
 
     function getPositionDetail()
@@ -127,13 +161,31 @@ abstract contract Convex3CRVBaseStrategy is ConvexBaseStrategy {
         return balanceOfToken(lpToken);
     }
 
-    function curveRemoveLiquidity(uint256 liquidity) internal override {
+    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
         console.log("liquidity:%d", liquidity);
-        getCurvePool().remove_liquidity(liquidity, [uint256(0), uint256(0)]);
-        uint256 balanceOf3Crv = balanceOfToken(CRV3);
-        ICurveLiquidityPool(POOL3).remove_liquidity(
-            balanceOf3Crv,
-            [uint256(0), uint256(0), uint256(0)]
-        );
+        ICurveLiquidityPool pool1 = getCurvePool();
+        if (_outputCode == 0) {
+            pool1.remove_liquidity(liquidity, [uint256(0), uint256(0)]);
+            uint256 balanceOf3Crv = balanceOfToken(CRV3);
+            ICurveLiquidityPool(POOL3).remove_liquidity(
+                balanceOf3Crv,
+                [uint256(0), uint256(0), uint256(0)]
+            );
+        } else if (_outputCode == 4) {
+            pool1.remove_liquidity_one_coin(liquidity, 0, 0);
+        } else {
+            pool1.remove_liquidity_one_coin(liquidity, 1, 0);
+            uint256 balanceOf3Crv = balanceOfToken(CRV3);
+            int128 index;
+            if (_outputCode == 1) {
+                index = 0;
+            } else if (_outputCode == 2) {
+                index = 1;
+            } else if (_outputCode == 3) {
+                index = 2;
+            }
+            ICurveLiquidityPool(POOL3).remove_liquidity_one_coin(balanceOf3Crv, index, 0);
+        }
+
     }
 }

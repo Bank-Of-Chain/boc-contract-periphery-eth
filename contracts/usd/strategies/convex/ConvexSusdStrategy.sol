@@ -29,11 +29,7 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         _wants[2] = address(0xdAC17F958D2ee523a2206206994597C13D831ec7);
         // sUSD
         _wants[3] = address(0x57Ab1ec28D129707052df4dF418D58a2D46d5f51);
-        super._initialize(
-            _vault,
-            _harvester,
-            _wants
-        );
+        super._initialize(_vault, _harvester, _wants);
     }
 
     function getVersion() external pure override returns (string memory) {
@@ -44,7 +40,7 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         return "ConvexSusdStrategy";
     }
 
-    function getRewardPool() internal pure override returns(IConvexReward) {
+    function getRewardPool() internal pure override returns (IConvexReward) {
         return IConvexReward(address(0x22eE18aca7F3Ee920D01F25dA85840D12d98E8Ca));
     }
 
@@ -61,6 +57,21 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
             _ratios[i] = CURVE_POOL.balances(index);
             index++;
         }
+    }
+
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants;
+
+        // not support remove_liquidity_one_coin
     }
 
     function getPositionDetail()
@@ -117,7 +128,7 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         return lpAmount;
     }
 
-    function curveRemoveLiquidity(uint256 liquidity) internal override {
+    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
         CURVE_POOL.remove_liquidity(liquidity, [uint256(0), uint256(0), uint256(0), uint256(0)]);
     }
 

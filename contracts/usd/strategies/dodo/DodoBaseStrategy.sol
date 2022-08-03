@@ -43,12 +43,32 @@ abstract contract DodoBaseStrategy is BaseClaimableStrategy, DodoPoolActionsMixi
         return "1.0.0";
     }
 
-    function getWantsInfo() public view override returns (address[] memory _assets, uint256[] memory _ratios) {
+    function getWantsInfo()
+        public
+        view
+        override
+        returns (address[] memory _assets, uint256[] memory _ratios)
+    {
         _assets = wants;
         (uint256 baseReserve, uint256 quoteReserve) = DodoVault(lpTokenPool).getVaultReserve();
         _ratios = new uint256[](_assets.length);
         _ratios[0] = baseReserve;
         _ratios[1] = quoteReserve;
+    }
+
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants; 
+
+        // not support remove_liquidity_one_coin
     }
 
     function getPositionDetail()
@@ -91,34 +111,55 @@ abstract contract DodoBaseStrategy is BaseClaimableStrategy, DodoPoolActionsMixi
         return targetPoolTotalAssets;
     }
 
-    function getPendingRewards() internal view returns (address[] memory _rewardsTokens, uint256[] memory _pendingAmounts) {
+    function getPendingRewards()
+        internal
+        view
+        returns (address[] memory _rewardsTokens, uint256[] memory _pendingAmounts)
+    {
         _rewardsTokens = new address[](1);
         _rewardsTokens[0] = DODO;
         _pendingAmounts = new uint256[](1);
         _pendingAmounts[0] = balanceOfToken(DODO) + getPendingRewardByToken(DODO);
     }
 
-    function claimRewards() internal override returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts) {
+    function claimRewards()
+        internal
+        override
+        returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
+    {
         (_rewardTokens, _claimAmounts) = getPendingRewards();
         if (_claimAmounts[0] > 0) {
             __claimAllRewards();
         }
     }
 
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {        
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        override
+    {
         address _lpTokenPool = lpTokenPool;
         IERC20Upgradeable(_assets[0]).safeTransfer(_lpTokenPool, _amounts[0]);
         IERC20Upgradeable(_assets[1]).safeTransfer(_lpTokenPool, _amounts[1]);
-        (uint256 shares, uint256 baseInput, uint256 quoteInput) = DodoVault(_lpTokenPool).buyShares(address(this));
+        (uint256 shares, uint256 baseInput, uint256 quoteInput) = DodoVault(_lpTokenPool)
+            .buyShares(address(this));
         console.log("[%s] buyShares success, shares=%s,", address(this), shares);
-        console.log("[%s] buyShares success, baseInput=%s, quoteInput=%s", address(this), baseInput, quoteInput);
+        console.log(
+            "[%s] buyShares success, baseInput=%s, quoteInput=%s",
+            address(this),
+            baseInput,
+            quoteInput
+        );
         uint256 lpAmount = IERC20Upgradeable(_lpTokenPool).balanceOf(address(this));
         console.log("[%s] lpAmount=", address(this), lpAmount);
         // Pledge lptoken for mining
         __deposit(lpAmount);
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         console.log("[%s] _withdrawSomeLpToken=", address(this), _withdrawShares, _totalShares);
         uint256 _lpAmount = balanceOfLpToken(address(this));
 
@@ -126,7 +167,14 @@ abstract contract DodoBaseStrategy is BaseClaimableStrategy, DodoPoolActionsMixi
             uint256 _withdrawAmount = (_lpAmount * _withdrawShares) / _totalShares;
             __withdrawLpToken(_withdrawAmount);
             // Sell the corresponding lp
-            DodoVault(lpTokenPool).sellShares(_withdrawAmount, address(this), 0, 0, "", block.timestamp + 600);
+            DodoVault(lpTokenPool).sellShares(
+                _withdrawAmount,
+                address(this),
+                0,
+                0,
+                "",
+                block.timestamp + 600
+            );
         }
     }
 }

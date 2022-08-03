@@ -31,7 +31,7 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
         return "1.0.0";
     }
 
-    function getRewardPool() internal pure override returns(IConvexReward) {
+    function getRewardPool() internal pure override returns (IConvexReward) {
         return IConvexReward(address(0xe3DaafC8C14147d5B4A7a56F0BfdED240158e51e));
     }
 
@@ -58,6 +58,21 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
             IYearnVault(ycUSDT).getPricePerFullShare() *
             curvePoolContract.balances(int128(2));
         _ratios[3] = curvePoolContract.balances(int128(3)) * 1e18;
+    }
+
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants;
+
+        // not support remove_liquidity_one_coin
     }
 
     function getPositionDetail()
@@ -114,7 +129,7 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
         return balanceOfToken(lpToken);
     }
 
-    function curveRemoveLiquidity(uint256 removeLiquidity) internal override {
+    function curveRemoveLiquidity(uint256 removeLiquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool(curvePool).remove_liquidity(
             removeLiquidity,
             [uint256(0), uint256(0), uint256(0), uint256(0)]

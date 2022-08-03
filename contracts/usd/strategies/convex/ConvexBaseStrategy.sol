@@ -58,9 +58,9 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
     }
 
     /// @dev do not remove with one coin, and return underlying
-    function curveRemoveLiquidity(uint256 liquidity) internal virtual;
+    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal virtual;
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
         console.log("_withdrawSomeLpToken:%d", _lpAmount);
         if (_lpAmount > 0) {
@@ -69,7 +69,7 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
             BOOSTER.withdraw(pid, _lpAmount);
             console.log('lpBalance:%d', balanceOfToken(lpToken));
             // remove liquidity on curve
-            curveRemoveLiquidity(_lpAmount);
+            curveRemoveLiquidity(_lpAmount,_outputCode);
         }
     }
 

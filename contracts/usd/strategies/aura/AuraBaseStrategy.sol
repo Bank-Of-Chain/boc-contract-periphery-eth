@@ -130,7 +130,7 @@ abstract contract AuraBaseStrategy is BaseClaimableStrategy {
     /// @notice Strategy withdraw the funds from 3rd pool.
     /// @param _withdrawShares Numerator
     /// @param _totalShares Denominator
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal override {
         uint256 withdrawAmount = (getStakingAmount() * _withdrawShares) / _totalShares;
         console.log("withdrawAmount:", withdrawAmount);
         //unstaking

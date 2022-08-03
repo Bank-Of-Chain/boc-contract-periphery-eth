@@ -25,11 +25,7 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         _wants[0] = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         // sUSD
         _wants[1] = address(0x57Ab1ec28D129707052df4dF418D58a2D46d5f51);
-        super._initialize(
-            _vault,
-            _harvester,
-            _wants
-        );
+        super._initialize(_vault, _harvester, _wants);
     }
 
     function getVersion() external pure override returns (string memory) {
@@ -40,7 +36,7 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         return "ConvexSaaveStrategy";
     }
 
-    function getRewardPool() internal pure override returns(IConvexReward) {
+    function getRewardPool() internal pure override returns (IConvexReward) {
         return IConvexReward(address(0xF86AE6790654b70727dbE58BF1a863B270317fD0));
     }
 
@@ -55,6 +51,30 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         for (uint256 i = 0; i < _assets.length; i++) {
             _ratios[i] = CURVE_POOL.balances(i);
         }
+    }
+
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        address[] memory _wants = wants;
+        outputsInfo = new OutputInfo[](3);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = _wants;
+
+        OutputInfo memory info1 = outputsInfo[1];
+        info1.outputCode = 1;
+        info1.outputTokens = new address[](1);
+        info1.outputTokens[0] = _wants[0];
+
+        OutputInfo memory info2 = outputsInfo[2];
+        info2.outputCode = 2;
+        info2.outputTokens = new address[](1);
+        info2.outputTokens[0] = _wants[1];
     }
 
     function getPositionDetail()
@@ -105,8 +125,15 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         return CURVE_POOL.add_liquidity([_amounts[0], _amounts[1]], 0, true);
     }
 
-    function curveRemoveLiquidity(uint256 liquidity) internal override {
-        CURVE_POOL.remove_liquidity(liquidity, [uint256(0), uint256(0)], true);
+    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
+        if (_outputCode == 0) {
+            CURVE_POOL.remove_liquidity(liquidity, [uint256(0), uint256(0)], true);
+        } else if (_outputCode == 1) {
+            CURVE_POOL.remove_liquidity_one_coin(liquidity, 0, 0, true);
+        } else if (_outputCode == 2) {
+            CURVE_POOL.remove_liquidity_one_coin(liquidity, 1, 0, true);
+        }
+
     }
 
     function claimRewards()

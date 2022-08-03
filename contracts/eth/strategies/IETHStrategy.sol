@@ -61,9 +61,11 @@ interface IETHStrategy {
     /// @notice Strategy repay the funds to vault
     /// @param _withdrawShares Numerator
     /// @param _totalShares Denominator
-    function repay(uint256 _withdrawShares, uint256 _totalShares)
-        external
-        returns (address[] memory _assets, uint256[] memory _amounts);
+    function repay(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _ouputCode
+    ) external returns (address[] memory _assets, uint256[] memory _amounts);
 
     /// @notice getter isWantRatioIgnorable
     function isWantRatioIgnorable() external view returns (bool);

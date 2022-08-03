@@ -49,6 +49,19 @@ abstract contract YearnEarnBaseStrategy is BaseStrategy {
         _ratios[0] = 1e18;
     }
 
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants;
+    }
+
     function getPositionDetail()
         public
         view
@@ -62,7 +75,7 @@ abstract contract YearnEarnBaseStrategy is BaseStrategy {
     {
         _tokens = wants;
         _amounts = new uint256[](1);
-        
+
         _amounts[0] = _estimatedDepositedAssets() + balanceOfToken(underlyingToken);
 
         console.log("[%s] getPositionDetail: %s", this.name(), _amounts[0]);
@@ -81,15 +94,21 @@ abstract contract YearnEarnBaseStrategy is BaseStrategy {
      */
     function _estimatedDepositedAssets() public view returns (uint256 depositedAssets) {
         IYearnVault _yVault = yVault;
-        depositedAssets = _yVault.calcPoolValueInToken()  * balanceOfToken(address(_yVault)) / _yVault.totalSupply();
+        depositedAssets =
+            (_yVault.calcPoolValueInToken() * balanceOfToken(address(_yVault))) /
+            _yVault.totalSupply();
         console.log("[%s] _estimatedDepositedAssets:%s", this.name(), depositedAssets);
     }
 
     // ==== Internal ==== //
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         IYearnVault _yVault = yVault;
-        uint256 _lpAmount = balanceOfToken(address(_yVault)) * _withdrawShares / _totalShares;
-        if(_lpAmount > 0){
+        uint256 _lpAmount = (balanceOfToken(address(_yVault)) * _withdrawShares) / _totalShares;
+        if (_lpAmount > 0) {
             _yVault.withdraw(_lpAmount);
         }
     }

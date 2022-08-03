@@ -27,7 +27,7 @@ contract ConvexCompoundStrategy is ConvexBaseStrategy {
         return "1.0.0";
     }
 
-    function getRewardPool() internal pure override returns(IConvexReward) {
+    function getRewardPool() internal pure override returns (IConvexReward) {
         return IConvexReward(address(0xf34DFF761145FF0B05e917811d488B441F33a968));
     }
 
@@ -42,9 +42,26 @@ contract ConvexCompoundStrategy is ConvexBaseStrategy {
         returns (address[] memory _assets, uint256[] memory _ratios)
     {
         _assets = wants;
-        _ratios = new uint256[](_assets.length);        
-        _ratios[0] = (ICToken(cDAI).balanceOf(curvePool) * (ICToken(cDAI).totalBorrows()) /ICToken(cDAI).totalSupply());
-        _ratios[1] = (ICToken(cUSDC).balanceOf(curvePool) * (ICToken(cUSDC).totalBorrows()) /ICToken(cUSDC).totalSupply());
+        _ratios = new uint256[](_assets.length);
+        _ratios[0] = ((ICToken(cDAI).balanceOf(curvePool) * (ICToken(cDAI).totalBorrows())) /
+            ICToken(cDAI).totalSupply());
+        _ratios[1] = ((ICToken(cUSDC).balanceOf(curvePool) * (ICToken(cUSDC).totalBorrows())) /
+            ICToken(cUSDC).totalSupply());
+    }
+
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants; //USDC
+
+        // not support remove_liquidity_one_coin
     }
 
     function getPositionDetail()
@@ -93,15 +110,13 @@ contract ConvexCompoundStrategy is ConvexBaseStrategy {
         return balanceOfToken(lpToken);
     }
 
-    function curveRemoveLiquidity(uint256 removeLiquidity) internal override {
+    function curveRemoveLiquidity(uint256 removeLiquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool(curvePool).remove_liquidity(removeLiquidity, [uint256(0), uint256(0)]);
         uint256 daiBalance = balanceOfToken(cDAI);
-        console.log("daiBalance:%d", daiBalance);
         if (daiBalance > 0) {
             ICToken(cDAI).redeem(daiBalance);
         }
         uint256 usdcBalance = balanceOfToken(cUSDC);
-        console.log("usdcBalance:%d", usdcBalance);
         if (usdcBalance > 0) {
             ICToken(cUSDC).redeem(usdcBalance);
         }

@@ -46,12 +46,13 @@ contract MockVault is AccessControlMixin {
     }
 
     /// @notice Withdraw the funds from specified strategy.
-    function redeem(address _strategy, uint256 _usdValue) external payable {
+    function redeem(address _strategy, uint256 _usdValue,uint256 _outputCode) external payable {
         uint256 totalValue = IETHStrategy(_strategy).estimatedTotalAssets();
         if (_usdValue > totalValue) {
             _usdValue = totalValue;
         }
-        IETHStrategy(_strategy).repay(_usdValue, totalValue);
+        console.log('outputCode:',_outputCode);
+        IETHStrategy(_strategy).repay(_usdValue, totalValue,_outputCode);
     }
 
     function report() external {}

@@ -34,7 +34,7 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
 
     function getConvexWants() internal pure override returns (address[] memory) {
         address[] memory _wants = new address[](2);
-        _wants[0] = NATIVE_TOKEN;
+        _wants[0] = ETHToken.NATIVE_TOKEN;
         _wants[1] = stETH;
         return _wants;
     }
@@ -73,6 +73,23 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         for (uint256 i = 0; i < _assets.length; i++) {
             _ratios[i] = getCurvePool().balances(i);
         }
+    }
+
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info = outputsInfo[0];
+        info.outputCode = 0;
+        info.outputTokens = wants;
+
+        OutputInfo memory info1 = outputsInfo[1];
+        info1.outputCode = 1;
+        info1.outputTokens = new address[](1);
+        info1.outputTokens[0] = ETHToken.NATIVE_TOKEN;
+
+        OutputInfo memory info2 = outputsInfo[2];
+        info2.outputCode = 2;
+        info2.outputTokens = new address[](1);
+        info2.outputTokens[0] = stETH;
     }
 
     function getPositionDetail()
@@ -135,7 +152,14 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         return getCurvePool().add_liquidity(depositArray, 0);
     }
 
-    function curveRemoveLiquidity(uint256 liquidity) internal override {
-        getCurvePool().remove_liquidity(liquidity, [uint256(0), uint256(0)]);
+    function curveRemoveLiquidity(uint256 liquidity,uint256 _outputCode) internal override {
+        ICurveLiquidityPoolPayable pool = getCurvePool();
+        if (_outputCode == 0){
+            pool.remove_liquidity(liquidity, [uint256(0), uint256(0)]);
+        } else if (_outputCode == 1){
+            pool.remove_liquidity_one_coin(liquidity,0,0);
+        } else if (_outputCode == 2){
+            pool.remove_liquidity_one_coin(liquidity,1,0);
+        }
     }
 }

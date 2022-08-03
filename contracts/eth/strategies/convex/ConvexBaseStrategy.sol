@@ -48,16 +48,16 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
 
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts) internal virtual returns (uint256);
 
-    function curveRemoveLiquidity(uint256 liquidity) internal virtual;
+    function curveRemoveLiquidity(uint256 _liquidity,uint256 _outputCode) internal virtual;
 
     function sellWETH2Want() internal virtual;
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
         if (_lpAmount > 0) {
             // https://etherscan.io/tx/0x9afc916be07738a7a4556d555c59e775d17ddc32d6eb48cdab83e006cd613394
             getRewardPool().withdrawAndUnwrap(_lpAmount, false);
-            curveRemoveLiquidity(_lpAmount);
+            curveRemoveLiquidity(_lpAmount,_outputCode);
         }
     }
 

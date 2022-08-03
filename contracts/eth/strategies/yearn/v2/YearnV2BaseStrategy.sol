@@ -33,6 +33,13 @@ abstract contract YearnV2BaseStrategy is ETHBaseStrategy {
         _ratios[0] = 1e18;
     }
 
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info = outputsInfo[0];
+        info.outputCode = 0;
+        info.outputTokens = wants;
+    }
+
     function getPositionDetail()
         public
         view
@@ -70,7 +77,7 @@ abstract contract YearnV2BaseStrategy is ETHBaseStrategy {
         yVault.deposit(_amounts[0]);
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal override {
         IYearnVaultV2 yVault = getYVault();
         uint256 balanceOf = yVault.balanceOf(address(this));
         uint256 pricePerShare = yVault.pricePerShare();
