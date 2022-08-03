@@ -50,8 +50,8 @@ contract ETHVaultAdmin is ETHVaultStorage {
      * @dev Sets the Maximum timestamp between two reported
      */
     function setMaxTimestampBetweenTwoReported(uint256 _maxTimestampBetweenTwoReported)
-    external
-    isVaultManager
+        external
+        isVaultManager
     {
         maxTimestampBetweenTwoReported = _maxTimestampBetweenTwoReported;
         emit MaxTimestampBetweenTwoReportedChanged(_maxTimestampBetweenTwoReported);
@@ -70,8 +70,8 @@ contract ETHVaultAdmin is ETHVaultStorage {
      *      Setting to the zero disables this feature.
      */
     function setUnderlyingUnitsPerShare(uint256 _underlyingUnitsPerShare)
-    external
-    onlyRole(BocRoles.GOV_ROLE)
+        external
+        onlyRole(BocRoles.GOV_ROLE)
     {
         require(
             underlyingUnitsPerShare == 0 && _underlyingUnitsPerShare > 0,
@@ -116,7 +116,10 @@ contract ETHVaultAdmin is ETHVaultStorage {
         emit TrusteeFeeBpsChanged(_basis);
     }
 
-    function setStrategyEnforceChangeLimit(address _strategy, bool _enabled) external isVaultManager {
+    function setStrategyEnforceChangeLimit(address _strategy, bool _enabled)
+        external
+        isVaultManager
+    {
         strategies[_strategy].enforceChangeLimit = _enabled;
     }
 
@@ -194,8 +197,8 @@ contract ETHVaultAdmin is ETHVaultStorage {
             address _strategy = strategyAdd.strategy;
             require(
                 (_strategy != ZERO_ADDRESS) &&
-                (!strategySet.contains(_strategy)) &&
-                (IETHStrategy(_strategy).vault() == address(this)),
+                    (!strategySet.contains(_strategy)) &&
+                    (IETHStrategy(_strategy).vault() == address(this)),
                 "Strategy is invalid"
             );
             _strategies[i] = _strategy;
@@ -219,11 +222,11 @@ contract ETHVaultAdmin is ETHVaultStorage {
     ) internal {
         //Add strategy to approved strategies
         strategies[strategy] = StrategyParams({
-        lastReport : block.timestamp,
-        totalDebt : 0,
-        profitLimitRatio : _profitLimitRatio,
-        lossLimitRatio : _lossLimitRatio,
-        enforceChangeLimit : true
+            lastReport: block.timestamp,
+            totalDebt: 0,
+            profitLimitRatio: _profitLimitRatio,
+            lossLimitRatio: _lossLimitRatio,
+            enforceChangeLimit: true
         });
         strategySet.add(strategy);
     }
@@ -249,7 +252,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
      */
     function _removeStrategy(address _addr, bool _force) internal {
         // Withdraw all assets
-        try IETHStrategy(_addr).repay(MAX_BPS, MAX_BPS) {} catch {
+        try IETHStrategy(_addr).repay(MAX_BPS, MAX_BPS, 0) {} catch {
             if (!_force) {
                 revert();
             }

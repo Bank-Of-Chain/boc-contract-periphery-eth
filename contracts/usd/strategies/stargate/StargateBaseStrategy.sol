@@ -13,14 +13,12 @@ import "../../../external/stargate/IStargatePool.sol";
 abstract contract StargateBaseStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public constant rewardsTokenSTG = address(0xAf5191B0De278C7286d6C7CC6ab6BB8A73bA2Cd6);
-    IStargateStakePool internal constant stargateStakePool = IStargateStakePool(0xB0D502E938ed5f4df2E681fE6E419ff29631d62b);
+    IStargateStakePool internal constant stargateStakePool =
+        IStargateStakePool(0xB0D502E938ed5f4df2E681fE6E419ff29631d62b);
     IStargateRouterPool internal stargateRouterPool;
     IStargatePool internal stargatePool;
 
-    function _initialize(
-        address _vault,
-        address _harvester
-    ) internal {
+    function _initialize(address _vault, address _harvester) internal {
         stargatePool = IStargatePool(getLpToken());
         stargateRouterPool = IStargateRouterPool(getRouter());
         super._initialize(_vault, _harvester, uint16(ProtocolEnum.Stargate), getStargateWants());
@@ -40,28 +38,54 @@ abstract contract StargateBaseStrategy is BaseClaimableStrategy {
 
     function getPoolId() internal pure virtual returns (uint256);
 
-    function getWantsInfo() public view override returns (address[] memory _assets, uint256[] memory _ratios){
+    function getWantsInfo()
+        public
+        view
+        override
+        returns (address[] memory _assets, uint256[] memory _ratios)
+    {
         _assets = wants;
         _ratios = new uint256[](1);
         _ratios[0] = 1e18;
     }
 
-    function getPositionDetail() public view override returns (
-        address[] memory _tokens,
-        uint256[] memory _amounts,
-        bool isUsd,
-        uint256 usdValue
-    ){
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = getStargateWants();
+    }
+
+    function getPositionDetail()
+        public
+        view
+        override
+        returns (
+            address[] memory _tokens,
+            uint256[] memory _amounts,
+            bool isUsd,
+            uint256 usdValue
+        )
+    {
         IStargatePool stargatePoolTmp = stargatePool;
         uint256 localDecimals = stargatePoolTmp.localDecimals();
         uint256 decimals = stargatePoolTmp.decimals();
         _tokens = wants;
         _amounts = new uint256[](1);
-        _amounts[0] = balanceOfLpToken()* 10**(localDecimals-decimals) + balanceOfToken(_tokens[0]);
+        _amounts[0] =
+            balanceOfLpToken() *
+            10**(localDecimals - decimals) +
+            balanceOfToken(_tokens[0]);
     }
 
     function balanceOfLpToken() private view returns (uint256 lpAmount) {
-        (lpAmount,) = stargateStakePool.userInfo(getStakePoolInfoId(), address(this));
+        (lpAmount, ) = stargateStakePool.userInfo(getStakePoolInfoId(), address(this));
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
@@ -69,10 +93,17 @@ abstract contract StargateBaseStrategy is BaseClaimableStrategy {
         uint256 localDecimals = stargatePoolTmp.localDecimals();
         uint256 decimals = stargatePoolTmp.decimals();
         uint256 totalLiquidity = stargatePoolTmp.totalLiquidity();
-        return totalLiquidity != 0 ? queryTokenValue(wants[0], totalLiquidity * 10**(localDecimals-decimals)) : 0;
+        return
+            totalLiquidity != 0
+                ? queryTokenValue(wants[0], totalLiquidity * 10**(localDecimals - decimals))
+                : 0;
     }
 
-    function claimRewards() internal override returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts){
+    function claimRewards()
+        internal
+        override
+        returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
+    {
         uint256 stakePoolId = getStakePoolInfoId();
         _rewardTokens = new address[](1);
         _rewardTokens[0] = rewardsTokenSTG;
@@ -83,7 +114,10 @@ abstract contract StargateBaseStrategy is BaseClaimableStrategy {
         }
     }
 
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        override
+    {
         // addLiquidity
         if (_amounts[0] > 0) {
             address lpTokenTmp = getLpToken();
@@ -99,7 +133,11 @@ abstract contract StargateBaseStrategy is BaseClaimableStrategy {
         }
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
         if (_lpAmount > 0) {
             // unstake liquidity

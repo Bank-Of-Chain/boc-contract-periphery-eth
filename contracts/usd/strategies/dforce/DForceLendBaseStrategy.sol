@@ -14,12 +14,10 @@ import "../../../external/dforce/IRewardDistributorV3.sol";
 abstract contract DForceLendBaseStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address internal constant DF = 0x431ad2ff6a9C365805eBaD47Ee021148d6f7DBe0;
-    IRewardDistributorV3 internal constant rewardDistributorV3 = IRewardDistributorV3(0x8fAeF85e436a8dd85D8E636Ea22E3b90f1819564);
+    IRewardDistributorV3 internal constant rewardDistributorV3 =
+        IRewardDistributorV3(0x8fAeF85e436a8dd85D8E636Ea22E3b90f1819564);
 
-    function _initialize(
-        address _vault,
-        address _harvester
-    ) internal {
+    function _initialize(address _vault, address _harvester) internal {
         super._initialize(_vault, _harvester, uint16(ProtocolEnum.DForce), getDForceWants());
     }
 
@@ -42,6 +40,19 @@ abstract contract DForceLendBaseStrategy is BaseClaimableStrategy {
         _ratios[0] = 1e18;
     }
 
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = getDForceWants();
+    }
+
     function getPositionDetail()
         public
         view
@@ -56,12 +67,16 @@ abstract contract DForceLendBaseStrategy is BaseClaimableStrategy {
         address iTokenTmp = getIToken();
         _tokens = wants;
         _amounts = new uint256[](1);
-        _amounts[0] = (balanceOfToken(iTokenTmp) * DFiToken(iTokenTmp).exchangeRateStored()) / 1e18 + balanceOfToken(_tokens[0]);
+        _amounts[0] =
+            (balanceOfToken(iTokenTmp) * DFiToken(iTokenTmp).exchangeRateStored()) /
+            1e18 +
+            balanceOfToken(_tokens[0]);
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
         address iTokenTmp = getIToken();
-        uint256 iTokenTotalSupply = (DFiToken(iTokenTmp).totalSupply() * DFiToken(iTokenTmp).exchangeRateStored()) / 1e18;
+        uint256 iTokenTotalSupply = (DFiToken(iTokenTmp).totalSupply() *
+            DFiToken(iTokenTmp).exchangeRateStored()) / 1e18;
         return iTokenTotalSupply != 0 ? queryTokenValue(wants[0], iTokenTotalSupply) : 0;
     }
 
@@ -95,7 +110,11 @@ abstract contract DForceLendBaseStrategy is BaseClaimableStrategy {
         }
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         address iTokenTmp = getIToken();
         uint256 _lpAmount = (balanceOfToken(iTokenTmp) * _withdrawShares) / _totalShares;
         if (_lpAmount > 0) {

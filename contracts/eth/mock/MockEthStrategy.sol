@@ -51,6 +51,15 @@ contract MockEthStrategy is ETHBaseStrategy {
         _ratios[1] = 200;
     }
 
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info = outputsInfo[0];
+        info.outputCode = 0;
+        info.outputTokens = new address[](2);
+        info.outputTokens[0] = NATIVE_TOKEN;
+        info.outputTokens[1] = stETH;
+    }
+
     /// @notice Returns the position details of the strategy.
     function getPositionDetail()
         public
@@ -109,7 +118,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         mock3rdPool.deposit{value: _amounts[0]}(_assets, _amounts);
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares)
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode)
         internal
         override
     {

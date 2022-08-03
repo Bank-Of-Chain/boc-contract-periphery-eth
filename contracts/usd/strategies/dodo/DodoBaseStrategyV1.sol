@@ -48,12 +48,33 @@ abstract contract DodoBaseStrategyV1 is BaseClaimableStrategy, DodoPoolV1Actions
         return "1.0.0";
     }
 
-    function getWantsInfo() public view override returns (address[] memory _assets, uint256[] memory _ratios) {
+    function getWantsInfo()
+        public
+        view
+        override
+        returns (address[] memory _assets, uint256[] memory _ratios)
+    {
         _assets = wants;
-        (uint256 baseExpectedTarget, uint256 quoteExpectedTarget) = DodoVaultV1(lpTokenPool).getExpectedTarget();
+        (uint256 baseExpectedTarget, uint256 quoteExpectedTarget) = DodoVaultV1(lpTokenPool)
+            .getExpectedTarget();
         _ratios = new uint256[](_assets.length);
         _ratios[0] = baseExpectedTarget;
         _ratios[1] = quoteExpectedTarget;
+    }
+
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants;
+
+        // not support remove_liquidity_one_coin
     }
 
     function getPositionDetail()
@@ -89,8 +110,12 @@ abstract contract DodoBaseStrategyV1 is BaseClaimableStrategy, DodoPoolV1Actions
         uint256[] memory lpTokenAmounts = balanceOfLpTokens();
         uint256[] memory amounts = new uint256[](2);
         address _lpTokenPool = lpTokenPool;
-        amounts[0] = (lpTokenAmounts[0] * DodoVaultV1(_lpTokenPool)._TARGET_BASE_TOKEN_AMOUNT_()) / DodoVaultV1(_lpTokenPool).getTotalBaseCapital();
-        amounts[1] = (lpTokenAmounts[1] * DodoVaultV1(_lpTokenPool)._TARGET_QUOTE_TOKEN_AMOUNT_()) / DodoVaultV1(_lpTokenPool).getTotalQuoteCapital();
+        amounts[0] =
+            (lpTokenAmounts[0] * DodoVaultV1(_lpTokenPool)._TARGET_BASE_TOKEN_AMOUNT_()) /
+            DodoVaultV1(_lpTokenPool).getTotalBaseCapital();
+        amounts[1] =
+            (lpTokenAmounts[1] * DodoVaultV1(_lpTokenPool)._TARGET_QUOTE_TOKEN_AMOUNT_()) /
+            DodoVaultV1(_lpTokenPool).getTotalQuoteCapital();
         return amounts;
     }
 
@@ -112,14 +137,22 @@ abstract contract DodoBaseStrategyV1 is BaseClaimableStrategy, DodoPoolV1Actions
         return targetPoolTotalAssets;
     }
 
-    function getPendingRewards() internal view returns (address[] memory _rewardsTokens, uint256[] memory _pendingAmounts) {
+    function getPendingRewards()
+        internal
+        view
+        returns (address[] memory _rewardsTokens, uint256[] memory _pendingAmounts)
+    {
         _rewardsTokens = new address[](1);
         _rewardsTokens[0] = DODO;
         _pendingAmounts = new uint256[](1);
         _pendingAmounts[0] = balanceOfToken(DODO) + getPendingReward();
     }
 
-    function claimRewards() internal override returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts) {
+    function claimRewards()
+        internal
+        override
+        returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
+    {
         (_rewardTokens, _claimAmounts) = getPendingRewards();
         if (_claimAmounts[0] > 0) {
             __claimRewards(BASE_LP_TOKEN);
@@ -127,7 +160,10 @@ abstract contract DodoBaseStrategyV1 is BaseClaimableStrategy, DodoPoolV1Actions
         }
     }
 
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        override
+    {
         uint8 rStatus = DodoVaultV1(lpTokenPool)._R_STATUS_();
         // Deposit fewer coins first ,so than will get rewards
         if (rStatus == 2) {
@@ -165,31 +201,44 @@ abstract contract DodoBaseStrategyV1 is BaseClaimableStrategy, DodoPoolV1Actions
         }
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         address _lpTokenPool = lpTokenPool;
         uint256 _baseWithdrawAmount = (balanceOfBaseLpToken() * _withdrawShares) / _totalShares;
         uint256 _quoteWithdrawAmount = (balanceOfQuoteLpToken() * _withdrawShares) / _totalShares;
-        (uint256 baseExpectedTarget, uint256 quoteExpectedTarget) = DodoVaultV1(_lpTokenPool).getExpectedTarget();
+        (uint256 baseExpectedTarget, uint256 quoteExpectedTarget) = DodoVaultV1(_lpTokenPool)
+            .getExpectedTarget();
         uint256 totalBaseCapital = DodoVaultV1(_lpTokenPool).getTotalBaseCapital();
         uint256 totalQuoteCapital = DodoVaultV1(_lpTokenPool).getTotalQuoteCapital();
         uint8 rStatus = DodoVaultV1(_lpTokenPool)._R_STATUS_();
         if (rStatus == 2) {
             if (_baseWithdrawAmount > 0) {
                 __withdrawLpToken(BASE_LP_TOKEN, _baseWithdrawAmount);
-                DodoVaultV1(_lpTokenPool).withdrawBase((_baseWithdrawAmount * baseExpectedTarget) / totalBaseCapital);
+                DodoVaultV1(_lpTokenPool).withdrawBase(
+                    (_baseWithdrawAmount * baseExpectedTarget) / totalBaseCapital
+                );
             }
             if (_quoteWithdrawAmount > 0) {
                 __withdrawLpToken(QUOTE_LP_TOKEN, _quoteWithdrawAmount);
-                DodoVaultV1(_lpTokenPool).withdrawQuote((_quoteWithdrawAmount * quoteExpectedTarget) / totalQuoteCapital);
+                DodoVaultV1(_lpTokenPool).withdrawQuote(
+                    (_quoteWithdrawAmount * quoteExpectedTarget) / totalQuoteCapital
+                );
             }
         } else {
             if (_quoteWithdrawAmount > 0) {
                 __withdrawLpToken(QUOTE_LP_TOKEN, _quoteWithdrawAmount);
-                DodoVaultV1(_lpTokenPool).withdrawQuote((_quoteWithdrawAmount * quoteExpectedTarget) / totalQuoteCapital);
+                DodoVaultV1(_lpTokenPool).withdrawQuote(
+                    (_quoteWithdrawAmount * quoteExpectedTarget) / totalQuoteCapital
+                );
             }
             if (_baseWithdrawAmount > 0) {
                 __withdrawLpToken(BASE_LP_TOKEN, _baseWithdrawAmount);
-                DodoVaultV1(_lpTokenPool).withdrawBase((_baseWithdrawAmount * baseExpectedTarget) / totalBaseCapital);
+                DodoVaultV1(_lpTokenPool).withdrawBase(
+                    (_baseWithdrawAmount * baseExpectedTarget) / totalBaseCapital
+                );
             }
         }
     }

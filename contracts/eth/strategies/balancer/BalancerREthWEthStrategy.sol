@@ -101,6 +101,15 @@ contract BalancerREthWEthStrategy is ETHBaseClaimableStrategy {
         (, _ratios, ) = balancerVault.getPoolTokens(poolId);
     }
 
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info = outputsInfo[0];
+        info.outputCode = 0;
+        info.outputTokens = new address[](1);
+        info.outputTokens[0] = RETH;
+        info.outputTokens[1] = WETH;
+    }
+
     /// @notice Returns the position details or ETH value of the strategy.
     function getPositionDetail()
         public
@@ -185,7 +194,7 @@ contract BalancerREthWEthStrategy is ETHBaseClaimableStrategy {
         IStakingLiquidityGauge(gauge).deposit(lpAmount);
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal override {
         IStakingLiquidityGauge stakingLiquidityGauge = IStakingLiquidityGauge(gauge);
         uint256 _lpAmount = (stakingLiquidityGauge.balanceOf(address(this)) * _withdrawShares) / _totalShares;
         if (_lpAmount > 0) {

@@ -45,6 +45,13 @@ contract StakeWiseReth2Seth2500Strategy is UniswapV3BaseStrategy {
         _ratios[0] = 1e18;
     }
 
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info = outputsInfo[0];
+        info.outputCode = 0;
+        info.outputTokens = wants;
+    }
+
     function getPositionDetail() public view override returns (address[] memory _tokens, uint256[] memory _amounts, bool isETH, uint256 ethValue) {
         _tokens = new address[](2);
         _tokens[0] = token0;
@@ -91,8 +98,8 @@ contract StakeWiseReth2Seth2500Strategy is UniswapV3BaseStrategy {
         super.depositTo3rdPool(_assets, _amounts);
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
-        super.withdrawFrom3rdPool(_withdrawShares, _totalShares);
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal override {
+        super.withdrawFrom3rdPool(_withdrawShares, _totalShares,_outputCode);
         IERC20(rETH2).approve(uniswapV3Router, 0);
         uint256 rETH2Amount = balanceOfToken(rETH2);
         IERC20(rETH2).approve(uniswapV3Router, rETH2Amount);

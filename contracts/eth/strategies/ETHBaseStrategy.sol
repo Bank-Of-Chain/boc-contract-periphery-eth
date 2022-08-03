@@ -17,9 +17,19 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using StableMath for uint256;
 
+    struct OutputInfo {
+        uint256 outputCode; //0：default path，Greater than 0：specify output path
+        address[] outputTokens; //output tokens
+    }
+
     event Borrow(address[] _assets, uint256[] _amounts);
 
-    event Repay(uint256 _withdrawShares, uint256 _totalShares, address[] _assets, uint256[] _amounts);
+    event Repay(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        address[] _assets,
+        uint256[] _amounts
+    );
 
     event SetIsWantRatioIgnorable(bool oldValue, bool newValue);
 
@@ -66,12 +76,19 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     }
 
     /// @notice Provide the strategy need underlying token and ratio
-    function getWantsInfo() external view virtual returns (address[] memory _assets, uint256[] memory _ratios);
+    function getWantsInfo()
+        external
+        view
+        virtual
+        returns (address[] memory _assets, uint256[] memory _ratios);
 
     /// @notice Provide the strategy need underlying tokens
     function getWants() external view returns (address[] memory) {
         return wants;
     }
+
+    // @notice Provide the strategy output path when withdraw.
+    function getOutputsInfo() external view virtual returns (OutputInfo[] memory outputsInfo);
 
     /// @notice Returns the position details or ETH value of the strategy.
     function getPositionDetail()
@@ -87,7 +104,12 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
 
     /// @notice Total assets of strategy in ETH.
     function estimatedTotalAssets() external view returns (uint256 assetsInETH) {
-        (address[] memory _tokens, uint256[] memory _amounts, bool isETH, uint256 ethValue) = getPositionDetail();
+        (
+            address[] memory _tokens,
+            uint256[] memory _amounts,
+            bool isETH,
+            uint256 ethValue
+        ) = getPositionDetail();
         if (isETH) {
             assetsInETH = ethValue;
         } else {
@@ -111,8 +133,11 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     /// @notice Strategy borrow funds from vault
     /// @param _assets borrow token address
     /// @param _amounts borrow token amount
-    function borrow(address[] memory _assets, uint256[] memory _amounts) external payable onlyVault {
-
+    function borrow(address[] memory _assets, uint256[] memory _amounts)
+        external
+        payable
+        onlyVault
+    {
         depositTo3rdPool(_assets, _amounts);
 
         emit Borrow(_assets, _amounts);
@@ -121,12 +146,11 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     /// @notice Strategy repay the funds to vault
     /// @param _repayShares Numerator
     /// @param _totalShares Denominator
-    function repay(uint256 _repayShares, uint256 _totalShares)
-        public
-        virtual
-        onlyVault
-        returns (address[] memory _assets, uint256[] memory _amounts)
-    {
+    function repay(
+        uint256 _repayShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) public virtual onlyVault returns (address[] memory _assets, uint256[] memory _amounts) {
         require(_repayShares > 0 && _totalShares >= _repayShares, "cannot repay 0 shares");
         _assets = wants;
         uint256[] memory balancesBefore = new uint256[](_assets.length);
@@ -134,11 +158,15 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
             balancesBefore[i] = balanceOfToken(_assets[i]);
         }
 
-        withdrawFrom3rdPool(_repayShares, _totalShares);
+        withdrawFrom3rdPool(_repayShares, _totalShares,_outputCode);
         _amounts = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
             uint256 balanceAfter = balanceOfToken(_assets[i]);
-            _amounts[i] = balanceAfter - balancesBefore[i] + (balancesBefore[i] * _repayShares) / _totalShares;
+            _amounts[i] =
+                balanceAfter -
+                balancesBefore[i] +
+                (balancesBefore[i] * _repayShares) /
+                _totalShares;
         }
 
         transferTokensToTarget(address(vault), _assets, _amounts);
@@ -149,12 +177,18 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     /// @notice Strategy deposit funds to 3rd pool.
     /// @param _assets deposit token address
     /// @param _amounts deposit token amount
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal virtual;
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        virtual;
 
     /// @notice Strategy withdraw the funds from 3rd pool.
     /// @param _withdrawShares Numerator
     /// @param _totalShares Denominator
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal virtual;
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal virtual;
 
     function balanceOfToken(address tokenAddress) internal view returns (uint256) {
         if (tokenAddress == NATIVE_TOKEN) {
@@ -168,9 +202,12 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
         return type(uint256).max;
     }
 
-
     /// @notice Query the ETH value of Token.
-    function queryTokenValueInETH(address _token, uint256 _amount) internal view returns (uint256 valueInETH) {
+    function queryTokenValueInETH(address _token, uint256 _amount)
+        internal
+        view
+        returns (uint256 valueInETH)
+    {
         if (_token == NATIVE_TOKEN) {
             valueInETH = _amount;
         } else {
@@ -201,7 +238,6 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
             }
         }
     }
-
 
     fallback() external payable {}
 

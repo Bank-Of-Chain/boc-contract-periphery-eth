@@ -216,11 +216,23 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
         override
         returns (address[] memory _assets, uint256[] memory _ratios)
     {
-        _assets = new address[](1);
-        _assets[0] = wants[0];
+        _assets = wants;
 
         _ratios = new uint256[](1);
         _ratios[0] = 1e18;
+    }
+
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info0 = outputsInfo[0];
+        info0.outputCode = 0;
+        info0.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -687,7 +699,11 @@ abstract contract ConvexIBUSDCBaseStrategy is Initializable, BaseStrategy {
         }
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         // claim when withdraw all.
         if (_withdrawShares == _totalShares) _claimAndInvest();
         uint256 totalStaking = balanceOfToken(getRewardPool());

@@ -102,6 +102,13 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
         _ratios[1] = amount1;
     }
 
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info = outputsInfo[0];
+        info.outputCode = 0;
+        info.outputTokens = wants;
+    }
+
     function getSpecifiedRangesOfTick(int24 tick) internal view returns (int24 tickFloor, int24 tickCeil, int24 tickLower, int24 tickUpper) {
         tickFloor = _floor(tick);
         tickCeil = tickFloor + getTickSpacing();
@@ -204,7 +211,7 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
         console.log('UniswapV3BaseStrategy depositTo3rdPool liquidity after: ', __getLiquidityForNFT(baseMintInfo.tokenId));
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal virtual override {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal virtual override {
         console.log('UniswapV3BaseStrategy withdrawFrom3rdPool balanceOfLpToken0 before: ', balanceOfLpToken(baseMintInfo.tokenId));
         console.log('UniswapV3BaseStrategy withdrawFrom3rdPool balanceOfLpToken1 before: ', balanceOfLpToken(limitMintInfo.tokenId));
         withdraw(baseMintInfo.tokenId, _withdrawShares, _totalShares);

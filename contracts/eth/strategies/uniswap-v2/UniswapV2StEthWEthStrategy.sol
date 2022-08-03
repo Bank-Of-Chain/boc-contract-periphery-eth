@@ -41,6 +41,13 @@ contract UniswapV2StEthWEthStrategy is ETHBaseStrategy, UniswapV2LiquidityAction
         _ratios[1] = reserve1;
     }
 
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
+        outputsInfo = new OutputInfo[](1);
+        OutputInfo memory info = outputsInfo[0];
+        info.outputCode = 0;
+        info.outputTokens = wants;
+    }
+
     function getPositionDetail()
         public
         view
@@ -86,7 +93,7 @@ contract UniswapV2StEthWEthStrategy is ETHBaseStrategy, UniswapV2LiquidityAction
         __uniswapV2Lend(address(this), _assets[0], _assets[1], _amounts[0], _amounts[1], 0, 0);
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal virtual override {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal virtual override {
         uint256 withdrawAmount = (balanceOfToken(address(uniswapV2Pair)) * _withdrawShares) / _totalShares;
         if (withdrawAmount > 0) {
             __uniswapV2Redeem(address(this), address(uniswapV2Pair), withdrawAmount, stETH, wETH, 0, 0);
