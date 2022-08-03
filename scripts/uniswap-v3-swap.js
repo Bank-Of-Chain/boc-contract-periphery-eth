@@ -97,6 +97,30 @@ const main = async () => {
                     tokenAmount * 10 ** tokenDecimals
                 );
                 break;
+            case address.WETH_ADDRESS:
+                console.log('top up WETH');
+                token = await ERC20.at(address.WETH_ADDRESS);
+                tokenDecimals = await token.decimals();
+                await topUp.topUpWETHByAddress(tokenAmount * 10 ** tokenDecimals, investor);
+                break;
+            case address.rocketPoolETH_ADDRESS:
+                console.log('top up rocketPoolETH');
+                token = await ERC20.at(address.rocketPoolETH_ADDRESS);
+                tokenDecimals = await token.decimals();
+                await topUp.topUpRocketPoolEthByAddress(tokenAmount * 10 ** tokenDecimals, investor);
+                break;
+            case address.sETH2_ADDRESS:
+                console.log('top up sETH2');
+                token = await ERC20.at(address.sETH2_ADDRESS);
+                tokenDecimals = await token.decimals();
+                await topUp.topUpSEth2ByAddress(tokenAmount * 10 ** tokenDecimals, investor);
+                break;
+            case address.rETH2_ADDRESS:
+                console.log('top up rETH2');
+                token = await ERC20.at(address.rETH2_ADDRESS);
+                tokenDecimals = await token.decimals();
+                await topUp.topUpREth2ByAddress(tokenAmount * 10 ** tokenDecimals, investor);
+                break;
             default:
                 throw new Error('Unsupported token!');
         }
