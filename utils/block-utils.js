@@ -41,7 +41,7 @@ async function advanceBlockV2(days) {
     ]);
     let afterBlock = await hre.network.provider.send("eth_getBlockByNumber", ["latest", false]);
     console.log('after mine block:%s, timestamp:%s', new BigNumber(afterBlock.number).toFixed(), new BigNumber(afterBlock.timestamp).toFixed());
-    // await modifier();
+    await modifier();
 }
 
 async function advanceBlockOfHours(hours) {
