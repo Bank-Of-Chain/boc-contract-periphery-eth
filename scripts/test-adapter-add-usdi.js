@@ -19,6 +19,7 @@ const {
 // === Constants === //
 const MFC = require("../config/mainnet-fork-test-config");
 
+// Set the vault_address in chain-1 which should add testAdapter
 const VAULT_ADDRESS = "0x5e6CB7E728E1C320855587E1D9C6F7972ebdD6D5";
 
 const main = async () => {
@@ -47,7 +48,6 @@ const main = async () => {
         const amount = new BigNumber(10).pow(6 + 10);
         await topUpUsdtByAddress(amount, testAdapter.address);
     }
-    console.log(12312312);
     for (const want of wants) {
         const token = await ERC20.at(want);
         const decimals = await token.decimals();
@@ -71,7 +71,6 @@ const main = async () => {
                 console.log(`WARN: missing mint for ${want}`);
         }
     }
-    console.log("testAdapter.address=", testAdapter.address);
     await exchangeAggregator.addExchangeAdapters([testAdapter.address]);
     console.log(await exchangeAggregator.getExchangeAdapters());
 };

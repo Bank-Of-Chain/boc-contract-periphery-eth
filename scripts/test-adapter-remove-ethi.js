@@ -4,6 +4,7 @@ const ExchangeAggregator = hre.artifacts.require("ExchangeAggregator");
 // === Utils === //
 const { findIndex } = require("lodash");
 
+// Set the vault_address in chain-1 which should remove testAdapter
 const VAULT_ADDRESS = "0x3a622DB2db50f463dF562Dc5F341545A64C580fc";
 
 const main = async () => {
