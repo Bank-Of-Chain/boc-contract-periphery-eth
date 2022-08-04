@@ -60,12 +60,6 @@ const strategiesList = [
         addToVault: true,
     },
     {
-        name: "ConvexBusdStrategy",
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
-    {
         name: "ConvexUsdpStrategy",
         profitLimitRatio: 100,
         lossLimitRatio: 100,
