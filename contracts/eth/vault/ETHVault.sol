@@ -223,7 +223,7 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /// @notice redeem the funds from specified strategy.
-    function redeem(address _strategy, uint256 _amount,uint256 _ouputCode)
+    function redeem(address _strategy, uint256 _amount, uint256 _outputCode)
         external
         isKeeper
         isActiveStrategy(_strategy)
@@ -235,7 +235,7 @@ contract ETHVault is ETHVaultStorage {
         (address[] memory _assets, uint256[] memory _amounts) = IETHStrategy(_strategy).repay(
             _amount,
             _strategyAssetValue,
-            _ouputCode
+            _outputCode
         );
         if (adjustPositionPeriod) {
             uint256 _assetsLength = _assets.length;
@@ -623,7 +623,12 @@ contract ETHVault is ETHVaultStorage {
                 _strategyWithdrawValue = _strategyTotalValue;
                 _needWithdrawValue -= _strategyWithdrawValue;
             } else {
-                _strategyWithdrawValue = _needWithdrawValue;
+                //If there is less than 0.001 ETH left, then all redemption
+                if(_needWithdrawValue + 1e15 >= _strategyTotalValue){
+                    _strategyWithdrawValue = _strategyTotalValue;
+                } else {
+                    _strategyWithdrawValue = _needWithdrawValue;
+                }
                 _needWithdrawValue = 0;
             }
             // console.log('start withdrawn from %s numerator %d denominator %d', _strategy, strategyWithdrawValue, strategyTotalValue);

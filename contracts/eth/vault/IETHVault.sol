@@ -166,7 +166,7 @@ interface IETHVault {
     external;
 
     /// @notice Withdraw the funds from specified strategy.
-    function redeem(address _strategy, uint256 _amount, uint256 _ouputCode) external;
+    function redeem(address _strategy, uint256 _amount, uint256 _outputCode) external;
 
     function exchange(
         address _fromToken,

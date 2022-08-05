@@ -251,10 +251,12 @@ contract ETHVaultAdmin is ETHVaultStorage {
      * @param _addr Address of the strategy to remove
      */
     function _removeStrategy(address _addr, bool _force) internal {
-        // Withdraw all assets
-        try IETHStrategy(_addr).repay(MAX_BPS, MAX_BPS, 0) {} catch {
-            if (!_force) {
-                revert();
+        if(strategies[_addr].totalDebt > 0){
+            // Withdraw all assets
+            try IETHStrategy(_addr).repay(MAX_BPS, MAX_BPS, 0) {} catch {
+                if (!_force) {
+                    revert();
+                }
             }
         }
 
@@ -274,7 +276,9 @@ contract ETHVaultAdmin is ETHVaultStorage {
                 }
             }
         }
-        totalDebt -= strategies[_addr].totalDebt;
+        if(strategies[_addr].totalDebt > 0){
+            totalDebt -= strategies[_addr].totalDebt;
+        }
         delete strategies[_addr];
         strategySet.remove(_addr);
         _removeStrategyFromQueue(_addr);

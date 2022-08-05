@@ -351,7 +351,7 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
       console.log("strategyTotalDebt:%s",strategyParam.totalDebt);
       if(strategyParam.totalDebt > 0){
         console.log('start redeeming:%s', strategyName);
-        await vault.redeem(strategyAddress, strategyParam.totalDebt);
+        await vault.redeem(strategyAddress, strategyParam.totalDebt, 0);
       }
 
       await logVaultInfo(`after redeem ${strategyName}`);
