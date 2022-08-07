@@ -12,26 +12,24 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address private constant cDAI = address(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
     address private constant cUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
-    address private constant curvePool = address(0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C);
 
-    function initialize(address _vault, address _harvester) public initializer {
+    function initialize(address _vault, address _harvester,string memory _name) public initializer {
         address[] memory _wants = new address[](3);
         _wants[0] = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
         _wants[1] = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
         _wants[2] = address(0xdAC17F958D2ee523a2206206994597C13D831ec7);
-        super._initialize(_vault, _harvester, _wants);
+        super._initialize(
+            _vault,
+            _harvester,
+            _name,
+            _wants,
+            0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C,
+            0x8B55351ea358e5Eda371575B031ee24F462d503e
+        );
     }
 
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
-    }
-
-    function getRewardPool() internal pure override returns (IConvexReward) {
-        return IConvexReward(address(0x8B55351ea358e5Eda371575B031ee24F462d503e));
-    }
-
-    function name() public pure override returns (string memory) {
-        return "ConvexUsdtStrategy";
     }
 
     function getWantsInfo()

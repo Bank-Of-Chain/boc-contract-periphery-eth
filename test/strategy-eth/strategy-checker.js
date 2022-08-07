@@ -190,6 +190,9 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         let initialRatio = wantsInfo._ratios[0];
         let wants0Precision = new BigNumber(10 ** (await decimals(wantsInfo._assets[0])));
 
+        // is ignore want ratio
+        let isIgnoreRatio = await strategy.isWantRatioIgnorable();
+        console.log('isIgnoreRatio:', isIgnoreRatio);
         for (let i = 0; i < wants.length; i++) {
             // local variable
             const asset = wantsInfo._assets[i];
@@ -201,8 +204,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
 
             // calculate amount wanted to deposit
             let amount;
-            // is ignore want ratio
-            let isIgnoreRatio = await strategy.isWantRatioIgnorable();
+            
             if (i !== 0) {
                 // for example,
                 // assets: [ETH, stETH]
@@ -215,7 +217,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
             }
 
             let wantBalance = new BigNumber(await balanceOf(asset, investor));
-            console.log('isIgnoreRatio:', isIgnoreRatio);
+            
             console.log('want:%s,balance:%d,amount:%d', asset, wantBalance, amount);
             // check balance enough
             if (wantBalance.gte(amount)) {

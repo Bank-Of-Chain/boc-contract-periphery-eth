@@ -42,13 +42,13 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
 
-    function initialize(address _vault, address _harvester) public {
+    function initialize(address _vault, address _harvester,string memory _name) external initializer {
         address[] memory _wants = new address[](3);
         _wants[0] = DAI; //DAI
         _wants[1] = USDC; //USDC
         _wants[2] = USDT; //USDT
 
-        _initialize(_vault, _harvester, uint16(ProtocolEnum.Aura), _wants);
+        _initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Aura), _wants);
 
         uint256 uintMax = type(uint256).max;
         // (address[] memory _tokens, , ) = BALANCER_VAULT.getPoolTokens(poolKey);
@@ -64,10 +64,6 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
 
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
-    }
-
-    function name() external pure override returns (string memory) {
-        return "Aura3PoolStrategy";
     }
 
     function getPoolKey() internal pure returns (bytes32) {

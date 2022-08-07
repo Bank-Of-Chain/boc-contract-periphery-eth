@@ -8,7 +8,7 @@ const {
 
 describe('【ConvexIronBankKrwStrategy Strategy Checker】', function () {
     // eslint-disable-next-line mocha/no-setup-in-describe
-    checker.check('ConvexIronBankKrwStrategy', async function () {
+    checker.check('ConvexIBUsdtkrwStrategy', async function () {
         await modifier();
     }, {
         investWithSynthForex: async function (strategy, keeper) {

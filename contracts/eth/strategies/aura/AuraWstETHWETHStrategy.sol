@@ -51,7 +51,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     mapping(address => address[]) public swapRewardRoutes;
     mapping(address => uint256) public sellFloor;
 
-    function initialize(address _vault) public {
+    function initialize(address _vault) external initializer {
         // bytes32 _poolKey = 0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
         // uint256 _pId = 3;
         // address _poolLpToken = 0x32296969Ef14EB0c6d29669C550D4a0449130230;
@@ -262,30 +262,32 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         IAsset[] memory poolAssets = _getPoolAssets(poolKey);
         uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
         IBalancerVault.ExitPoolRequest memory exitRequest;
-        if (_outputCode == 0) {     //WSTETH + wETH
+        if (_outputCode == 0) {
+            //WSTETH + wETH
             exitRequest = IBalancerVault.ExitPoolRequest({
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
                 userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _exitAmount),
                 toInternalBalance: false
             });
-        } else if(_outputCode == 1){    //WSTETH
+        } else if (_outputCode == 1) {
+            //WSTETH
             exitRequest = IBalancerVault.ExitPoolRequest({
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
-                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _exitAmount,0),
+                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _exitAmount, 0),
                 toInternalBalance: false
             });
-        } else if (_outputCode == 2){   //wETH
+        } else if (_outputCode == 2) {
+            //wETH
             exitRequest = IBalancerVault.ExitPoolRequest({
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
-                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _exitAmount,1),
+                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _exitAmount, 1),
                 toInternalBalance: false
             });
         }
         BALANCER_VAULT.exitPool(poolKey, address(this), recipient, exitRequest);
-
     }
 
     function claimRewards()

@@ -17,10 +17,10 @@ const MFC_TEST = require('../config/mainnet-fork-test-config');
 const MFC_PRODUCTION = require('../config/mainnet-fork-config');
 const {
     strategiesList: strategiesListUsd
-} = require('../config/strategy-config-usd.js');
+} = require('../config/strategy-usd/strategy-config-usd');
 const {
     strategiesList: strategiesListEth
-} = require('../config/strategy-config-eth.js');
+} = require('../config/strategy-eth/strategy-config-eth');
 
 const {
     deploy,
@@ -229,23 +229,28 @@ const deployBase = async (contractName, depends = []) => {
  * @param {string} contractName Contract Name
  * @param {string[]} depends Contract Fronting Dependency
  */
-const deployProxyBase = async (contractName, depends = []) => {
+const deployProxyBase = async (contractName, depends = [],customParams = []) => {
     console.log(` 🛰  Deploying[Proxy]: ${contractName}`);
     const keyArray = keys(addressMap);
-    const nextParams = [];
+    const dependParams = [];
     for (const depend of depends) {
         if (includes(keyArray, depend)) {
             if (isEmpty(get(addressMap, depend))) {
                 await addDependAddress(depend);
             }
-            nextParams.push(addressMap[depend]);
+            dependParams.push(addressMap[depend]);
             continue;
         }
-        nextParams.push(depend);
+        dependParams.push(depend);
     }
 
     try {
-        const constract = await deployProxy(contractName, nextParams, { timeout: 0 });
+        const allParams = [
+            ...dependParams,
+            ...customParams
+        ];
+        
+        const constract = await deployProxy(contractName, allParams, { timeout: 0 });
         await constract.deployed();
         addressMap[contractName] = constract.address;
         return constract;
@@ -577,13 +582,15 @@ const deploy_usd = async () => {
     for (const strategyItem of strategiesListUsd) {
         const {
             name,
+            contract,
             addToVault,
             profitLimitRatio,
             lossLimitRatio,
+            customParams
         } = strategyItem
         let strategyAddress = addressMap[name];
         if (isEmpty(strategyAddress)) {
-            const deployStrategy = await deployProxyBase(name, [USDVault, Harvester]);
+            const deployStrategy = await deployProxyBase(contract, [USDVault, Harvester,name],customParams);
             if (addToVault) {
                 strategyAddress = deployStrategy.address;
                 increaseArray.push({

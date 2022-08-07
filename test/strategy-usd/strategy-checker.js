@@ -4,6 +4,7 @@ const { assert } = require('chai');
 
 const MFC = require('../../config/mainnet-fork-test-config');
 const addressConfig = require('../../config/address-config');
+const {strategiesList} = require('../../config/strategy-usd/strategy-config-usd')
 
 const topUp = require('../../utils/top-up-utils');
 const { advanceBlock, getLatestBlock } = require('../../utils/block-utils');
@@ -143,7 +144,16 @@ async function _topUpFamilyBucket() {
     console.log('topUp finish!');
 }
 
-async function check(strategyName, callback, exchangeRewardTokenCallback = {}, uniswapV3RebalanceCallback,outputCode = 0) {
+function findStrategyItem(strategyName) {
+
+    const result = strategiesList.find((item) => {
+        return item.name == strategyName;
+    });
+
+    return result;
+}
+
+async function check(strategyName, callback, exchangeRewardTokenCallback = {}, uniswapV3RebalanceCallback, outputCode = 0) {
     before(async function () {
         accounts = await ethers.getSigners();
         governance = accounts[0].address;
@@ -162,10 +172,28 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
         console.log('mock vault address:%s', mockVault.address);
+        const strategyItem = findStrategyItem(strategyName);
+        console.log('strategyItem:',strategyItem);
+        
+        const {
+            name,
+            contract,
+            customParams
+        } = strategyItem;
+        
         // init strategy
-        const Strategy = hre.artifacts.require(strategyName);
+        const Strategy = hre.artifacts.require(contract);
         strategy = await Strategy.new();
-        await strategy.initialize(mockVault.address, harvester);
+        
+        const allParams = [
+            mockVault.address,
+            harvester,
+            name,
+            ...customParams
+        ]
+        console.log('allParams:',allParams);
+        
+        await strategy.initialize(...allParams);
         // top up for vault
         await _topUpFamilyBucket();
     });
@@ -191,7 +219,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         let max = new BigNumber(5_000_000_000).multipliedBy(precision);
         assert(thirdPoolAssets.isGreaterThan(min) && thirdPoolAssets.isLessThan(max), 'large deviation in thirdPoolAssets estimation');
     });
-    
+
     let depositUSD = new BigNumber(0);
     it('[estimatedTotalAssets = transferred tokens value]', async function () {
         let depositedAssets = [];
@@ -200,6 +228,8 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         let wants0Precision = new BigNumber(10 ** (await wants0Contract.decimals()));
         let initialAmount = new BigNumber(10000);
         let initialRatio = wantsInfo._ratios[0];
+        let isIgnoreRatio = await strategy.isWantRatioIgnorable();
+        console.log('isIgnoreRatio:', isIgnoreRatio);
         for (let i = 0; i < wants.length; i++) {
             const asset = wantsInfo._assets[i];
             depositedAssets.push(asset);
@@ -207,34 +237,32 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
             const assetContract = await ERC20.at(asset);
             let assetPrecision = new BigNumber(10 ** (await assetContract.decimals()));
             let amount;
-            let isIgnoreRatio = await strategy.isWantRatioIgnorable();
-            if (i !== 0 && !isIgnoreRatio) {
+            
+            if (i !== 0) {
                 amount = new BigNumber(initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0));
             } else {
                 amount = initialAmount.multipliedBy(assetPrecision);
             }
             let wantToken = await ERC20.at(wantsInfo._assets[i]);
             let wantBalance = new BigNumber(await wantToken.balanceOf(investor));
-            console.log('wantBalance:',wantBalance);
-            console.log('isIgnoreRatio:',isIgnoreRatio);
-            console.log('want:%s,balance:%s,amount:%s',asset,wantBalance.toFixed(),amount.toFixed());
-            if (wantBalance.gte(amount)){
-                await assetContract.transfer(mockVault.address, amount, {
-                    from: investor,
-                });
-                depositedAmounts.push(amount);
-                depositUSD = depositUSD.plus(await valueInterpreter.calcCanonicalAssetValueInUsd(asset, amount));
-            } else if (isIgnoreRatio){
-                console.log('use 0');
-                depositedAmounts.push(new BigNumber(0));
+            console.log('wantBalance:', wantBalance);
+            
+            console.log('want:%s,balance:%s,amount:%s', asset, wantBalance.toFixed(), amount.toFixed());
+            if (amount.gte(wantBalance)) {
+                amount = wantBalance;
             }
+            await assetContract.transfer(mockVault.address, amount, {
+                from: investor,
+            });
+            depositedAmounts.push(amount);
+            depositUSD = depositUSD.plus(await valueInterpreter.calcCanonicalAssetValueInUsd(asset, amount));
         }
-        console.log('Lend:',depositedAssets,depositedAmounts.map(i => i.toFormat()));
+        console.log('Lend:', depositedAssets, depositedAmounts.map(i => i.toFormat()));
 
         await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
         const estimatedTotalAssets = new BigNumber(await strategy.estimatedTotalAssets()).dividedBy(10 ** 18);
         const debtRateQuery = () => {
-            if(!strategy.debtRate){
+            if (!strategy.debtRate) {
                 return Promise.resolve(-1);
             }
             return strategy.debtRate().catch(() => -1)
@@ -265,7 +293,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
     it('[totalAssets should increase after 3 days]', async function () {
         const beforeTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
         if (callback) {
-            await callback(strategy.address,keeper);
+            await callback(strategy.address, keeper);
         }
         await advanceBlock(3);
         pendingRewards = await strategy.harvest.call({
@@ -277,7 +305,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
             investWithSynthForex
         } = exchangeRewardTokenCallback;
         if (typeof investWithSynthForex === 'function') {
-            await investWithSynthForex(strategy, keeper).catch(() => {});
+            await investWithSynthForex(strategy, keeper).catch(() => { });
         }
         const rewardsTokens = pendingRewards._rewardsTokens;
         for (let i = 0; i < rewardsTokens.length; i++) {
@@ -301,7 +329,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
         const estimatedTotalAssets0 = new BigNumber(await strategy.estimatedTotalAssets());
-        await mockVault.redeem(strategy.address, estimatedTotalAssets0,outputCode);
+        await mockVault.redeem(strategy.address, estimatedTotalAssets0, outputCode);
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets()).dividedBy(10 ** 18);
         console.log('After withdraw all shares,strategy assets:%s', estimatedTotalAssets1.toFixed());
         assert.isTrue(estimatedTotalAssets1.multipliedBy(10000).isLessThan(depositUSD), 'assets left in strategy should not be more than 1/10000');
