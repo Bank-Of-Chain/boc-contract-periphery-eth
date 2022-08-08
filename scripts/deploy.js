@@ -37,8 +37,8 @@ const USDPegToken = 'USDPegToken';
 const USDVaultAdmin = 'VaultAdmin';
 const Treasury = 'Treasury';
 const ValueInterpreter = 'ValueInterpreter';
-const USDParaSwapV5Adapter = 'ParaSwapV5Adapter';
-const USDOneInchV4Adapter = 'OneInchV4Adapter';
+const ParaSwapV5Adapter = 'ParaSwapV5Adapter';
+const OneInchV4Adapter = 'OneInchV4Adapter';
 const ChainlinkPriceFeed = 'ChainlinkPriceFeed';
 const ExchangeAggregator = 'ExchangeAggregator';
 const AccessControlProxy = 'AccessControlProxy';
@@ -62,9 +62,6 @@ const ETHVaultAdmin = 'ETHVaultAdmin';
 const ETHVaultBuffer = 'ETHVaultBuffer';
 const ETHPegToken = 'ETHPegToken';
 const PriceOracle = 'PriceOracle';
-const ETHParaSwapV5Adapter = 'EthParaSwapV5Adapter';
-const ETHOneInchV4Adapter = 'EthOneInchV4Adapter';
-const ETHExchangeAggregator = 'ETHExchangeAggregator';
 const HarvestHelper = 'HarvestHelper';
 const ETH_INITIAL_ASSET_LIST = [
     MFC_PRODUCTION.ETH_ADDRESS,
@@ -84,8 +81,8 @@ const addressMap = {
     [ChainlinkPriceFeed]: '',
     [AggregatedDerivativePriceFeed]: '',
     [ValueInterpreter]: '',
-    [USDOneInchV4Adapter]: '',
-    [USDParaSwapV5Adapter]: '',
+    [OneInchV4Adapter]: '',
+    [ParaSwapV5Adapter]: '',
     [ExchangeAggregator]: '',
     [Treasury]: '',
     [USDVault]: '',
@@ -98,9 +95,6 @@ const addressMap = {
         rs[i.name] = '';
         return rs
     }, {}),
-    [ETHOneInchV4Adapter]: '',
-    [ETHParaSwapV5Adapter]: '',
-    [ETHExchangeAggregator]: '',
     [PriceOracle]: '',
     [ETHVault]: '',
     [ETHVaultAdmin]: '',
@@ -511,23 +505,21 @@ const deploy_usd = async () => {
     if (isEmpty(addressMap[ValueInterpreter])) {
         valueInterpreter = await deployBase(ValueInterpreter, [ChainlinkPriceFeed, AggregatedDerivativePriceFeed, AccessControlProxy]);
     }
-    if (isEmpty(addressMap[USDOneInchV4Adapter])) {
-        oneInchV4Adapter = await deployBase(USDOneInchV4Adapter);
+    if (isEmpty(addressMap[OneInchV4Adapter])) {
+        oneInchV4Adapter = await deployBase(OneInchV4Adapter);
     }
-    if (isEmpty(addressMap[USDParaSwapV5Adapter])) {
-        paraSwapV5Adapter = await deployBase(USDParaSwapV5Adapter);
+    if (isEmpty(addressMap[ParaSwapV5Adapter])) {
+        paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
     }
 
     if (isEmpty(addressMap[ExchangeAggregator])) {
-        const adapterArray = [addressMap[USDOneInchV4Adapter], addressMap[USDParaSwapV5Adapter]];
+        const adapterArray = [addressMap[OneInchV4Adapter], addressMap[ParaSwapV5Adapter]];
         exchangeAggregator = await deployBase(ExchangeAggregator, [adapterArray, AccessControlProxy]);
     }
 
     if (isEmpty(addressMap[USDVaultAdmin])) {
         vaultAdmin = await deployBase(USDVaultAdmin);
     }
-
-
 
     let cVault;
     if (isEmpty(addressMap[USDVault])) {
@@ -620,19 +612,16 @@ const deploy_eth = async () => {
         priceOracle = await deployProxyBase(PriceOracle, []);
     }
 
-    if (isEmpty(addressMap[ETHOneInchV4Adapter])) {
-        oneInchV4Adapter = await deployBase(ETHOneInchV4Adapter);
+    if (isEmpty(addressMap[OneInchV4Adapter])) {
+        oneInchV4Adapter = await deployBase(OneInchV4Adapter);
     }
-    if (isEmpty(addressMap[ETHParaSwapV5Adapter])) {
-        paraSwapV5Adapter = await deployBase(ETHParaSwapV5Adapter);
+    if (isEmpty(addressMap[ParaSwapV5Adapter])) {
+        paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
     }
 
-    const adapterArray = [addressMap[ETHOneInchV4Adapter], addressMap[ETHParaSwapV5Adapter]];
-    if (isEmpty(addressMap[ETHExchangeAggregator])) {
-        ethExchangeAggregator = await deployBase(ETHExchangeAggregator, [adapterArray, AccessControlProxy]);
-    } else {
-        ethExchangeAggregator = await ETHExchangeAggregator.at(addressMap[ETHExchangeAggregator]);
-        await ethExchangeAggregator.addExchangeAdapters(adapterArray);
+    const adapterArray = [addressMap[OneInchV4Adapter], addressMap[ParaSwapV5Adapter]];
+    if (isEmpty(addressMap[ExchangeAggregator])) {
+        await deployBase(ExchangeAggregator, [adapterArray, AccessControlProxy]);
     }
 
     if (isEmpty(addressMap[ETHVaultAdmin])) {
@@ -641,7 +630,7 @@ const deploy_eth = async () => {
 
     let cVault;
     if (isEmpty(addressMap[ETHVault])) {
-        vault = await deployProxyBase(ETHVault, [AccessControlProxy, Treasury, ETHExchangeAggregator, PriceOracle]);
+        vault = await deployProxyBase(ETHVault, [AccessControlProxy, Treasury, ExchangeAggregator, PriceOracle]);
         cVault = await VaultContract.at(addressMap[ETHVault]);
         await vault.setAdminImpl(vaultAdmin.address);
         for (let i = 0; i < ETH_INITIAL_ASSET_LIST.length; i++) {

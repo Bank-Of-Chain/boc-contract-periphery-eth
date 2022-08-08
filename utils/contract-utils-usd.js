@@ -47,7 +47,7 @@ const ValueInterpreter = hre.artifacts.require("ValueInterpreter")
 const MockValueInterpreter = hre.artifacts.require(
     "contracts/usd/mock/MockValueInterpreter.sol:MockValueInterpreter",
 )
-const TestAdapter = hre.artifacts.require("contracts/usd/exchanges/adapters/TestAdapter.sol:TestAdapter");
+const TestAdapter = hre.artifacts.require("contracts/exchanges/adapters/TestAdapter.sol:TestAdapter");
 const ExchangeAggregator = hre.artifacts.require("ExchangeAggregator")
 const IExchangeAdapter = hre.artifacts.require("IExchangeAdapter")
 const OneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
@@ -125,16 +125,16 @@ async function setupCoreProtocolWithMockValueInterpreter (
     )
     let valueInterpreter
     let exchangeAggregator
+    let testAdapter;
+
     if (mock) {
         valueInterpreter = await MockValueInterpreter.new(
             chainlinkPriceFeed.address,
             aggregatedDerivativePriceFeed.address,
             accessControlProxy.address,
         )
-
         console.log('deploy TestAdapter');
-        const testAdapter = await TestAdapter.new(valueInterpreter.address);
-
+        testAdapter = await TestAdapter.new(valueInterpreter.address);
         console.log('deploy ExchangeAggregator');
         exchangeAggregator = await ExchangeAggregator.new([testAdapter.address], accessControlProxy.address);
     } else {
@@ -143,6 +143,9 @@ async function setupCoreProtocolWithMockValueInterpreter (
             aggregatedDerivativePriceFeed.address,
             accessControlProxy.address,
         )
+        console.log('deploy TestAdapter');
+        testAdapter = await TestAdapter.new(valueInterpreter.address);
+
         console.log('deploy OneInchV4Adapter');
         const oneInchV4Adapter = await OneInchV4Adapter.new();
 

@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "../exchanges/IETHExchangeAggregator.sol";
+import "boc-contract-core/contracts/exchanges/IExchangeAggregator.sol";
 
 interface IETHVault {
     struct StrategyParams {
@@ -54,6 +54,7 @@ interface IETHVault {
     event TrusteeFeeBpsChanged(uint256 _basis);
     event MinimumInvestmentAmountChanged(uint256 _minimumInvestmentAmount);
     event TreasuryAddressChanged(address _address);
+    event ExchangeManagerAddressChanged(address _address);
     event SetAdjustPositionPeriod(bool _adjustPositionPeriod);
     event RedeemFeeUpdated(uint256 _redeemFeeBps);
     event SetWithdrawalQueue(address[] queues);
@@ -155,14 +156,14 @@ interface IETHVault {
         address _asset,
         uint256 _minimumAmount,
         bool _needExchange,
-        IETHExchangeAggregator.ExchangeToken[] memory _exchangeTokens
+        IExchangeAggregator.ExchangeToken[] memory _exchangeTokens
     ) external returns (address[] memory _assets, uint256[] memory _amounts);
 
     /// @notice Change ETHi supply with Vault total assets.
     function rebase() external;
 
     /// @notice Allocate funds in Vault to strategies.
-    function lend(address _strategy, IETHExchangeAggregator.ExchangeToken[] calldata _exchangeTokens)
+    function lend(address _strategy, IExchangeAggregator.ExchangeToken[] calldata _exchangeTokens)
     external;
 
     /// @notice Withdraw the funds from specified strategy.
@@ -172,7 +173,7 @@ interface IETHVault {
         address _fromToken,
         address _toToken,
         uint256 _amount,
-        IETHExchangeAggregator.ExchangeParam memory exchangeParam
+        IExchangeAggregator.ExchangeParam memory exchangeParam
     ) external returns (uint256);
 
     function report() external;
@@ -201,6 +202,11 @@ interface IETHVault {
      *      Setting to the zero address disables this feature.
      */
     function setTreasuryAddress(address _address) external;
+
+    /**
+    * @dev Sets the exchangeManagerAddress that can receive a portion of yield.
+     */
+    function setExchangeManagerAddress(address _exchangeManagerAddress) external;
 
     //    /**
     //     * @dev Set the EHTi address after initialization(only once)

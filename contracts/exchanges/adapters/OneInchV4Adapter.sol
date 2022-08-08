@@ -3,14 +3,14 @@ pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 import "hardhat/console.sol";
-import "../../../external/oneinch/IOneInchV4.sol";
 import "boc-contract-core/contracts/exchanges/IExchangeAdapter.sol";
+import "boc-contract-core/contracts/library/RevertReasonParser.sol";
 import "../utils/ExchangeHelpers.sol";
+import "../../external/oneinch/IOneInchV4.sol";
 
 import "@openzeppelin/contracts~v3/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts~v3/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts~v3/math/SafeMath.sol";
-import "boc-contract-core/contracts/library/RevertReasonParser.sol";
 
 contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
     using SafeERC20 for IERC20;
@@ -42,24 +42,34 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
         uint8,
         bytes calldata _data,
         SwapDescription calldata _sd
-    ) external override returns (uint256) {
+    ) external payable override returns (uint256) {
+        bool success;
+        bytes memory result;
         console.log("[OneInchV4Adapter] start safeApprove");
-        IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, 0);
-        IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, _sd.amount);
-        console.log("[OneInchV4Adapter] start swap");
-        uint256 toTokenBefore = IERC20(_sd.dstToken).balanceOf(address(this));
+        uint256 toTokenBefore = getTokenBalance(_sd.dstToken, address(this));
+
         bytes memory _callData = _getCallData(_data, _sd);
-        (bool success, bytes memory result) = AGGREGATION_ROUTER_V4.call(_callData);
+
+        if(_sd.srcToken != NativeToken.NATIVE_TOKEN){
+            IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, 0);
+            IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, _sd.amount);
+            console.log("[OneInchV4Adapter] start swap");
+            (success, result) = AGGREGATION_ROUTER_V4.call(_callData);
+        }else{
+            console.log("[OneInchV4Adapter] start swap");
+            (success, result) = payable(AGGREGATION_ROUTER_V4).call{value: _sd.amount}(_callData);
+        }
         console.log("[OneInchV4Adapter] end swap");
+
         emit Response(success, result);
         if (!success) {
-            revert(RevertReasonParser.parse(result, "1inch V4 swap failed: "));
+            revert(RevertReasonParser.parse(result, '1inch V4 swap failed: '));
         }
         console.log("[OneInchV4Adapter] swap ok");
-        uint256 exchangeAmount = IERC20(_sd.dstToken).balanceOf(address(this)) - toTokenBefore;
-        console.log("[OneInchV4Adapter] swap receive target amount:", exchangeAmount);
-        IERC20(_sd.dstToken).safeTransfer(_sd.receiver, exchangeAmount);
-        console.log("[OneInchV4Adapter] transfer ok");
+
+        uint256 exchangeAmount = getTokenBalance(_sd.dstToken, address(this)) - toTokenBefore;
+        _sd.dstToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(exchangeAmount):IERC20(_sd.dstToken).safeTransfer(_sd.receiver, exchangeAmount);
+        console.log('swap and transfer ok, return _sd.receiver:%s, token:%s, exchangeAmount:%s', _sd.receiver, _sd.dstToken, exchangeAmount);
         return exchangeAmount;
     }
 
@@ -165,5 +175,8 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
         assembly {
             _sig := mload(add(_tempData, 32))
         }
+    }
+
+    receive() external payable {
     }
 }

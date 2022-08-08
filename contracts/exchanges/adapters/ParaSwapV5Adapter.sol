@@ -2,19 +2,18 @@
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
-import '../utils/ParaSwapV5ActionsMixin.sol';
-import '../IETHExchangeAdapter.sol';
-import '../utils/ExchangeHelpers.sol';
-import '@openzeppelin/contracts~v3/math/SafeMath.sol';
-import 'hardhat/console.sol';
-import 'boc-contract-core/contracts/library/RevertReasonParser.sol';
-import "../../../library/ETHToken.sol";
+import "../utils/ParaSwapV5ActionsMixin.sol";
+import "boc-contract-core/contracts/exchanges/IExchangeAdapter.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
+import "boc-contract-core/contracts/library/RevertReasonParser.sol";
+import "@openzeppelin/contracts~v3/math/SafeMath.sol";
+import "hardhat/console.sol";
 
 /// @title ParaSwapV4Adapter Contract
 /// @author Enzyme Council <security@enzyme.finance>
 /// @notice Adapter for interacting with ParaSwap (v4)
 /// @dev Does not allow any protocol that collects protocol fees in ETH, e.g., 0x v3
-contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
+contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -42,7 +41,7 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
     }
 
     // EXTERNAL FUNCTIONS
-    function swap(uint8 _method, bytes calldata _encodedCallArgs, SwapDescription calldata _sd) external payable override returns (uint256){
+    function swap(uint8 _method, bytes calldata _encodedCallArgs, IExchangeAdapter.SwapDescription calldata _sd) external payable override returns (uint256){
         require(_method < SWAP_METHOD_SELECTOR.length, 'ParaswapAdapter method out of range');
         bytes4 selector = SWAP_METHOD_SELECTOR[_method];
         bytes memory data = abi.encodeWithSelector(selector, _encodedCallArgs, _sd);
@@ -60,7 +59,7 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
 
     function multiSwap(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.SellData memory data) = abi.decode(_encodedCallArgs, (Utils.SellData));
         console.log('multiSwap');
@@ -76,7 +75,7 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
 
     function megaSwap(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.MegaSwapSellData memory data) = abi.decode(_encodedCallArgs, (Utils.MegaSwapSellData));
         console.log('megaSwap');
@@ -96,7 +95,7 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
 
     function protectedMultiSwap(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.SellData memory data) = abi.decode(_encodedCallArgs, (Utils.SellData));
         console.log('protectedMultiSwap');
@@ -113,7 +112,7 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
 
     function protectedMegaSwap(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.MegaSwapSellData memory data) = abi.decode(_encodedCallArgs, (Utils.MegaSwapSellData));
         console.log('protectedMegaSwap');
@@ -133,7 +132,7 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
 
     function protectedSimpleSwap(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.SimpleData memory data) = abi.decode(_encodedCallArgs, (Utils.SimpleData));
         console.log('protectedSimpleSwap');
@@ -150,7 +149,7 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
 
     function simpleSwap(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.SimpleData memory data) = abi.decode(_encodedCallArgs, (Utils.SimpleData));
         console.log('simpleSwap');
@@ -168,7 +167,7 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
 
     function swapOnUniswap(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (uint256 amountIn,uint256 amountOutMin,address[] memory path) = __decodeSwapOnUniswapArgs(_encodedCallArgs);
         console.log('swapOnUniswap');
@@ -187,13 +186,13 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
         );
         uint256 amount = getTokenBalance(_sd.dstToken, address(this)).sub(toTokenBefore);
         console.log('=========transferToken amount========:%s', amount);
-        toToken == NATIVE_TOKEN?payable(_sd.receiver).transfer(amount):IERC20(toToken).safeTransfer(_sd.receiver, amount);
+        toToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(amount):IERC20(toToken).safeTransfer(_sd.receiver, amount);
         return amount;
     }
 
     function swapOnUniswapFork(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (
         address factory,
@@ -223,13 +222,13 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
         );
         uint256 amount = getTokenBalance(_sd.dstToken, address(this)) - toTokenBefore;
         console.log('=========transferToken amount========:%s', amount);
-        toToken == NATIVE_TOKEN?payable(_sd.receiver).transfer(amount):IERC20(toToken).safeTransfer(_sd.receiver, amount);
+        toToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(amount):IERC20(toToken).safeTransfer(_sd.receiver, amount);
         return amount;
     }
 
     function swapOnUniswapV2Fork(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (
         address tokenIn,
@@ -241,7 +240,7 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
         console.log('swapOnUniswapV2Fork _sd.dstToken:%s, tokenIn:%s', _sd.dstToken, tokenIn);
         console.log('swapOnUniswapV2Fork amountIn:%s, amountOutMin:%s', amountIn, amountOutMin);
         __validateFromTokenAmount(tokenIn, _sd.srcToken);
-//                __validateToTokenAddress(toToken, _sd);
+        //                __validateToTokenAddress(toToken, _sd);
 
         amountOutMin = _sd.amount.mul(amountOutMin).div(amountIn);
         amountIn = _sd.amount;
@@ -257,14 +256,14 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
             pools
         );
         uint256 amount = getTokenBalance(_sd.dstToken, address(this)) - toTokenBefore;
-        _sd.dstToken == NATIVE_TOKEN?payable(_sd.receiver).transfer(amount):IERC20(_sd.dstToken).safeTransfer(_sd.receiver, amount);
+        _sd.dstToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(amount):IERC20(_sd.dstToken).safeTransfer(_sd.receiver, amount);
         console.log('swapOnUniswapV2Fork transfer ok, _sd.receiver:%s, amount:%s, _sd.dstToken:%s', _sd.receiver, amount, _sd.dstToken);
         return amount;
     }
 
     function swapOnZeroXv2(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (
         address fromToken,
@@ -294,13 +293,13 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
             payload
         );
         uint256 amount = getTokenBalance(_sd.dstToken, address(this)) - toTokenBefore;
-        toToken == NATIVE_TOKEN?payable(_sd.receiver).transfer(amount):IERC20(toToken).safeTransfer(_sd.receiver, amount);
+        toToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(amount):IERC20(toToken).safeTransfer(_sd.receiver, amount);
         return amount;
     }
 
     function swapOnZeroXv4(
         bytes calldata _encodedCallArgs,
-        SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (
         address fromToken,
@@ -329,7 +328,7 @@ contract EthParaSwapV5Adapter is ParaSwapV5ActionsMixin, IETHExchangeAdapter {
             payload
         );
         uint256 amount = getTokenBalance(_sd.dstToken, address(this)) - toTokenBefore;
-        toToken == NATIVE_TOKEN?payable(_sd.receiver).transfer(amount):IERC20(toToken).safeTransfer(_sd.receiver, amount);
+        toToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(amount):IERC20(toToken).safeTransfer(_sd.receiver, amount);
         return amount;
     }
 

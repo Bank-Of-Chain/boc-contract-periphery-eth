@@ -89,6 +89,15 @@ contract ETHVaultAdmin is ETHVaultStorage {
         emit TreasuryAddressChanged(_address);
     }
 
+    /**
+     * @dev Sets the exchangeManagerAddress that can receive a portion of yield.
+     */
+    function setExchangeManagerAddress(address _exchangeManagerAddress) external onlyRole(BocRoles.GOV_ROLE) {
+        require(_exchangeManagerAddress != address(0), "exchangeManager ad is 0");
+        exchangeManager = _exchangeManagerAddress;
+        emit ExchangeManagerAddressChanged(_exchangeManagerAddress);
+    }
+
     //
     //    function setETHiAddress(address _address) external onlyRole(BocRoles.GOV_ROLE) {
     //        require(address(ethi) == ZERO_ADDRESS, "ETHi has been set");
@@ -161,7 +170,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
 
     /// @notice Remove support for specific asset.
     function removeAsset(address _asset) external isVaultManager {
-        if (_asset == ETHToken.NATIVE_TOKEN) {
+        if (_asset == NativeToken.NATIVE_TOKEN) {
             require(address(vaultBufferAddress).balance == 0, "vaultBuffer exist this asset");
         } else {
             require(
@@ -174,7 +183,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
         trackedAssetsMap.minus(_asset, 1);
         if (trackedAssetsMap.get(_asset) <= 0) {
             uint256 _balance;
-            if (_asset == ETHToken.NATIVE_TOKEN) {
+            if (_asset == NativeToken.NATIVE_TOKEN) {
                 _balance = address(this).balance;
             } else {
                 _balance = IERC20Upgradeable(_asset).balanceOf(address(this));
@@ -266,7 +275,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
             trackedAssetsMap.minus(wantToken, 1);
             if (trackedAssetsMap.get(wantToken) <= 0) {
                 uint256 _balance;
-                if (wantToken == ETHToken.NATIVE_TOKEN) {
+                if (wantToken == NativeToken.NATIVE_TOKEN) {
                     _balance = address(this).balance;
                 } else {
                     _balance = IERC20Upgradeable(wantToken).balanceOf(address(this));

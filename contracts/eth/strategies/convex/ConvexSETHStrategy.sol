@@ -30,7 +30,7 @@ contract ConvexSETHStrategy is ConvexBaseStrategy {
 
     function getConvexWants() internal pure override returns (address[] memory) {
         address[] memory _wants = new address[](2);
-        _wants[0] = ETHToken.NATIVE_TOKEN;
+        _wants[0] = NativeToken.NATIVE_TOKEN;
         _wants[1] = sETH;
         return _wants;
     }
@@ -80,7 +80,7 @@ contract ConvexSETHStrategy is ConvexBaseStrategy {
         OutputInfo memory info1 = outputsInfo[1];
         info1.outputCode = 1;
         info1.outputTokens = new address[](1);
-        info1.outputTokens[0] = ETHToken.NATIVE_TOKEN;
+        info1.outputTokens[0] = NativeToken.NATIVE_TOKEN;
 
         OutputInfo memory info2 = outputsInfo[2];
         info2.outputCode = 2;

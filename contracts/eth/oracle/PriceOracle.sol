@@ -8,7 +8,7 @@ import "../../external/lido/IWstETH.sol";
 import "../../external/rocketpool/RocketTokenRETHInterface.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "hardhat/console.sol";
-import "../../library/ETHToken.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 
@@ -118,7 +118,7 @@ contract PriceOracle is IPriceOracle, Initializable {
     }
 
     function priceInEth(address _asset) public view override returns (uint256) {
-        if (_asset == ETHToken.NATIVE_TOKEN) {
+        if (_asset == NativeToken.NATIVE_TOKEN) {
             return 1e18;
         } else if (_asset == stETH) {
             return stEthPriceInEth();
@@ -140,7 +140,7 @@ contract PriceOracle is IPriceOracle, Initializable {
     }
 
     function priceInUSD(address _asset) public view override returns (uint256) {
-        if (_asset == ETHToken.NATIVE_TOKEN) {
+        if (_asset == NativeToken.NATIVE_TOKEN) {
             return ethPriceInUsd() * 1e10;
         } else {
             return (priceInEth(_asset) * ethPriceInUsd()) / 1e8;
@@ -167,7 +167,7 @@ contract PriceOracle is IPriceOracle, Initializable {
     }
 
     function getPowDecimals(address _asset) internal view returns (uint256) {
-        if (_asset == ETHToken.NATIVE_TOKEN) {
+        if (_asset == NativeToken.NATIVE_TOKEN) {
             return 1e18;
         } else {
             return 10**IERC20Metadata(_asset).decimals();
