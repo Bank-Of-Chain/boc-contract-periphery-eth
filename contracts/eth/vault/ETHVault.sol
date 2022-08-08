@@ -449,6 +449,10 @@ contract ETHVault is ETHVaultStorage {
             if (_vaultValueOfNow + _transferValue < _vaultValueOfBefore) {
                 _old2LendAssets = _vaultValueOfBefore - _vaultValueOfNow - _transferValue;
             }
+            if(_vaultValueOfBefore <= _transferValue){
+                _redeemValue = 0;
+                console.log("_redeemValue=",_redeemValue);
+            }
             if (_totalValueOfNow > _totalValueOfBefore) {
                 uint256 _gain = _totalValueOfNow - _totalValueOfBefore;
                 if (_transferValue > 0) {
@@ -459,18 +463,18 @@ contract ETHVault is ETHVaultStorage {
                 }
             } else {
                 uint256 _loss = _totalValueOfBefore - _totalValueOfNow;
-                if (_transferValue > 0) {
+                if (_transferValue > 0 && _loss > 0) {
                     _transferAssets =
                         _transferValue -
                         (_loss * _transferValue) /
                         (_transferValue + _redeemValue + _old2LendAssets);
                 }
             }
+            console.log("_transferAssets:", _transferAssets);
             uint256 _totalShares = IPegToken(pegTokenAddress).totalShares();
-            if (!rebasePaused) {
+            if (!rebasePaused && _totalShares > 0) {
                 _totalShares = _rebase(_totalValueOfNow - _transferAssets, _totalShares);
             }
-            console.log("_transferAssets:", _transferAssets);
             if (_transferAssets > 0) {
                 uint256 _sharesAmount = _calculateShare(
                     _transferAssets,
