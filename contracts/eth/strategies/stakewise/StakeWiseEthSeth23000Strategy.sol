@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 import "../../../external/uniswap/IQuoter.sol";
-import "../uniswapv3/ETHUniswapV3Strategy.sol";
+import "../uniswapv3/ETHUniswapV3BaseStrategy.sol";
 import "../../../external/stakewise/IPool.sol";
 
-contract StakeWiseEthSeth23000Strategy is ETHUniswapV3Strategy {
+contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // https://info.uniswap.org/#/pools/0x7379e81228514a1d2a6cf7559203998e20598346

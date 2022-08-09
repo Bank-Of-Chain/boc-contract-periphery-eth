@@ -590,7 +590,7 @@ const deploy_usd = async () => {
         } = strategyItem
         let strategyAddress = addressMap[name];
         if (isEmpty(strategyAddress)) {
-            const deployStrategy = await deployProxyBase(contract, [USDVault, Harvester,name],customParams);
+            const deployStrategy = await deployProxyBase(contract, [USDVault, Harvester],[name,...customParams]);
             if (addToVault) {
                 strategyAddress = deployStrategy.address;
                 increaseArray.push({
@@ -690,13 +690,15 @@ const deploy_eth = async () => {
     for (const strategyItem of strategiesListEth) {
         const {
             name,
+            contract,
             addToVault,
             profitLimitRatio,
             lossLimitRatio,
+            customParams
         } = strategyItem
         let strategyAddress = addressMap[name];
         if (isEmpty(strategyAddress)) {
-            const deployStrategy = await deployProxyBase(name, [ETHVault]);
+            const deployStrategy = await deployProxyBase(contract, [ETHVault],[name,...customParams]);
             if (addToVault) {
                 strategyAddress = deployStrategy.address;
                 increaseArray.push({
