@@ -25,6 +25,7 @@ const {
     topUpUsdpByAddress,
     // topUpUsdpByAddress
 } = require("./top-up-utils")
+const hre = require("hardhat");
 
 // === Core Contracts === //
 // Access Control Proxy
@@ -46,9 +47,11 @@ const ValueInterpreter = hre.artifacts.require("ValueInterpreter")
 const MockValueInterpreter = hre.artifacts.require(
     "contracts/usd/mock/MockValueInterpreter.sol:MockValueInterpreter",
 )
-const TestAdapter = hre.artifacts.require("contracts/usd/exchanges/adapters/TestAdapter.sol:TestAdapter");
+const TestAdapter = hre.artifacts.require("contracts/exchanges/adapters/TestAdapter.sol:TestAdapter");
 const ExchangeAggregator = hre.artifacts.require("ExchangeAggregator")
 const IExchangeAdapter = hre.artifacts.require("IExchangeAdapter")
+const OneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
+const ParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
 
 /**
  * Initializing vault contracts
@@ -121,25 +124,37 @@ async function setupCoreProtocolWithMockValueInterpreter (
         accessControlProxy.address,
     )
     let valueInterpreter
+    let exchangeAggregator
+    let testAdapter;
+
     if (mock) {
         valueInterpreter = await MockValueInterpreter.new(
             chainlinkPriceFeed.address,
             aggregatedDerivativePriceFeed.address,
             accessControlProxy.address,
         )
+        console.log('deploy TestAdapter');
+        testAdapter = await TestAdapter.new(valueInterpreter.address);
+        console.log('deploy ExchangeAggregator');
+        exchangeAggregator = await ExchangeAggregator.new([testAdapter.address], accessControlProxy.address);
     } else {
         valueInterpreter = await ValueInterpreter.new(
             chainlinkPriceFeed.address,
             aggregatedDerivativePriceFeed.address,
             accessControlProxy.address,
         )
-    }
-    const testAdapter = await TestAdapter.new(valueInterpreter.address)
+        console.log('deploy TestAdapter');
+        testAdapter = await TestAdapter.new(valueInterpreter.address);
 
-    const exchangeAggregator = await ExchangeAggregator.new(
-        [testAdapter.address],
-        accessControlProxy.address,
-    )
+        console.log('deploy OneInchV4Adapter');
+        const oneInchV4Adapter = await OneInchV4Adapter.new();
+
+        console.log('deploy ParaSwapV5Adapter');
+        const paraSwapV5Adapter = await ParaSwapV5Adapter.new();
+        console.log('deploy ExchangeAggregator');
+        exchangeAggregator = await ExchangeAggregator.new([oneInchV4Adapter.address,paraSwapV5Adapter.address], accessControlProxy.address);
+    }
+
     const exchangePlatformAdapters = await getExchangePlatformAdapters(exchangeAggregator)
 
     // const usdi = await USDi.new()

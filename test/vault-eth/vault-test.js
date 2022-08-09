@@ -33,7 +33,7 @@ chai.use(solidity);
 const expect = chai.expect;
 
 const AccessControlProxy = hre.artifacts.require('AccessControlProxy');
-// const Treasury = hre.artifacts.require('Treasury');
+const Treasury = hre.artifacts.require('Treasury');
 const PriceOracle = hre.artifacts.require('PriceOracle');
 const ETHi = hre.artifacts.require("ETHi");
 const WETHi = hre.artifacts.require("WETHi");
@@ -84,7 +84,7 @@ describe("Vault", function () {
     let mockS3CoinStrategy;
 
     // Core protocol contracts
-    let ethi;
+    let treasury;
     let pegToken;
     let vault;
     let vaultBuffer;
@@ -157,9 +157,10 @@ describe("Vault", function () {
             exchangePlatformAdapters[adapters.identifiers_[i]] = adapters.exchangeAdapters_[i];
         }
 
-        // console.log(exchangePlatformAdapters);
+        treasury = await Treasury.new();
+        await treasury.initialize(accessControlProxy.address);
 
-        treasuryAddress = ethExchanger.address;    
+        treasuryAddress = treasury.address;
              
         await vault.initialize(accessControlProxy.address, treasuryAddress, exchangeAggregator.address, priceOracle.address);
         vaultAdmin = await VaultAdmin.new();
@@ -498,7 +499,7 @@ describe("Vault", function () {
         console.log("(amount,totalDebt)=(%s,%s)", new BigNumber(await iVault.totalDebt()).div(5).toFixed(),new BigNumber(await iVault.totalDebt()).toFixed());
         let beforeETH = new BigNumber(await balance.current(iVault.address)).toFixed();
         console.log("redeem amount: %s",new BigNumber(await iVault.totalDebt()).div(5).toFixed())
-        tx =  await iVault.redeem(mockS3CoinStrategy.address, new BigNumber(await iVault.totalDebt()).div(5).toFixed());
+        tx =  await iVault.redeem(mockS3CoinStrategy.address, new BigNumber(await iVault.totalDebt()).div(5).toFixed(), 0);
         gasUsed = tx.receipt.gasUsed;
         console.log('redeem gasUsed: %d', gasUsed);
         let afterETH = new BigNumber(await balance.current(iVault.address)).toFixed();
@@ -554,5 +555,33 @@ describe("Vault", function () {
         console.log("Balance of ETHi of farmer1 after end Adjust Position:%s", new BigNumber(await pegToken.balanceOf(farmer1)).toFixed());
         console.log("Balance of ETHi of farmer2 after end Adjust Position:%s", new BigNumber(await pegToken.balanceOf(farmer2)).toFixed());
         console.log("valueOfTrackedTokensIncludeVaultBuffer after end Adjust Position:%s,totalAssetsIncludeVaultBuffer：%s", new BigNumber(await iVault.valueOfTrackedTokensIncludeVaultBuffer()).toFixed(), new BigNumber(await iVault.totalAssetsIncludeVaultBuffer()).toFixed());
+    });
+
+    it('Verify：burn from strategy', async function (){
+        await iVault.rebase();
+        const treasuryLp =  new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed();
+        await treasury.withdraw(pegToken.address, governance, new BigNumber(treasuryLp).toFixed(), {from: governance});
+
+        console.log("totalValueInStrategies before withdraw: %s",new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed());
+        console.log("totalAssets before withdraw: %s",new BigNumber(await iVault.totalAssets()).toFixed());
+        console.log("Balance of ETHi of farmer1 before withdraw: %s", new BigNumber(await pegToken.balanceOf(farmer1)).toFixed());
+        console.log("Balance of ETHi of farmer2 before withdraw: %s", new BigNumber(await pegToken.balanceOf(farmer2)).toFixed());
+        console.log("Balance of ETHi of governance before withdraw: %s", new BigNumber(await pegToken.balanceOf(governance)).toFixed());
+        let _amount =  new BigNumber(await pegToken.balanceOf(farmer1)).toFixed();
+        await iVault.burn(_amount, MFC.ETH_ADDRESS, 0, false, [], {from: farmer1});
+        console.log("totalValueInStrategies after farmer1 withdraw: %s",new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed());
+        _amount =  new BigNumber(await pegToken.balanceOf(governance)).toFixed();
+        await iVault.burn(_amount, MFC.ETH_ADDRESS, 0, false, [], {from: governance});
+        console.log("totalValueInStrategies after governance withdraw: %s",new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed());
+        _amount =  new BigNumber(await pegToken.balanceOf(farmer2)).minus(new BigNumber(10).pow(15)).plus(10).toFixed();
+        await iVault.burn(_amount, MFC.ETH_ADDRESS, 0, false, [], {from: farmer2});
+        const totalValueInStrategies = new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed();
+        console.log("totalValueInStrategies after withdraw: %s",totalValueInStrategies);
+        console.log("totalAssets after withdraw: %s",new BigNumber(await iVault.totalAssets()).toFixed());
+        console.log("Balance of ETHi of farmer1 after withdraw: %s", new BigNumber(await pegToken.balanceOf(farmer1)).toFixed());
+        console.log("Balance of ETHi of farmer2 after withdraw: %s", new BigNumber(await pegToken.balanceOf(farmer2)).toFixed());
+        console.log("Balance of ETHi of governance after withdraw: %s", new BigNumber(await pegToken.balanceOf(governance)).toFixed());
+
+        Utils.assertBNEq(totalValueInStrategies, 0);
     });
 });
