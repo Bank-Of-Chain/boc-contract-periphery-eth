@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 import "../../../external/uniswap/IQuoter.sol";
-import "../uniswapv3/UniswapV3BaseStrategy.sol";
+import "../uniswapv3/ETHUniswapV3Strategy.sol";
 import "../../../external/stakewise/IPool.sol";
 
-contract StakeWiseReth2Seth2500Strategy is UniswapV3BaseStrategy {
+contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3Strategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // https://info.uniswap.org/#/pools/0xa9ffb27d36901f87f1d0f20773f7072e38c5bfba
@@ -23,20 +23,12 @@ contract StakeWiseReth2Seth2500Strategy is UniswapV3BaseStrategy {
     address internal constant stakeWisePool = 0xC874b064f465bdD6411D45734b56fac750Cda29A;
     IPool public stakeWiseIPool;
 
-    function initialize(address _vault) public initializer {
-        uniswapV3Initialize(uniswapV3Pool, 10, 10, 41400, 0, 100, 60);
+    function initialize(address _vault,string memory _name) public initializer {
+        uniswapV3Initialize(uniswapV3Pool, 10, 10, 41400, 0, 100, 60,10);
         address[] memory _wants = new address[](1);
         _wants[0] = wETH;
-        super._initialize(_vault, uint16(ProtocolEnum.StakeWise), _wants);
+        super._initialize(_vault, uint16(ProtocolEnum.StakeWise),_name, _wants);
         stakeWiseIPool = IPool(stakeWisePool);
-    }
-
-    function name() public pure override returns (string memory) {
-        return 'StakeWiseReth2Seth2500Strategy';
-    }
-
-    function getTickSpacing() override internal pure returns (int24){
-        return 10;
     }
 
     function getWantsInfo() public view override returns (address[] memory _assets, uint256[] memory _ratios) {

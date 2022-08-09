@@ -12,8 +12,8 @@ contract ConvexrETHwstETHStrategy is ConvexBaseStrategy {
     address private constant rETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
     address private constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
 
-    function initialize(address _vault) public {
-        super._initialize(_vault);
+    function initialize(address _vault, string memory _name) external initializer {
+        super._initialize(_vault, _name);
         //set up sell reward path
         address[] memory rewardCRVPath = new address[](2);
         rewardCRVPath[0] = CRV;
@@ -60,19 +60,26 @@ contract ConvexrETHwstETHStrategy is ConvexBaseStrategy {
         return "1.0.0";
     }
 
-    function name() external pure override returns (string memory) {
-        return "ConvexrETHwstETHStrategy";
-    }
-
-    function getWantsInfo() public view override returns (address[] memory _assets, uint256[] memory _ratios) {
+    function getWantsInfo()
+        public
+        view
+        override
+        returns (address[] memory _assets, uint256[] memory _ratios)
+    {
         _assets = wants;
         _ratios = new uint256[](_assets.length);
-        
+
         _ratios[0] = getCurvePool().balances(0);
         _ratios[1] = getCurvePool().balances(1);
     }
 
-    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
         outputsInfo = new OutputInfo[](3);
         OutputInfo memory info0 = outputsInfo[0];
         info0.outputCode = 0;
@@ -106,8 +113,14 @@ contract ConvexrETHwstETHStrategy is ConvexBaseStrategy {
         uint256 lpAmount = balanceOfLpToken();
         // curve LP total supply
         uint256 totalSupply = IERC20Upgradeable(getLpToken()).totalSupply();
-        _amounts[0] = balanceOfToken(_tokens[0]) + (getCurvePool().balances(0) * lpAmount) / totalSupply;
-        _amounts[1] = balanceOfToken(_tokens[1]) + (getCurvePool().balances(1) * lpAmount) / totalSupply;
+        _amounts[0] =
+            balanceOfToken(_tokens[0]) +
+            (getCurvePool().balances(0) * lpAmount) /
+            totalSupply;
+        _amounts[1] =
+            balanceOfToken(_tokens[1]) +
+            (getCurvePool().balances(1) * lpAmount) /
+            totalSupply;
     }
 
     function sellWETH2Want() internal override {
@@ -117,13 +130,16 @@ contract ConvexrETHwstETHStrategy is ConvexBaseStrategy {
 
     function convertETH2wstETH() internal {
         uint256 balance = address(this).balance;
-        if(balance>0){
+        if (balance > 0) {
             (bool sent, ) = payable(wstETH).call{value: balance}("");
             require(sent, "Failed to convert");
         }
     }
 
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        override
+    {
         bool isDeposit = false;
         convertETH2wstETH();
         if (balanceOfToken(wstETH) > 0) {
@@ -151,7 +167,11 @@ contract ConvexrETHwstETHStrategy is ConvexBaseStrategy {
         }
     }
 
-    function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts) internal override returns (uint256) {
+    function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        override
+        returns (uint256)
+    {
         for (uint256 i = 0; i < _assets.length; i++) {
             if (_amounts[i] > 0) {
                 IERC20Upgradeable(_assets[i]).safeApprove(address(getCurvePool()), 0);
@@ -161,14 +181,14 @@ contract ConvexrETHwstETHStrategy is ConvexBaseStrategy {
         return getCurvePool().add_liquidity([_amounts[0], _amounts[1]], 0);
     }
 
-    function curveRemoveLiquidity(uint256 liquidity,uint256 _outputCode) internal override {
+    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPoolPayable pool = getCurvePool();
-        if (_outputCode == 0){
+        if (_outputCode == 0) {
             pool.remove_liquidity(liquidity, [uint256(0), uint256(0)]);
-        } else if (_outputCode == 1){
-            pool.remove_liquidity_one_coin(liquidity,0,0);
-        } else if (_outputCode == 2){
-            pool.remove_liquidity_one_coin(liquidity,1,0);
+        } else if (_outputCode == 1) {
+            pool.remove_liquidity_one_coin(liquidity, 0, 0);
+        } else if (_outputCode == 2) {
+            pool.remove_liquidity_one_coin(liquidity, 1, 0);
         }
     }
 }

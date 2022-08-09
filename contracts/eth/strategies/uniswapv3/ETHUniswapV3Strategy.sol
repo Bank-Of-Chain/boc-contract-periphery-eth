@@ -16,7 +16,7 @@ import '../../../utils/actions/UniswapV3LiquidityActionsMixin.sol';
 import './../../enums/ProtocolEnum.sol';
 import 'hardhat/console.sol';
 
-abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3LiquidityActionsMixin {
+contract ETHUniswapV3Strategy is ETHBaseClaimableStrategy, UniswapV3LiquidityActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     event UniV3SetBaseThreshold(int24 _baseThreshold);
@@ -31,6 +31,7 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
     int24 public minTickMove;
     int24 public maxTwapDeviation;
     int24 public lastTick;
+    int24 public tickSpacing;
     uint256 public period;
     uint256 public lastTimestamp;
     uint32 public twapDuration;
@@ -44,22 +45,24 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
     MintInfo public baseMintInfo;
     MintInfo public limitMintInfo;
 
-    function _initialize(
+    function initialize(
         address _vault,
+        string memory _name,
         address _pool,
         int24 _baseThreshold,
         int24 _limitThreshold,
         uint256 _period,
         int24 _minTickMove,
         int24 _maxTwapDeviation,
-        uint32 _twapDuration
-    ) internal virtual {
-        uniswapV3Initialize(_pool, _baseThreshold, _limitThreshold, _period, _minTickMove, _maxTwapDeviation, _twapDuration);
+        uint32 _twapDuration,
+        int24 _tickSpacing
+    ) external initializer {
+        uniswapV3Initialize(_pool, _baseThreshold, _limitThreshold, _period, _minTickMove, _maxTwapDeviation, _twapDuration,_tickSpacing);
         address[] memory _wants = new address[](2);
         _wants[0] = token0;
         _wants[1] = token1;
         console.log('UniswapV3BaseStrategy _initialize _wants[0]: %s, _wants[1]: %s', _wants[0], _wants[1]);
-        super._initialize(_vault, uint16(ProtocolEnum.UniswapV3), _wants);
+        super._initialize(_vault, uint16(ProtocolEnum.UniswapV3), _name,_wants);
     }
 
     function uniswapV3Initialize(
@@ -69,7 +72,8 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
         uint256 _period,
         int24 _minTickMove,
         int24 _maxTwapDeviation,
-        uint32 _twapDuration
+        uint32 _twapDuration,
+        int24 _tickSpacing
     ) internal {
         super._initializeUniswapV3Liquidity(_pool);
         baseThreshold = _baseThreshold;
@@ -78,9 +82,8 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
         minTickMove = _minTickMove;
         maxTwapDeviation = _maxTwapDeviation;
         twapDuration = _twapDuration;
+        tickSpacing = _tickSpacing;
     }
-
-    function getTickSpacing() internal pure virtual returns (int24);
 
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
@@ -111,7 +114,7 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
 
     function getSpecifiedRangesOfTick(int24 tick) internal view returns (int24 tickFloor, int24 tickCeil, int24 tickLower, int24 tickUpper) {
         tickFloor = _floor(tick);
-        tickCeil = tickFloor + getTickSpacing();
+        tickCeil = tickFloor + tickSpacing;
         tickLower = tickFloor - baseThreshold;
         tickUpper = tickCeil + baseThreshold;
         console.log('UniswapV3BaseStrategy getSpecifiedRangesOfTick tick:');
@@ -319,7 +322,7 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
 
         // check price not too close to boundary
         int24 maxThreshold = baseThreshold > limitThreshold ? baseThreshold : limitThreshold;
-        if (tick < TickMath.MIN_TICK + maxThreshold + getTickSpacing() || tick > TickMath.MAX_TICK - maxThreshold - getTickSpacing()) {
+        if (tick < TickMath.MIN_TICK + maxThreshold + tickSpacing || tick > TickMath.MAX_TICK - maxThreshold - tickSpacing) {
             return false;
         }
 
@@ -344,9 +347,10 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
     // Rounds tick down towards negative infinity so that it's a multiple of `tickSpacing`.
     function _floor(int24 tick) internal view returns (int24) {
         // compressed=-27633, tick=-276330, tickSpacing=10
-        int24 compressed = tick / getTickSpacing();
-        if (tick < 0 && tick % getTickSpacing() != 0) compressed--;
-        return compressed * getTickSpacing();
+        int24 _tickSpacing = tickSpacing;
+        int24 compressed = tick / _tickSpacing;
+        if (tick < 0 && tick % _tickSpacing != 0) compressed--;
+        return compressed * _tickSpacing;
     }
 
     function mintNewPosition(int24 _tickLower, int24 _tickUpper, uint256 _amount0Desired, uint256 _amount1Desired, bool _base) internal returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) {
@@ -386,8 +390,8 @@ abstract contract UniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3Li
         }
     }
 
-    function _checkThreshold(int24 _threshold) internal pure {
-        require(_threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % getTickSpacing() == 0, "threshold validate error");
+    function _checkThreshold(int24 _threshold) internal view {
+        require(_threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0, "threshold validate error");
     }
 
     function setBaseThreshold(int24 _baseThreshold) external onlyGovOrDelegate {

@@ -242,6 +242,9 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
             });
         }
         BALANCER_VAULT.exitPool(poolKey, address(this), recipient, exitRequest);
+        console.log('after withdraw want0 balancer:%d',balanceOfToken(wants[0]));
+        console.log('after withdraw want1 balancer:%d',balanceOfToken(wants[1]));
+        console.log('after withdraw want2 balancer:%d',balanceOfToken(wants[2]));
     }
 
     function claimRewards()

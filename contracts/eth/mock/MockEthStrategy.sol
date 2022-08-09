@@ -22,7 +22,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         address[] memory _wants = new address[](2);
         _wants[0] = ETHToken.NATIVE_TOKEN;
         _wants[1] = stETH;
-        super._initialize(_vault, 23, _wants);
+        super._initialize(_vault, 23, "MockEthStrategy",_wants);
     }
 
     function getVersion()
@@ -34,9 +34,6 @@ contract MockEthStrategy is ETHBaseStrategy {
         return "0.0.1";
     }
 
-    function name() external pure virtual override returns (string memory) {
-        return "MockEthStrategy";
-    }
 
     function getWantsInfo()
         external

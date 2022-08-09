@@ -31,10 +31,10 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
     int24 public minTickMove;
     int24 public maxTwapDeviation;
     int24 public lastTick;
+    int24 public tickSpacing;
     uint256 public period;
     uint256 public lastTimestamp;
     uint32 public twapDuration;
-    int24 public tickSpacing;
 
     struct MintInfo {
         uint256 tokenId;

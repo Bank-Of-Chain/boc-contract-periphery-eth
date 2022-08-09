@@ -11,18 +11,16 @@ import "./../../enums/ProtocolEnum.sol";
 import "../ETHBaseStrategy.sol";
 import "hardhat/console.sol";
 
-contract UniswapV2StEthWEthStrategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin {
+contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    IUniswapV2Pair internal constant uniswapV2Pair = IUniswapV2Pair(0x4028DAAC072e492d34a3Afdbef0ba7e35D8b55C4);
-    address internal constant stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84; //pairToken0
-    address internal constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; //pairToken1
-
-    function initialize(address _vault) external {
+    IUniswapV2Pair public uniswapV2Pair;
+    function initialize(address _vault,string memory _name,address _pair) external initializer {
+        uniswapV2Pair = IUniswapV2Pair(_pair);
         address[] memory _wants = new address[](2);
-        _wants[0] = stETH;
-        _wants[1] = wETH;
-        _initialize(_vault, uint16(ProtocolEnum.UniswapV2), _wants);
+        _wants[0] = uniswapV2Pair.token0();
+        _wants[1] = uniswapV2Pair.token1();
+        _initialize(_vault, uint16(ProtocolEnum.UniswapV2), _name,_wants);
         _initializeUniswapV2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     }
 
@@ -30,9 +28,6 @@ contract UniswapV2StEthWEthStrategy is ETHBaseStrategy, UniswapV2LiquidityAction
         return "1.0.0";
     }
 
-    function name() public pure override returns (string memory) {
-        return "UniswapV2StEthWEthStrategy";
-    }
 
     function getWantsInfo() external view virtual override returns (address[] memory _assets, uint256[] memory _ratios) {
         (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
@@ -77,8 +72,8 @@ contract UniswapV2StEthWEthStrategy is ETHBaseStrategy, UniswapV2LiquidityAction
         uint256 lpDecimalUnit = 1e18;
         uint256 part0 = (uint256(reserve0) * (lpDecimalUnit)) / totalSupply;
         uint256 part1 = (uint256(reserve1) * (lpDecimalUnit)) / totalSupply;
-        uint256 partValue0 = priceOracle.valueInEth(stETH, part0);
-        uint256 partValue1 = priceOracle.valueInEth(wETH, part1);
+        uint256 partValue0 = priceOracle.valueInEth(wants[0], part0);
+        uint256 partValue1 = priceOracle.valueInEth(wants[1], part1);
         lpValue = partValue0 + partValue1;
     }
 
@@ -97,7 +92,7 @@ contract UniswapV2StEthWEthStrategy is ETHBaseStrategy, UniswapV2LiquidityAction
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal virtual override {
         uint256 withdrawAmount = (balanceOfToken(address(uniswapV2Pair)) * _withdrawShares) / _totalShares;
         if (withdrawAmount > 0) {
-            __uniswapV2Redeem(address(this), address(uniswapV2Pair), withdrawAmount, stETH, wETH, 0, 0);
+            __uniswapV2Redeem(address(this), address(uniswapV2Pair), withdrawAmount, wants[0], wants[1], 0, 0);
         }
     }
 

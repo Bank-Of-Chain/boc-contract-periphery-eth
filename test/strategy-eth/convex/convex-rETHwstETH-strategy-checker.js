@@ -1,5 +1,5 @@
 // npx hardhat test ./test/strategy/convex/convex-rETHwstETH-strategy-checker.js
 const checker = require('../strategy-checker');
 describe('【ConvexrETHwstETHStrategy Strategy Checker】', function() {
-    checker.check('ConvexrETHwstETHStrategy',null,null,null,2);
+    checker.check('ConvexrETHwstETHStrategy',null,null,null,0);
 });

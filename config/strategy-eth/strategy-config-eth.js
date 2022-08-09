@@ -1,64 +1,15 @@
+const {auraStrategies} = require('./strategy-config-eth-aura');
+const {convexStrategies} = require('./strategy-config-eth-convex');
+const {uniswapStrategies} = require('./strategy-config-eth-uniswap');
+const {stakewiseStrategies} = require('./strategy-config-eth-stakewise');
+const {yearnStrategies} = require('./strategy-config-eth-yearn');
+
 const strategiesList = [
-    {
-        name: 'AuraWstETHWETHStrategy',
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
-    {
-        name: 'UniswapV2StEthWEthStrategy',
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
-    {
-        name: 'BalancerWstEthWEthStrategy',
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
-    {
-        name: 'BalancerREthWEthStrategy',
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
-    {
-        name: 'ConvexrETHwstETHStrategy',
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
-    {
-        name: 'ConvexStETHStrategy',
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
-    {
-        name: 'UniswapV3RethEth3000Strategy',
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
-    {
-        name: 'StakeWiseEthSeth23000Strategy',
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
-    {
-        name: 'StakeWiseReth2Seth2500Strategy',
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
-    {
-        name: 'YearnV2YETHStrategy',
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-    },
+    ...auraStrategies,
+    ...convexStrategies,
+    ...uniswapStrategies,
+    ...stakewiseStrategies,
+    ...yearnStrategies
 ]
 
-exports.strategiesList = strategiesList;
+exports.strategiesList = strategiesList

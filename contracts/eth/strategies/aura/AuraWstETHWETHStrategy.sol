@@ -51,7 +51,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     mapping(address => address[]) public swapRewardRoutes;
     mapping(address => uint256) public sellFloor;
 
-    function initialize(address _vault) external initializer {
+    function initialize(address _vault,string memory _name) external initializer {
         // bytes32 _poolKey = 0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
         // uint256 _pId = 3;
         // address _poolLpToken = 0x32296969Ef14EB0c6d29669C550D4a0449130230;
@@ -88,7 +88,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
         isWantRatioIgnorable = true;
 
-        super._initialize(_vault, uint16(ProtocolEnum.Aura), _wants);
+        super._initialize(_vault, uint16(ProtocolEnum.Aura), _name,_wants);
     }
 
     /**
@@ -108,10 +108,6 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
-    }
-
-    function name() external pure override returns (string memory) {
-        return "AuraWstETHWETHStrategy";
     }
 
     function getPoolKey() internal pure returns (bytes32) {

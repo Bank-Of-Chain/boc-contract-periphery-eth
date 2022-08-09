@@ -3,7 +3,7 @@ const { ethers } = require('hardhat');
 const { assert } = require('chai');
 
 const MFC = require('../../config/mainnet-fork-test-config');
-
+const {strategiesList} = require('../../config/strategy-eth/strategy-config-eth')
 const topUp = require('../../utils/top-up-utils');
 const assertUtils = require('../../utils/assert-utils');
 const { advanceBlock, } = require('../../utils/block-utils');
@@ -117,6 +117,15 @@ async function transfer(asset, amount, from, to) {
     }
 }
 
+function findStrategyItem(strategyName) {
+
+    const result = strategiesList.find((item) => {
+        return item.name == strategyName;
+    });
+
+    return result;
+}
+
 async function check(strategyName, beforeCallback, afterCallback, uniswapV3RebalanceCallback,outputCode = 0) {
     before(async function () {
         accounts = await ethers.getSigners();
@@ -133,18 +142,36 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
         console.log('mock vault address:%s', mockVault.address);
+        // find strategy config
+        const strategyItem = findStrategyItem(strategyName);
+        console.log('strategyItem:',strategyItem);
+        
+        const {
+            name,
+            contract,
+            customParams
+        } = strategyItem;
         // init strategy
-        const Strategy = hre.artifacts.require(strategyName);
+        const Strategy = hre.artifacts.require(contract);
         strategy = await Strategy.new();
         console.log('%s address:%s', strategyName, strategy.address);
 
-        if (strategyName === 'MockEthStrategy') {
-            let mock3rdEthPool = await Mock3rdEthPool.new();
-            await strategy.initialize(mockVault.address, mock3rdEthPool.address);
-        } else {
-            await strategy.initialize(mockVault.address);
-        }
-        console.log('strategy initialize finish.');
+        const allParams = [
+            mockVault.address,
+            name,
+            ...customParams
+        ]
+        console.log('allParams:',allParams);
+        
+        await strategy.initialize(...allParams);
+
+        // if (strategyName === 'MockEthStrategy') {
+        //     let mock3rdEthPool = await Mock3rdEthPool.new();
+        //     await strategy.initialize(mockVault.address, mock3rdEthPool.address);
+        // } else {
+        //     await strategy.initialize(mockVault.address);
+        // }
+        // console.log('strategy initialize finish.');
 
         // top up for vault
         await _topUpFamilyBucket();
