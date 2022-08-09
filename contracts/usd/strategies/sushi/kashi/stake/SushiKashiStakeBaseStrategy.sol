@@ -161,7 +161,12 @@ abstract contract SushiKashiStakeBaseStrategy is BaseClaimableStrategy {
         IKashiPair _kashiPair = getKashiPair();
         address _want = wants[0];
         uint256 _withdrawAmount = (_lpAmount * _withdrawShares) / _totalShares;
-        console.log("[%s] lp amount wanted is %d, lp amount is %d", this.name(), _withdrawAmount, balanceOfLpToken());
+        console.log(
+            "[%s] lp amount wanted is %d, lp amount is %d",
+            this.name(),
+            _withdrawAmount,
+            balanceOfLpToken()
+        );
         // 1. withdraw from MasterChef
         masterChef.withdraw(getPoolId(), _withdrawAmount);
         console.log("[%s] withdraw successfully", this.name());
@@ -170,7 +175,9 @@ abstract contract SushiKashiStakeBaseStrategy is BaseClaimableStrategy {
         uint256 pairLeft = base - _withdrawAmount;
         if (pairLeft < KASHI_MINIMUM) {
             _withdrawAmount = _withdrawAmount - (KASHI_MINIMUM - pairLeft);
-            console.log("[%s] kashi totalSupply will be less than minimum, so cut the withdrawn lp amount", pairLeft);
+            console.log(
+                "[%s] kashi totalSupply will be less than minimum, so cut the withdrawn lp amount"
+            );
         }
         // 2. ACTION_REMOVE_ASSET
         uint256 share = _kashiPair.removeAsset(address(this), _withdrawAmount);
@@ -178,7 +185,11 @@ abstract contract SushiKashiStakeBaseStrategy is BaseClaimableStrategy {
         console.log("[%s] share is %d", this.name(), share);
         // 3. ACTION_BENTO_WITHDRAW
         bentoBox.withdraw(_want, address(this), address(this), 0, share);
-        console.log("[%s] real amount out is %d", this.name(), IERC20Upgradeable(_want).balanceOf(address(this)));
+        console.log(
+            "[%s] real amount out is %d",
+            this.name(),
+            IERC20Upgradeable(_want).balanceOf(address(this))
+        );
     }
 
     function balanceOfLpToken() public view returns (uint256) {

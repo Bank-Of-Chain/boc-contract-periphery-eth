@@ -217,7 +217,12 @@ abstract contract ConvexIronBankBaseStrategy is Initializable, BaseStrategy {
         } else {
             depositedAssets = 0;
         }
-        console.log("[%s] rewardBalance:%s,depositedAssets:%s", this.name(), rewardBalance, depositedAssets);
+        console.log(
+            "[%s] rewardBalance:%s,depositedAssets:%s",
+            this.name(),
+            rewardBalance,
+            depositedAssets
+        );
     }
 
     /**
@@ -245,7 +250,12 @@ abstract contract ConvexIronBankBaseStrategy is Initializable, BaseStrategy {
             value += ((underlyingBalance * _collateralTokenPrice()) /
                 decimalUnitOfToken(collateralToken));
         }
-        console.log("total assets:%s,deposited:%s,collateral:%s", value, deposited, collateralAssets());
+        console.log(
+            "total assets:%s,deposited:%s,collateral:%s",
+            value,
+            deposited,
+            collateralAssets()
+        );
     }
 
     /**
@@ -321,7 +331,12 @@ abstract contract ConvexIronBankBaseStrategy is Initializable, BaseStrategy {
         } else {
             overflow = currentBorrow - borrowAvaible;
         }
-        console.log("borrowInfo space:%s,overflow:%s borrowAvaible:%s", space, overflow, borrowAvaible);
+        console.log(
+            "borrowInfo space:%s,overflow:%s borrowAvaible:%s",
+            space,
+            overflow,
+            borrowAvaible
+        );
     }
 
     function getCurveLpToken() public view returns (address) {
@@ -341,7 +356,12 @@ abstract contract ConvexIronBankBaseStrategy is Initializable, BaseStrategy {
         uint256 assetsValue = assets();
         uint256 debtsValue = debts();
         console.log("[%s] assets:%s,debts:%s", this.name(), assetsValue, debtsValue);
-        console.log("[%s] rewardCRV:%s, rewardCVX:%s", this.name(), balanceOfToken(rewardCRV), balanceOfToken(rewardCVX));
+        console.log(
+            "[%s] rewardCRV:%s, rewardCVX:%s",
+            this.name(),
+            balanceOfToken(rewardCRV),
+            balanceOfToken(rewardCVX)
+        );
         //Net Assets
         return assetsValue - debtsValue;
     }
@@ -447,7 +467,12 @@ abstract contract ConvexIronBankBaseStrategy is Initializable, BaseStrategy {
         (, uint256 rate) = comptroller.markets(address(collateralCToken));
         uint256 liquidity = (collateralAssets() * rate) / 1e18;
         borrowAvaible = _borrowAvaiable(liquidity);
-        console.log("borrowInfo rate:%s,collateral liquidity:%s borrowAvaible:%s", rate, liquidity, borrowAvaible);
+        console.log(
+            "borrowInfo rate:%s,collateral liquidity:%s borrowAvaible:%s",
+            rate,
+            liquidity,
+            borrowAvaible
+        );
     }
 
     // Add collateral to IronBank
@@ -483,7 +508,12 @@ abstract contract ConvexIronBankBaseStrategy is Initializable, BaseStrategy {
         address booster = BOOSTER;
         //saving gas
         if (liquidity > 0) {
-            console.log("[%s] deposit to Convex,pid:%s,lp amount:%s", this.name(), _pid, balanceOfToken(lpToken));
+            console.log(
+                "[%s] deposit to Convex,pid:%s,lp amount:%s",
+                this.name(),
+                _pid,
+                balanceOfToken(lpToken)
+            );
             IERC20Upgradeable(lpToken).safeApprove(booster, 0);
             IERC20Upgradeable(lpToken).safeApprove(booster, liquidity);
             IConvex(booster).deposit(_pid, liquidity, true);
@@ -496,7 +526,12 @@ abstract contract ConvexIronBankBaseStrategy is Initializable, BaseStrategy {
         //saving gas
         borrowC.borrow(borrowAmount);
         receiveAmount = balanceOfToken(borrowC.underlying());
-        console.log("[%s] borrow amount:%s,receive amount:%s", this.name(), borrowAmount, receiveAmount);
+        console.log(
+            "[%s] borrow amount:%s,receive amount:%s",
+            this.name(),
+            borrowAmount,
+            receiveAmount
+        );
     }
 
     // repay forex
@@ -544,7 +579,12 @@ abstract contract ConvexIronBankBaseStrategy is Initializable, BaseStrategy {
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal override {
         uint256 totalStaking = balanceOfToken(rewardPool);
         uint256 cvxLpAmount = (totalStaking * _withdrawShares) / _totalShares;
-        console.log("[%s] _withdrawSomeLpToken:%s, _totalShares:%s", this.name(), _withdrawShares, _totalShares);
+        console.log(
+            "[%s] _withdrawSomeLpToken:%s, _totalShares:%s",
+            this.name(),
+            _withdrawShares,
+            _totalShares
+        );
         console.log("[%s] cvxLpAmount: %s", this.name(), cvxLpAmount);
         //saving gas
         CTokenInterface borrowC = borrowCToken;
@@ -561,12 +601,21 @@ abstract contract ConvexIronBankBaseStrategy is Initializable, BaseStrategy {
             _repayForex(repayAmount);
             uint256 burnAmount = (balanceOfToken(address(collateralC)) * repayAmount) /
                 currentBorrow;
-            console.log("burnAmount:%s,repayAmount:%s,currentBorrow:%s", burnAmount, repayAmount, currentBorrow);
+            console.log(
+                "burnAmount:%s,repayAmount:%s,currentBorrow:%s",
+                burnAmount,
+                repayAmount,
+                currentBorrow
+            );
             collateralC.redeem(burnAmount);
             //The excess borrowToken is exchanged for U
             uint256 profit = balanceOfToken(borrowToken);
             if (profit > 0) {
-                console.log("profit:%d,rewardRoutes[borrowToken]:%d", profit, rewardRoutes[borrowToken].length);
+                console.log(
+                    "profit:%d,rewardRoutes[borrowToken]:%d",
+                    profit,
+                    rewardRoutes[borrowToken].length
+                );
                 IUniswapV2Router2(sushiRouterAddr).swapExactTokensForTokens(
                     profit,
                     0,
@@ -596,7 +645,11 @@ abstract contract ConvexIronBankBaseStrategy is Initializable, BaseStrategy {
         require(_assets[0] == address(collateralToken) && _amounts[0] > 0);
         uint256 collateralAmount = _amounts[0];
         _mintCollateralCToken(collateralAmount);
-        console.log("[%s] after _mintCollateralCToken = %s", this.name(), this.estimatedTotalAssets());
+        console.log(
+            "[%s] after _mintCollateralCToken = %s",
+            this.name(),
+            this.estimatedTotalAssets()
+        );
         (uint256 space, ) = borrowInfo();
         console.log("[%s] borrow info:space = %s", this.name(), space);
         if (space > 0) {

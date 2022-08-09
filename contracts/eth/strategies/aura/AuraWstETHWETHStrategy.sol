@@ -319,8 +319,12 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
                     // IRewardPool(extraReward).getReward();
                     _rewardsTokens[2 + i] = rewardToken;
                     _claimAmounts[2 + i] = balanceOfToken(rewardToken);
-                    console.log("extraReward,rewardToken,balance");
-                    console.log(extraReward, rewardToken, balanceOfToken(rewardToken));
+                    console.log(
+                        "extraReward:%s,rewardToken:%s,balance:%d",
+                        extraReward,
+                        rewardToken,
+                        balanceOfToken(rewardToken)
+                    );
                 }
             }
         }

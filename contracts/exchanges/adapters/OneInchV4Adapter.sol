@@ -45,7 +45,6 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
     ) external payable override returns (uint256) {
         bool success;
         bytes memory result;
-        console.log("[OneInchV4Adapter] start safeApprove");
         uint256 toTokenBefore = getTokenBalance(_sd.dstToken, address(this));
 
         bytes memory _callData = _getCallData(_data, _sd);
@@ -59,7 +58,6 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             console.log("[OneInchV4Adapter] start swap");
             (success, result) = payable(AGGREGATION_ROUTER_V4).call{value: _sd.amount}(_callData);
         }
-        console.log("[OneInchV4Adapter] end swap");
 
         emit Response(success, result);
         if (!success) {
@@ -76,14 +74,15 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
     function _getCallData(bytes calldata _data, SwapDescription calldata _sd) private view returns(bytes memory){
         bytes memory _callData;
         bytes4 _sig = _getSig(_data);
-        if(_sig == SWAP_METHOD_SELECTOR[0]){
+        bytes4[] memory _selector = SWAP_METHOD_SELECTOR;
+        if(_sig == _selector[0]){
             (address _caller,
             IOneInchV4.OneInchSwapDescription memory _desc,
             bytes memory _tempCallData) = abi.decode(_data[4:], (address, IOneInchV4.OneInchSwapDescription, bytes));
             _desc.minReturnAmount = _desc.minReturnAmount.mul(_sd.amount).div(_desc.amount);
             _desc.amount = _sd.amount;
             _callData = abi.encodeWithSelector(IOneInchV4.swap.selector, _caller, _desc, _tempCallData);
-        }else if(_sig == SWAP_METHOD_SELECTOR[1]){
+        }else if(_sig == _selector[1]){
             (address _srcToken,
             uint256 _amount,
             uint256 _minReturn,
@@ -91,7 +90,7 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             _minReturn = _minReturn.mul(_sd.amount).div(_amount);
             _amount = _sd.amount;
             _callData = abi.encodeWithSelector(IOneInchV4.unoswap.selector, _srcToken, _amount, _minReturn, _pools);
-        }else if(_sig == SWAP_METHOD_SELECTOR[2]){
+        }else if(_sig == _selector[2]){
             (address _srcToken,
             uint256 _amount,
             uint256 _minReturn,
@@ -101,7 +100,7 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             _minReturn = _minReturn.mul(_sd.amount).div(_amount);
             _amount = _sd.amount;
             _callData = abi.encodeWithSelector(IOneInchV4.unoswapWithPermit.selector, _srcToken, _amount, _minReturn, _pools, _permit);
-        }else if(_sig == SWAP_METHOD_SELECTOR[3]){
+        }else if(_sig == _selector[3]){
             (uint256 _amount,
             uint256 _minReturn,
             uint256[] memory _pools
@@ -109,7 +108,7 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             _minReturn = _minReturn.mul(_sd.amount).div(_amount);
             _amount = _sd.amount;
             _callData = abi.encodeWithSelector(IOneInchV4.uniswapV3Swap.selector, _amount, _minReturn, _pools);
-        }else if(_sig == SWAP_METHOD_SELECTOR[4]){
+        }else if(_sig == _selector[4]){
             (
             address _recipient,
             uint256 _amount,
@@ -119,7 +118,7 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             _minReturn = _minReturn.mul(_sd.amount).div(_amount);
             _amount = _sd.amount;
             _callData = abi.encodeWithSelector(IOneInchV4.uniswapV3SwapTo.selector, _recipient, _amount, _minReturn, _pools);
-        }else if(_sig == SWAP_METHOD_SELECTOR[5]){
+        }else if(_sig == _selector[5]){
             (
             address _recipient,
             address _srcToken,
@@ -131,7 +130,7 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             _minReturn = _minReturn.mul(_sd.amount).div(_amount);
             _amount = _sd.amount;
             _callData = abi.encodeWithSelector(IOneInchV4.uniswapV3SwapToWithPermit.selector, _recipient, _srcToken, _amount, _minReturn, _pools, _permit);
-        }else if(_sig == SWAP_METHOD_SELECTOR[6]){
+        }else if(_sig == _selector[6]){
             (
             address _srcToken,
             address _dstToken,
@@ -141,7 +140,7 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             _minReturn = _minReturn.mul(_sd.amount).div(_amount);
             _amount = _sd.amount;
             _callData = abi.encodeWithSelector(IOneInchV4.clipperSwap.selector, _srcToken, _dstToken, _amount, _minReturn);
-        }else if(_sig == SWAP_METHOD_SELECTOR[7]){
+        }else if(_sig == _selector[7]){
             (
             address _recipient,
             address _srcToken,
@@ -152,7 +151,7 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             _minReturn = _minReturn.mul(_sd.amount).div(_amount);
             _amount = _sd.amount;
             _callData = abi.encodeWithSelector(IOneInchV4.clipperSwapTo.selector, _recipient, _srcToken, _dstToken, _amount, _minReturn);
-        }else if(_sig == SWAP_METHOD_SELECTOR[8]){
+        }else if(_sig == _selector[8]){
             (
             address _recipient,
             address _srcToken,

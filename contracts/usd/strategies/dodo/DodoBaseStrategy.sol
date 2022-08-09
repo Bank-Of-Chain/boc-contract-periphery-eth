@@ -143,7 +143,12 @@ abstract contract DodoBaseStrategy is BaseClaimableStrategy, DodoPoolActionsMixi
         (uint256 shares, uint256 baseInput, uint256 quoteInput) = DodoVault(_lpTokenPool)
             .buyShares(address(this));
         console.log("[%s] buyShares success, shares=%s,", address(this), shares);
-        console.log("[%s] buyShares success, baseInput=%s, quoteInput=%s", address(this), baseInput, quoteInput);
+        console.log(
+            "[%s] buyShares success, baseInput=%s, quoteInput=%s",
+            address(this),
+            baseInput,
+            quoteInput
+        );
         uint256 lpAmount = IERC20Upgradeable(_lpTokenPool).balanceOf(address(this));
         console.log("[%s] lpAmount=", address(this), lpAmount);
         // Pledge lptoken for mining

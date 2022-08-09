@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../strategies/ETHBaseStrategy.sol";
 import "./Mock3rdEthPool.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";

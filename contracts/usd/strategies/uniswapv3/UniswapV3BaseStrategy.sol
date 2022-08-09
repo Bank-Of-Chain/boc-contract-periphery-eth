@@ -59,7 +59,11 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
         address[] memory _wants = new address[](2);
         _wants[0] = token0;
         _wants[1] = token1;
-        console.log("UniswapV3BaseStrategy _initialize _wants[0]: %s, _wants[1]: %s", _wants[0], _wants[1]);
+        console.log(
+            "UniswapV3BaseStrategy _initialize _wants[0]: %s, _wants[1]: %s",
+            _wants[0],
+            _wants[1]
+        );
         super._initialize(_vault, _harvester, uint16(ProtocolEnum.UniswapV3), _wants);
         baseThreshold = _baseThreshold;
         limitThreshold = _limitThreshold;
@@ -94,7 +98,11 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
             tickUpper,
             pool.liquidity()
         );
-        console.log("UniswapV3BaseStrategy getWantsInfo amount0: %d, amount1: %d", amount0, amount1);
+        console.log(
+            "UniswapV3BaseStrategy getWantsInfo amount0: %d, amount1: %d",
+            amount0,
+            amount1
+        );
         _ratios = new uint256[](2);
         _ratios[0] = amount0;
         _ratios[1] = amount1;
@@ -220,8 +228,14 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
         internal
         override
     {
-        console.log("UniswapV3BaseStrategy depositTo3rdPool balanceOfToken0 before: ",balanceOfToken(token0));
-        console.log("UniswapV3BaseStrategy depositTo3rdPool balanceOfToken1 before: ",balanceOfToken(token1));
+        console.log(
+            "UniswapV3BaseStrategy depositTo3rdPool balanceOfToken0 before: ",
+            balanceOfToken(token0)
+        );
+        console.log(
+            "UniswapV3BaseStrategy depositTo3rdPool balanceOfToken1 before: ",
+            balanceOfToken(token1)
+        );
         (, int24 tick, , , , , ) = pool.slot0();
         if (baseMintInfo.tokenId == 0) {
             console.log("UniswapV3BaseStrategy depositTo3rdPool mintNewPosition");
@@ -254,9 +268,18 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
             }
         }
 
-        console.log("UniswapV3BaseStrategy depositTo3rdPool balanceOfToken0 after: ", balanceOfToken(token0));
-        console.log("UniswapV3BaseStrategy depositTo3rdPool balanceOfToken1 after: ", balanceOfToken(token1));
-        console.log("UniswapV3BaseStrategy depositTo3rdPool liquidity after: ", __getLiquidityForNFT(baseMintInfo.tokenId));
+        console.log(
+            "UniswapV3BaseStrategy depositTo3rdPool balanceOfToken0 after: ",
+            balanceOfToken(token0)
+        );
+        console.log(
+            "UniswapV3BaseStrategy depositTo3rdPool balanceOfToken1 after: ",
+            balanceOfToken(token1)
+        );
+        console.log(
+            "UniswapV3BaseStrategy depositTo3rdPool liquidity after: ",
+            __getLiquidityForNFT(baseMintInfo.tokenId)
+        );
     }
 
     function withdrawFrom3rdPool(
@@ -264,12 +287,24 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-        console.log("UniswapV3BaseStrategy withdrawFrom3rdPool balanceOfLpToken0 before: ", balanceOfLpToken(baseMintInfo.tokenId));
-        console.log("UniswapV3BaseStrategy withdrawFrom3rdPool balanceOfLpToken1 before: ", balanceOfLpToken(limitMintInfo.tokenId));
+        console.log(
+            "UniswapV3BaseStrategy withdrawFrom3rdPool balanceOfLpToken0 before: ",
+            balanceOfLpToken(baseMintInfo.tokenId)
+        );
+        console.log(
+            "UniswapV3BaseStrategy withdrawFrom3rdPool balanceOfLpToken1 before: ",
+            balanceOfLpToken(limitMintInfo.tokenId)
+        );
         withdraw(baseMintInfo.tokenId, _withdrawShares, _totalShares);
         withdraw(limitMintInfo.tokenId, _withdrawShares, _totalShares);
-        console.log("UniswapV3BaseStrategy withdrawFrom3rdPool base balanceOfLpToken after: ", balanceOfLpToken(baseMintInfo.tokenId));
-        console.log("UniswapV3BaseStrategy withdrawFrom3rdPool limit balanceOfLpToken after: ", balanceOfLpToken(limitMintInfo.tokenId));
+        console.log(
+            "UniswapV3BaseStrategy withdrawFrom3rdPool base balanceOfLpToken after: ",
+            balanceOfLpToken(baseMintInfo.tokenId)
+        );
+        console.log(
+            "UniswapV3BaseStrategy withdrawFrom3rdPool limit balanceOfLpToken after: ",
+            balanceOfLpToken(limitMintInfo.tokenId)
+        );
     }
 
     function withdraw(
@@ -296,12 +331,23 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
                 amount1Min: 0,
                 deadline: block.timestamp
             });
-
-        console.log("UniswapV3BaseStrategy removeLiquidity balanceOfToken0 before: ", balanceOfToken(token0));
-        console.log("UniswapV3BaseStrategy removeLiquidity balanceOfToken1 before: ", balanceOfToken(token1));
+        console.log(
+            "UniswapV3BaseStrategy removeLiquidity balanceOfToken0 before: ",
+            balanceOfToken(token0)
+        );
+        console.log(
+            "UniswapV3BaseStrategy removeLiquidity balanceOfToken1 before: ",
+            balanceOfToken(token1)
+        );
         __removeLiquidity(params);
-        console.log("UniswapV3BaseStrategy removeLiquidity balanceOfToken0 after: ", balanceOfToken(token0));
-        console.log("UniswapV3BaseStrategy removeLiquidity balanceOfToken1 after: ", balanceOfToken(token1));
+        console.log(
+            "UniswapV3BaseStrategy removeLiquidity balanceOfToken0 after: ",
+            balanceOfToken(token0)
+        );
+        console.log(
+            "UniswapV3BaseStrategy removeLiquidity balanceOfToken1 after: ",
+            balanceOfToken(token1)
+        );
     }
 
     function balanceOfLpToken(uint256 _tokenId) public view returns (uint128) {
@@ -318,14 +364,20 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
 
     function rebalance(int24 tick) internal {
         // Withdraw all current liquidity
-        console.log("UniswapV3BaseStrategy rebalance baseMintInfo.tokenId: ", baseMintInfo.tokenId);
+        console.log(
+            "UniswapV3BaseStrategy rebalance baseMintInfo.tokenId: ",
+            baseMintInfo.tokenId
+        );
         uint128 baseLiquidity = balanceOfLpToken(baseMintInfo.tokenId);
         if (baseLiquidity > 0) {
             removeLiquidity(baseMintInfo.tokenId, baseLiquidity);
             __collectAll(baseMintInfo.tokenId);
         }
 
-        console.log("UniswapV3BaseStrategy rebalance limitMintInfo.tokenId: ", limitMintInfo.tokenId);
+        console.log(
+            "UniswapV3BaseStrategy rebalance limitMintInfo.tokenId: ",
+            limitMintInfo.tokenId
+        );
         uint128 limitLiquidity = balanceOfLpToken(limitMintInfo.tokenId);
         if (limitLiquidity > 0) {
             removeLiquidity(limitMintInfo.tokenId, limitLiquidity);
@@ -341,7 +393,11 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
         ) = getSpecifiedRangesOfTick(tick);
         uint256 balance0 = balanceOfToken(token0);
         uint256 balance1 = balanceOfToken(token1);
-        console.log("UniswapV3BaseStrategy rebalance base mintNewPosition before balance0: %d, balance1: %d", balance0, balance1);
+        console.log(
+            "UniswapV3BaseStrategy rebalance base mintNewPosition before balance0: %d, balance1: %d",
+            balance0,
+            balance1
+        );
         (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = mintNewPosition(
             tickLower,
             tickUpper,
@@ -353,7 +409,11 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
         balance0 = balanceOfToken(token0);
         balance1 = balanceOfToken(token1);
         if (balance0 > 0 || balance1 > 0) {
-            console.log("UniswapV3BaseStrategy rebalance limit mintNewPosition before balance0: %d, balance1: %d", balance0, balance1);
+            console.log(
+                "UniswapV3BaseStrategy rebalance limit mintNewPosition before balance0: %d, balance1: %d",
+                balance0,
+                balance1
+            );
             // Place bid or ask order on Uniswap depending on which token is left
             if (
                 getLiquidityForAmounts(tickFloor - limitThreshold, tickFloor, balance0, balance1) >
@@ -365,7 +425,11 @@ abstract contract UniswapV3BaseStrategy is BaseClaimableStrategy, UniswapV3Liqui
                 mintNewPosition(tickCeil, tickCeil + limitThreshold, balance0, balance1, false);
                 console.log("UniswapV3BaseStrategy rebalance limit ask mintNewPosition");
             }
-            console.log("UniswapV3BaseStrategy rebalance limit mintNewPosition after balance0: %d, balance1: %d", balanceOfToken(token0), balanceOfToken(token1));
+            console.log(
+                "UniswapV3BaseStrategy rebalance limit mintNewPosition after balance0: %d, balance1: %d",
+                balanceOfToken(token0),
+                balanceOfToken(token1)
+            );
         }
         lastTimestamp = block.timestamp;
         lastTick = tick;

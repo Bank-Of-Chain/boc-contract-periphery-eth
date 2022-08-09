@@ -146,21 +146,22 @@ contract ETHExchanger is IETHExchanger {
         bytes calldata _data,
         IExchangeAdapter.SwapDescription calldata _sd
     ) external payable override returns (uint256 toAmount) {
-        if (_sd.srcToken == NativeToken.NATIVE_TOKEN && _sd.dstToken == stETH) {
+        address _nativeToken = NativeToken.NATIVE_TOKEN;
+        if (_sd.srcToken == _nativeToken && _sd.dstToken == stETH) {
             toAmount = eth2stEth(_sd.receiver);
-        } else if (_sd.srcToken == NativeToken.NATIVE_TOKEN && _sd.dstToken == wETH) {
+        } else if (_sd.srcToken == _nativeToken && _sd.dstToken == wETH) {
             toAmount = eth2wEth(_sd.receiver);
-        } else if (_sd.srcToken == NativeToken.NATIVE_TOKEN && _sd.dstToken == wstETH) {
+        } else if (_sd.srcToken == _nativeToken && _sd.dstToken == wstETH) {
             toAmount = eth2wstEth(_sd.receiver);
-        } else if (_sd.srcToken == NativeToken.NATIVE_TOKEN && _sd.dstToken == rETH) {
+        } else if (_sd.srcToken == _nativeToken && _sd.dstToken == rETH) {
             toAmount = eth2rEth(_sd.receiver);
-        } else if (_sd.dstToken == NativeToken.NATIVE_TOKEN && _sd.srcToken == stETH) {
+        } else if (_sd.dstToken == _nativeToken && _sd.srcToken == stETH) {
             toAmount = stEth2Eth(_sd.receiver, _sd.amount);
-        } else if (_sd.dstToken == NativeToken.NATIVE_TOKEN && _sd.srcToken == wETH) {
+        } else if (_sd.dstToken == _nativeToken && _sd.srcToken == wETH) {
             toAmount = wEth2Eth(_sd.receiver, _sd.amount);
-        } else if (_sd.dstToken == NativeToken.NATIVE_TOKEN && _sd.srcToken == wstETH) {
+        } else if (_sd.dstToken == _nativeToken && _sd.srcToken == wstETH) {
             toAmount = wstEth2Eth(_sd.receiver, _sd.amount);
-        } else if (_sd.dstToken == NativeToken.NATIVE_TOKEN && _sd.srcToken == rETH) {
+        } else if (_sd.dstToken == _nativeToken && _sd.srcToken == rETH) {
             toAmount = rEth2Eth(_sd.receiver, _sd.amount);
         } else {
             revert("Asset not available");
