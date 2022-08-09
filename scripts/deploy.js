@@ -223,7 +223,7 @@ const deployBase = async (contractName, depends = []) => {
  * @param {string} contractName Contract Name
  * @param {string[]} depends Contract Fronting Dependency
  */
-const deployProxyBase = async (contractName, depends = [],customParams = []) => {
+const deployProxyBase = async (contractName, depends = [], customParams = [], name = null) => {
     console.log(` 🛰  Deploying[Proxy]: ${contractName}`);
     const keyArray = keys(addressMap);
     const dependParams = [];
@@ -243,10 +243,10 @@ const deployProxyBase = async (contractName, depends = [],customParams = []) => 
             ...dependParams,
             ...customParams
         ];
-        
+
         const constract = await deployProxy(contractName, allParams, { timeout: 0 });
         await constract.deployed();
-        addressMap[contractName] = constract.address;
+        addressMap[name == null ? contractName : name] = constract.address;
         return constract;
     } catch (error) {
         console.log('Contract Deployment Exceptions：', error);
@@ -428,6 +428,9 @@ const main = async () => {
         return type;
     })
 
+    const accounts = await ethers.getSigners();
+    const balanceBeforeDeploy = await ethers.provider.getBalance(accounts[0].address);
+
     await deploy_common();
     if (type == 1) {
         await deploy_usd();
@@ -439,6 +442,9 @@ const main = async () => {
     }
 
     console.table(addressMap);
+    const balanceAfterDeploy = await ethers.provider.getBalance(accounts[0].address);
+    console.log('balanceBeforeDeploy:%d,balanceAfterDeploy:%d', ethers.utils.formatEther(balanceBeforeDeploy), ethers.utils.formatEther(balanceAfterDeploy));
+
 }
 
 const deploy_common = async () => {
@@ -582,7 +588,7 @@ const deploy_usd = async () => {
         } = strategyItem
         let strategyAddress = addressMap[name];
         if (isEmpty(strategyAddress)) {
-            const deployStrategy = await deployProxyBase(contract, [USDVault, Harvester],[name,...customParams]);
+            const deployStrategy = await deployProxyBase(contract, [USDVault, Harvester], [name, ...customParams], name);
             if (addToVault) {
                 strategyAddress = deployStrategy.address;
                 increaseArray.push({
@@ -602,7 +608,7 @@ const deploy_usd = async () => {
     }
 
     await addStrategiesToUSDVault(cVault, allArray, increaseArray);
-    console.log('getStrategies=', await cVault.getStrategies());
+    // console.log('getStrategies=', await cVault.getStrategies());
 };
 
 const deploy_eth = async () => {
@@ -687,7 +693,7 @@ const deploy_eth = async () => {
         } = strategyItem
         let strategyAddress = addressMap[name];
         if (isEmpty(strategyAddress)) {
-            const deployStrategy = await deployProxyBase(contract, [ETHVault],[name,...customParams]);
+            const deployStrategy = await deployProxyBase(contract, [ETHVault], [name, ...customParams], name);
             if (addToVault) {
                 strategyAddress = deployStrategy.address;
                 increaseArray.push({
@@ -707,7 +713,7 @@ const deploy_eth = async () => {
     }
 
     await addStrategiesToETHVault(cVault, allArray, increaseArray);
-    console.log('getStrategies=', await cVault.getStrategies());
+    // console.log('getStrategies=', await cVault.getStrategies());
 };
 
 main().then(() => process.exit(0))
