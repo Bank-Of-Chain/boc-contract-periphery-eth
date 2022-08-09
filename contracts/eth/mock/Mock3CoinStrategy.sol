@@ -8,7 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "boc-contract-core/contracts/library/BocRoles.sol";
-import "../../library/ETHToken.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
 import "boc-contract-core/contracts/library/StableMath.sol";
 import "../oracle/IPriceOracle.sol";
 import "../vault/IETHVault.sol";
@@ -35,7 +35,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         // stETH
         _wants[0] = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
         // ETH
-        _wants[1] = ETHToken.NATIVE_TOKEN;
+        _wants[1] = NativeToken.NATIVE_TOKEN;
         protocol = 32;
         vault = IETHVault(_vault);
         valueInterpreter = IPriceOracle(vault.priceProvider());
@@ -112,7 +112,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal virtual {}
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal virtual {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal virtual {
         // _assets = new address[](wants.length);
         // _amounts = new uint256[](_assets.length);
         // for (uint256 i = 0; i < _assets.length; i++) {
@@ -162,7 +162,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
     /// @notice Strategy repay the funds to vault
     /// @param _repayShares Numerator
     /// @param _totalShares Denominator
-    function repay(uint256 _repayShares, uint256 _totalShares) public virtual onlyVault returns (address[] memory _assets, uint256[] memory _amounts) {
+    function repay(uint256 _repayShares, uint256 _totalShares, uint256 _outputCode) public virtual onlyVault returns (address[] memory _assets, uint256[] memory _amounts) {
         require(_repayShares > 0 && _totalShares >= _repayShares, "cannot repay 0 shares");
         _assets = wants;
         uint256[] memory balancesBefore = new uint256[](_assets.length);
@@ -170,7 +170,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
             balancesBefore[i] = balanceOfToken(_assets[i]);
         }
 
-        withdrawFrom3rdPool(_repayShares, _totalShares);
+        withdrawFrom3rdPool(_repayShares, _totalShares, _outputCode);
         _amounts = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
             uint256 balanceAfter = balanceOfToken(_assets[i]);
@@ -183,7 +183,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
     }
 
     function balanceOfToken(address tokenAddress) internal view returns (uint256) {
-        if (tokenAddress == ETHToken.NATIVE_TOKEN) {
+        if (tokenAddress == NativeToken.NATIVE_TOKEN) {
             return address(this).balance;
         }
         return IERC20Upgradeable(tokenAddress).balanceOf(address(this));
@@ -219,7 +219,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
             uint256 amount = _amounts[i];
             address _asset = _assets[i];
             if (amount > 0) {
-                if (_asset == ETHToken.NATIVE_TOKEN) {
+                if (_asset == NativeToken.NATIVE_TOKEN) {
                     payable(_target).transfer(amount);
                 } else {
                     IERC20Upgradeable(_asset).safeTransfer(_target, amount);

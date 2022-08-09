@@ -11,8 +11,8 @@ import "boc-contract-core/contracts/vault/IVaultBuffer.sol";
 import "boc-contract-core/contracts/library/BocRoles.sol";
 import "../token/ETHi.sol";
 import "../strategies/IETHStrategy.sol";
-import "../../library/ETHToken.sol";
-import "../exchanges/IETHExchangeAggregator.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
+import "boc-contract-core/contracts/exchanges/IExchangeAggregator.sol";
 import "../oracle/IPriceOracle.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -91,6 +91,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     event MaxTimestampBetweenTwoReportedChanged(uint256 _maxTimestampBetweenTwoReported);
     event MinimumInvestmentAmountChanged(uint256 _minimumInvestmentAmount);
     event TreasuryAddressChanged(address _address);
+    event ExchangeManagerAddressChanged(address _address);
     event SetAdjustPositionPeriod(bool _adjustPositionPeriod);
     event RedeemFeeUpdated(uint256 _redeemFeeBps);
     event SetWithdrawalQueue(address[] queues);

@@ -37,7 +37,7 @@ contract MockVault is AccessControlMixin {
     }
 
     /// @notice Withdraw the funds from specified strategy.
-    function redeem(address _strategy, uint256 _usdValue,uint256 _outputCode) external {
+    function redeem(address _strategy, uint256 _usdValue, uint256 _outputCode) external {
         uint256 totalValue = IStrategy(_strategy).estimatedTotalAssets();
         if (_usdValue > totalValue) {
             _usdValue = totalValue;

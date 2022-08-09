@@ -9,7 +9,6 @@ pragma solidity ^0.8.0;
 
 import "./ETHVaultStorage.sol";
 import "../strategies/IETHStrategy.sol";
-import "../exchanges/IETHExchangeAggregator.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract ETHVault is ETHVaultStorage {
@@ -124,7 +123,7 @@ contract ETHVault is ETHVaultStorage {
             if (estimatedTotalAssets > 0) {
                 _value =
                     _value +
-                    IPriceOracle(priceProvider).valueInUsd(ETHToken.NATIVE_TOKEN, estimatedTotalAssets);
+                    IPriceOracle(priceProvider).valueInUsd(NativeToken.NATIVE_TOKEN, estimatedTotalAssets);
             }
         }
     }
@@ -155,7 +154,7 @@ contract ETHVault is ETHVaultStorage {
         if (_minimumAmount > 0) {
             require(_shareAmount >= _minimumAmount, "Mint amount lt minimum");
         }
-        if (_asset == ETHToken.NATIVE_TOKEN) {
+        if (_asset == NativeToken.NATIVE_TOKEN) {
             uint256 _ethAmount = msg.value;
             require(_ethAmount == _amount, "Amount must eq transfer value");
             IVaultBuffer(vaultBufferAddress).mint{value: _ethAmount}(msg.sender, _shareAmount);
@@ -176,7 +175,7 @@ contract ETHVault is ETHVaultStorage {
         address _asset,
         uint256 _minimumAmount,
         bool _needExchange,
-        IETHExchangeAggregator.ExchangeToken[] memory _exchangeTokens
+        IExchangeAggregator.ExchangeToken[] memory _exchangeTokens
     )
         external
         whenNotEmergency
@@ -223,7 +222,7 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /// @notice redeem the funds from specified strategy.
-    function redeem(address _strategy, uint256 _amount,uint256 _ouputCode)
+    function redeem(address _strategy, uint256 _amount, uint256 _outputCode)
         external
         isKeeper
         isActiveStrategy(_strategy)
@@ -235,7 +234,7 @@ contract ETHVault is ETHVaultStorage {
         (address[] memory _assets, uint256[] memory _amounts) = IETHStrategy(_strategy).repay(
             _amount,
             _strategyAssetValue,
-            _ouputCode
+            _outputCode
         );
         if (adjustPositionPeriod) {
             uint256 _assetsLength = _assets.length;
@@ -257,7 +256,7 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /// @notice Allocate funds in Vault to strategies.
-    function lend(address _strategy, IETHExchangeAggregator.ExchangeToken[] calldata _exchangeTokens)
+    function lend(address _strategy, IExchangeAggregator.ExchangeToken[] calldata _exchangeTokens)
         external
         isKeeper
         whenNotEmergency
@@ -305,7 +304,7 @@ contract ETHVault is ETHVaultStorage {
                 }
 
                 console.log("token %s actualAmount %s ratios %s", _wants[i], _actualAmount, _ratios[i]);
-                if (_wants[i] == ETHToken.NATIVE_TOKEN) {
+                if (_wants[i] == NativeToken.NATIVE_TOKEN) {
                     _lendValue += _actualAmount;
                     _ethAmount = _actualAmount;
                 } else {
@@ -328,7 +327,7 @@ contract ETHVault is ETHVaultStorage {
         address _fromToken,
         address _toToken,
         uint256 _amount,
-        IETHExchangeAggregator.ExchangeParam memory _exchangeParam
+        IExchangeAggregator.ExchangeParam memory _exchangeParam
     ) external isKeeper nonReentrant returns (uint256) {
         return _exchange(_fromToken, _toToken, _amount, _exchangeParam);
     }
@@ -450,6 +449,10 @@ contract ETHVault is ETHVaultStorage {
             if (_vaultValueOfNow + _transferValue < _vaultValueOfBefore) {
                 _old2LendAssets = _vaultValueOfBefore - _vaultValueOfNow - _transferValue;
             }
+            if(_vaultValueOfBefore <= _transferValue){
+                _redeemValue = 0;
+                console.log("_redeemValue=",_redeemValue);
+            }
             if (_totalValueOfNow > _totalValueOfBefore) {
                 uint256 _gain = _totalValueOfNow - _totalValueOfBefore;
                 if (_transferValue > 0) {
@@ -460,18 +463,18 @@ contract ETHVault is ETHVaultStorage {
                 }
             } else {
                 uint256 _loss = _totalValueOfBefore - _totalValueOfNow;
-                if (_transferValue > 0) {
+                if (_transferValue > 0 && _loss > 0) {
                     _transferAssets =
                         _transferValue -
                         (_loss * _transferValue) /
                         (_transferValue + _redeemValue + _old2LendAssets);
                 }
             }
+            console.log("_transferAssets:", _transferAssets);
             uint256 _totalShares = IPegToken(pegTokenAddress).totalShares();
-            if (!rebasePaused) {
+            if (!rebasePaused && _totalShares > 0) {
                 _totalShares = _rebase(_totalValueOfNow - _transferAssets, _totalShares);
             }
-            console.log("_transferAssets:", _transferAssets);
             if (_transferAssets > 0) {
                 uint256 _sharesAmount = _calculateShare(
                     _transferAssets,
@@ -593,7 +596,7 @@ contract ETHVault is ETHVaultStorage {
         require(!(IVaultBuffer(vaultBufferAddress).isDistributing()), "is distributing");
         checkIsSupportAsset(_asset);
         uint256 _mintAmount = _amount;
-        if (_asset != ETHToken.NATIVE_TOKEN) {
+        if (_asset != NativeToken.NATIVE_TOKEN) {
             _mintAmount = IPriceOracle(priceProvider).valueInEth(_asset, _amount);
         }
         uint256 _minimumInvestmentAmount = minimumInvestmentAmount;
@@ -623,7 +626,12 @@ contract ETHVault is ETHVaultStorage {
                 _strategyWithdrawValue = _strategyTotalValue;
                 _needWithdrawValue -= _strategyWithdrawValue;
             } else {
-                _strategyWithdrawValue = _needWithdrawValue;
+                //If there is less than 0.001 ETH left, then all redemption
+                if(_needWithdrawValue + 1e15 >= _strategyTotalValue){
+                    _strategyWithdrawValue = _strategyTotalValue;
+                } else {
+                    _strategyWithdrawValue = _needWithdrawValue;
+                }
                 _needWithdrawValue = 0;
             }
             // console.log('start withdrawn from %s numerator %d denominator %d', _strategy, strategyWithdrawValue, strategyTotalValue);
@@ -792,7 +800,7 @@ contract ETHVault is ETHVaultStorage {
         address[] memory _trackedAssets,
         uint256[] memory _assetPrices,
         uint256[] memory _assetDecimals,
-        IETHExchangeAggregator.ExchangeToken[] memory _exchangeTokens
+        IExchangeAggregator.ExchangeToken[] memory _exchangeTokens
     ) internal returns (uint256[] memory) {
         uint256 _trackedAssetsLength = _trackedAssets.length;
         uint256[] memory _amounts = new uint256[](_trackedAssetsLength);
@@ -811,7 +819,7 @@ contract ETHVault is ETHVaultStorage {
                 } else {
                     _amounts[i] = _withdrawAmount;
                     for (uint256 j = 0; j < _exchangeTokens.length; j++) {
-                        IETHExchangeAggregator.ExchangeToken memory _exchangeToken = _exchangeTokens[j];
+                        IExchangeAggregator.ExchangeToken memory _exchangeToken = _exchangeTokens[j];
                         if (
                             _exchangeToken.fromToken == _withdrawToken && _exchangeToken.toToken == _asset
                         ) {
@@ -848,7 +856,7 @@ contract ETHVault is ETHVaultStorage {
             uint256 _amount = _outputs[i];
             if (_amount > 0) {
                 address _trackedAsset = _trackedAssets[i];
-                if (_trackedAsset == ETHToken.NATIVE_TOKEN) {
+                if (_trackedAsset == NativeToken.NATIVE_TOKEN) {
                     _actualAmount = _actualAmount + _amount;
                     payable(msg.sender).transfer(_amount);
                 } else {
@@ -866,7 +874,7 @@ contract ETHVault is ETHVaultStorage {
         uint256 _accountBalance,
         uint256 _amount,
         address _asset,
-        IETHExchangeAggregator.ExchangeToken[] memory _exchangeTokens
+        IExchangeAggregator.ExchangeToken[] memory _exchangeTokens
     ) internal {
         require(
             _amount > 0 && _amount <= _accountBalance,
@@ -941,7 +949,7 @@ contract ETHVault is ETHVaultStorage {
 
     function _calculateAndTransfer(
         address _asset,
-        IETHExchangeAggregator.ExchangeToken[] memory _exchangeTokens,
+        IExchangeAggregator.ExchangeToken[] memory _exchangeTokens,
         bool _needExchange,
         uint256 _actualAsset,
         address[] memory _trackedAssets,
@@ -1064,7 +1072,7 @@ contract ETHVault is ETHVaultStorage {
     /// @notice check valid and exchange to want token
     function _checkAndExchange(
         address _strategy,
-        IETHExchangeAggregator.ExchangeToken[] calldata _exchangeTokens
+        IExchangeAggregator.ExchangeToken[] calldata _exchangeTokens
     )
         internal
         returns (
@@ -1090,7 +1098,7 @@ contract ETHVault is ETHVaultStorage {
 
         for (uint256 j = 0; j < _wantsLength; j++) {
             for (uint256 i = 0; i < _exchangeTokensLength; i++) {
-                IETHExchangeAggregator.ExchangeToken memory exchangeToken = _exchangeTokens[i];
+                IExchangeAggregator.ExchangeToken memory exchangeToken = _exchangeTokens[i];
 
                 // not strategy need token,skip
                 if (_wants[j] != exchangeToken.toToken) continue;
@@ -1119,19 +1127,19 @@ contract ETHVault is ETHVaultStorage {
         address _fromToken,
         address _toToken,
         uint256 _amount,
-        IETHExchangeAggregator.ExchangeParam memory exchangeParam
+        IExchangeAggregator.ExchangeParam memory exchangeParam
     ) internal returns (uint256 exchangeAmount) {
         require(trackedAssetsMap.contains(_toToken), "!T");
 
-        IETHExchangeAdapter.SwapDescription memory swapDescription = IETHExchangeAdapter.SwapDescription({
+        IExchangeAdapter.SwapDescription memory swapDescription = IExchangeAdapter.SwapDescription({
             amount: _amount,
             srcToken: _fromToken,
             dstToken: _toToken,
             receiver: address(this)
         });
-        if (_fromToken == ETHToken.NATIVE_TOKEN) {
+        if (_fromToken == NativeToken.NATIVE_TOKEN) {
             // payable(exchangeManager).transfer(_amount);
-            exchangeAmount = IETHExchangeAggregator(exchangeManager).swap{value: _amount}(
+            exchangeAmount = IExchangeAggregator(exchangeManager).swap{value: _amount}(
                 exchangeParam.platform,
                 exchangeParam.method,
                 exchangeParam.encodeExchangeArgs,
@@ -1139,7 +1147,7 @@ contract ETHVault is ETHVaultStorage {
             );
         } else {
             IERC20Upgradeable(_fromToken).safeApprove(exchangeManager, _amount);
-            exchangeAmount = IETHExchangeAggregator(exchangeManager).swap(
+            exchangeAmount = IExchangeAggregator(exchangeManager).swap(
                 exchangeParam.platform,
                 exchangeParam.method,
                 exchangeParam.encodeExchangeArgs,
@@ -1215,7 +1223,7 @@ contract ETHVault is ETHVaultStorage {
 
     function _balanceOfToken(address _trackedAsset, address _owner) internal view returns (uint256) {
         uint256 _balance;
-        if (_trackedAsset == ETHToken.NATIVE_TOKEN) {
+        if (_trackedAsset == NativeToken.NATIVE_TOKEN) {
             _balance = _owner.balance;
         } else {
             _balance = IERC20Upgradeable(_trackedAsset).balanceOf(_owner);
@@ -1234,7 +1242,7 @@ contract ETHVault is ETHVaultStorage {
     ) internal view returns (uint256) {
         uint256 _decimal = _assetDecimals[_assetIndex];
         if (_decimal == 0) {
-            if (_asset == ETHToken.NATIVE_TOKEN) {
+            if (_asset == NativeToken.NATIVE_TOKEN) {
                 _decimal = 18;
             } else {
                 _decimal = IERC20Metadata(_asset).decimals();
@@ -1255,7 +1263,7 @@ contract ETHVault is ETHVaultStorage {
     ) internal view returns (uint256) {
         uint256 _price = _assetPrices[_assetIndex];
         if (_price == 0) {
-            if (_asset == ETHToken.NATIVE_TOKEN) {
+            if (_asset == NativeToken.NATIVE_TOKEN) {
                 _price = 1e18;
             } else {
                 _price = IPriceOracle(priceProvider).priceInEth(_asset);

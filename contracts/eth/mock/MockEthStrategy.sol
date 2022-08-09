@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../strategies/ETHBaseStrategy.sol";
 import "./Mock3rdEthPool.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -20,7 +21,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         mock3rdPool = Mock3rdEthPool(payable(_mock3rdPool));
 
         address[] memory _wants = new address[](2);
-        _wants[0] = ETHToken.NATIVE_TOKEN;
+        _wants[0] = NativeToken.NATIVE_TOKEN;
         _wants[1] = stETH;
         super._initialize(_vault, 23, _wants);
     }
@@ -56,7 +57,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         OutputInfo memory info = outputsInfo[0];
         info.outputCode = 0;
         info.outputTokens = new address[](2);
-        info.outputTokens[0] = ETHToken.NATIVE_TOKEN;
+        info.outputTokens[0] = NativeToken.NATIVE_TOKEN;
         info.outputTokens[1] = stETH;
     }
 

@@ -1,0 +1,166 @@
+/**
+ * Vault rule：
+ * 1. remove asset
+ * 2. add asset
+ */
+
+const BigNumber = require('bignumber.js');
+const {
+    ethers,
+} = require('hardhat');
+const Utils = require('../../../utils/assert-utils');
+const {
+    getStrategyDetails,
+} = require('../../../utils/strategy-utils');
+const {
+    mapKeys,
+    map,
+    filter,
+    isEmpty,
+    every
+} = require("lodash");
+
+const {
+    send,
+    balance
+} = require('@openzeppelin/test-helpers');
+
+const {
+    setupCoreProtocol,
+} = require('../../../utils/contract-utils-eth');
+const {
+    topUpUsdtByAddress,
+    topUpSTETHByAddress,
+    topUpDaiByAddress,
+    topUpEthByAddress,
+    tranferBackUsdt,
+} = require('../../../utils/top-up-utils');
+
+// === Constants === //
+const MFC = require('../../../config/mainnet-fork-test-config');
+const {strategiesList} = require('../../../config/strategy-config-eth');
+const {getBestSwapInfo} = require("piggy-finance-utils");
+const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
+
+const EXCHANGE_EXTRA_PARAMS = {
+    oneInchV4: {
+        useHttp: true,
+        network: 1,
+        protocols: 'CURVE_V2,SUSHI,CURVE,UNISWAP_V2,UNISWAP_V3'
+    },
+    // paraswap: {
+    //     network: 1,
+    //     includeDEXS: 'UniswapV2,UniswapV3,SushiSwap,mStable,DODOV2,DODOV1,Curve,CurveV2,Compound,Bancor,BalancerV2,Aave2',
+    //     excludeContractMethods: ['swapOnZeroXv2', 'swapOnZeroXv4']
+    // }
+}
+
+describe('【Vault unit exchange】', function () {
+    // parties in the protocol
+    let accounts;
+    let governance;
+    let farmer1;
+    let keeper;
+    let token;
+    let tokenDecimals;
+    let depositAmount
+
+    // Core protocol contracts
+    let vault;
+    let underlying;
+    let valueInterpreter;
+    let exchangePlatformAdapters;
+    let addToVaultStrategies;
+    let farmer1Lp
+
+    before(async function () {
+        tokenDecimals = new BigNumber(18);
+        depositAmount = new BigNumber(10).pow(tokenDecimals).multipliedBy(10);
+        await ethers.getSigners().then((resp) => {
+            accounts = resp;
+            governance = accounts[0].address;
+            farmer1 = accounts[1].address;
+            keeper = accounts[19].address;
+        });
+        await topUpEthByAddress(depositAmount, keeper);
+        await topUpSTETHByAddress(depositAmount, keeper);
+        await setupCoreProtocol(MFC.ETH_ADDRESS, governance, keeper, false).then((resp) => {
+            vault = resp.vault;
+            underlying = resp.underlying;
+            valueInterpreter = resp.valueInterpreter;
+            exchangePlatformAdapters = resp.exchangePlatformAdapters;
+            addToVaultStrategies = resp.addToVaultStrategies;
+        });
+    });
+    after(async function () {
+        await tranferBackUsdt(farmer1);
+    });
+
+    it('verify：Vault exchange', async function () {
+        let fromToken = MFC.ETH_ADDRESS;
+        let toToken =  MFC.stETH_ADDRESS;
+        const fromAmount = depositAmount;
+        // const fromTokenERC = await ERC20.at(fromToken);
+        const toTokenERC = await ERC20.at(toToken);
+        const fromTokenDecimals = 18;
+        const toTokenDecimals = new BigNumber(await toTokenERC.decimals());
+        const fromTokenSymbol = 'ETH';
+        const toTokenSymbol = await toTokenERC.symbol();
+
+        // let fromTokenArray = [fromToken];
+        // let amountArray = [depositAmount, depositAmount];
+        // let exchangeArray = await Promise.all(
+        //     map(fromTokenArray, async (fromToken, index) => {
+        //         const exchangeAmounts = amountArray[index].toString();
+
+                // 根据key获取value，不可写错
+                let platformAdapter = {
+                    // paraswap: exchangePlatformAdapters.paraswap,
+                    oneInchV4: exchangePlatformAdapters.oneInchV4
+                };
+                const SWAP_INFO = await getBestSwapInfo({
+                    address: fromToken,
+                    symbol: fromTokenSymbol,
+                    decimals: fromTokenDecimals
+                }, {
+                    address: toToken,
+                    symbol: toTokenSymbol,
+                    decimals: toTokenDecimals
+                }, fromAmount.div(2).toFixed(), 4999, 4999, platformAdapter, EXCHANGE_EXTRA_PARAMS);
+
+                let exchangeParam = {
+                        platform: SWAP_INFO.platform,
+                        method: SWAP_INFO.method,
+                        encodeExchangeArgs: SWAP_INFO.encodeExchangeArgs,
+                        slippage: SWAP_INFO.slippage,
+                        oracleAdditionalSlippage: SWAP_INFO.oracleAdditionalSlippage
+                    };
+            // })
+        // );
+        console.log(exchangeParam);
+
+        // await fromTokenERC.approve(vault.address, 0, {
+        //     from: keeper
+        // });
+        // await fromTokenERC.approve(vault.address, fromAmount, {
+        //     from: keeper
+        // });
+        await topUpEthByAddress(fromAmount, vault.address);
+        // await fromTokenERC.transfer(vault.address,fromAmount, {from: keeper});
+        const fromTokenBalanceBefore = new BigNumber(await balance.current(vault.address));
+        const toTokenBalanceBefore = new BigNumber(await toTokenERC.balanceOf(vault.address));
+        console.log("Balance of %s of Vault before exchange: %s", fromTokenSymbol, new BigNumber(await balance.current(vault.address)).toFixed());
+        console.log("Balance of %s of Vault before exchange: %s", toTokenSymbol, new BigNumber(await toTokenERC.balanceOf(vault.address)).toFixed());
+
+        await vault.exchange(fromToken, toToken, fromAmount.div(2).toFixed(), exchangeParam, {from: keeper});
+        const fromTokenBalanceAfter = new BigNumber(await balance.current(vault.address));
+        const toTokenBalanceAfter = new BigNumber(await toTokenERC.balanceOf(vault.address));
+        console.log("Balance of %s of Vault after exchange: %s", fromTokenSymbol, new BigNumber(await balance.current(vault.address)).toFixed());
+        console.log("Balance of %s of Vault after exchange: %s", toTokenSymbol, new BigNumber(await toTokenERC.balanceOf(vault.address)).toFixed());
+
+        Utils.assertBNGt(toTokenBalanceAfter.minus(toTokenBalanceBefore), 0);
+        Utils.assertBNEq(fromTokenBalanceBefore.minus(fromTokenBalanceAfter), fromAmount.div(2).toFixed());
+
+    });
+
+});

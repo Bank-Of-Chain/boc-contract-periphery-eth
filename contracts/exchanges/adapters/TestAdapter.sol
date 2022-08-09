@@ -24,7 +24,7 @@ contract TestAdapter is IExchangeAdapter {
         uint8 _method,
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
-    ) external override returns (uint256) {
+    ) external payable override returns (uint256) {
         console.log("[TestAdapter] swap:_sd.srcToken:%s, balanceOf:%s", _sd.srcToken, IERC20Upgradeable(_sd.srcToken).balanceOf(address(this)));
         console.log("[TestAdapter] swap:_sd.dstToken:%s, balanceOf:%s", _sd.dstToken, IERC20Upgradeable(_sd.dstToken).balanceOf(address(this)));
         uint256 amount = IValueInterpreter(valueInterpreter).calcCanonicalAssetValue(
@@ -37,5 +37,8 @@ contract TestAdapter is IExchangeAdapter {
         uint256 expectAmount = (amount * 1000) / 1000;
         IERC20Upgradeable(_sd.dstToken).safeTransfer(_sd.receiver, expectAmount);
         return expectAmount;
+    }
+
+    receive() external payable {
     }
 }

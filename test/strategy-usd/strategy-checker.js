@@ -301,7 +301,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
         const estimatedTotalAssets0 = new BigNumber(await strategy.estimatedTotalAssets());
-        await mockVault.redeem(strategy.address, estimatedTotalAssets0,outputCode);
+        await mockVault.redeem(strategy.address, estimatedTotalAssets0, outputCode);
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets()).dividedBy(10 ** 18);
         console.log('After withdraw all shares,strategy assets:%s', estimatedTotalAssets1.toFixed());
         assert.isTrue(estimatedTotalAssets1.multipliedBy(10000).isLessThan(depositUSD), 'assets left in strategy should not be more than 1/10000');
