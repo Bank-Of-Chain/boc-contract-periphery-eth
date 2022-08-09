@@ -463,7 +463,7 @@ contract ETHVault is ETHVaultStorage {
                 }
             } else {
                 uint256 _loss = _totalValueOfBefore - _totalValueOfNow;
-                if (_transferValue > 0 && _loss > 0) {
+                if (_transferValue > 0) {
                     _transferAssets =
                         _transferValue -
                         (_loss * _transferValue) /
