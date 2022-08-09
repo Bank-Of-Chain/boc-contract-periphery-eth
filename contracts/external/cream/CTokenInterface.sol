@@ -14,6 +14,7 @@ interface CTokenInterface {
     function getCash() external view returns (uint);
     function totalBorrows() external view returns (uint);
     function totalReserves() external view returns (uint);
+    function interestRateModel() external view returns(address);
 
     function repayBorrow(uint256) external returns (uint256);
 

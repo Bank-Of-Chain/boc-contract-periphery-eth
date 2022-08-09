@@ -6,7 +6,7 @@ const {
 
 describe('【ConvexIBUSDCGbpStrategy Strategy Checker】', function () {
     // eslint-disable-next-line mocha/no-setup-in-describe
-    checker.check('ConvexIBUSDCGbpStrategy', async function () {
+    checker.check('ConvexIBUsdcGbpStrategy', async function () {
         // await modifier();
     }, {
         // investWithSynthForex: async function (strategy, keeper) {

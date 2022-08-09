@@ -7,7 +7,7 @@ const MFC = require('../../../config/mainnet-fork-test-config');
 
 const { advanceBlock } = require('../../../utils/block-utils');
 const MockUniswapV3Router = hre.artifacts.require('contracts/eth/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
-const UniswapV3RethEth3000Strategy = hre.artifacts.require("UniswapV3RethEth3000Strategy");
+const UniswapV3RethEth3000Strategy = hre.artifacts.require("ETHUniswapV3Strategy");
 
 describe('【UniswapV3RethEth3000Strategy Strategy Checker】', function () {
     checker.check('UniswapV3RethEth3000Strategy', async function (strategy) {

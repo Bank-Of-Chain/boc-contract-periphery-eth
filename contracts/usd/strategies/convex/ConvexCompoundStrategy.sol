@@ -14,25 +14,23 @@ contract ConvexCompoundStrategy is ConvexBaseStrategy {
     address private constant USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     address private constant cDAI = address(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
     address private constant cUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
-    address private constant curvePool = address(0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56);
 
-    function initialize(address _vault, address _harvester) public {
+    function initialize(address _vault, address _harvester,string memory _name) public {
         address[] memory _wants = new address[](2);
         _wants[0] = DAI;
         _wants[1] = USDC;
-        super._initialize(_vault, _harvester, _wants);
+        super._initialize(
+            _vault,
+            _harvester,
+            _name,
+            _wants,
+            0xA2B47E3D5c44877cca798226B7B8118F9BFb7A56,
+            0xf34DFF761145FF0B05e917811d488B441F33a968
+        );
     }
 
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
-    }
-
-    function getRewardPool() internal pure override returns (IConvexReward) {
-        return IConvexReward(address(0xf34DFF761145FF0B05e917811d488B441F33a968));
-    }
-
-    function name() public pure override returns (string memory) {
-        return "ConvexCompoundStrategy";
     }
 
     function getWantsInfo()
@@ -59,7 +57,7 @@ contract ConvexCompoundStrategy is ConvexBaseStrategy {
         outputsInfo = new OutputInfo[](1);
         OutputInfo memory info0 = outputsInfo[0];
         info0.outputCode = 0;
-        info0.outputTokens = wants; //USDC
+        info0.outputTokens = wants; 
 
         // not support remove_liquidity_one_coin
     }

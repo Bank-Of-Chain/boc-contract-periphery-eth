@@ -3,7 +3,7 @@ const { ethers } = require('hardhat');
 const { assert } = require('chai');
 
 const MFC = require('../../config/mainnet-fork-test-config');
-
+const {strategiesList} = require('../../config/strategy-eth/strategy-config-eth')
 const topUp = require('../../utils/top-up-utils');
 const assertUtils = require('../../utils/assert-utils');
 const { advanceBlock, } = require('../../utils/block-utils');
@@ -117,6 +117,15 @@ async function transfer(asset, amount, from, to) {
     }
 }
 
+function findStrategyItem(strategyName) {
+
+    const result = strategiesList.find((item) => {
+        return item.name == strategyName;
+    });
+
+    return result;
+}
+
 async function check(strategyName, beforeCallback, afterCallback, uniswapV3RebalanceCallback,outputCode = 0) {
     before(async function () {
         accounts = await ethers.getSigners();
@@ -133,18 +142,36 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
         console.log('mock vault address:%s', mockVault.address);
+        // find strategy config
+        const strategyItem = findStrategyItem(strategyName);
+        console.log('strategyItem:',strategyItem);
+        
+        const {
+            name,
+            contract,
+            customParams
+        } = strategyItem;
         // init strategy
-        const Strategy = hre.artifacts.require(strategyName);
+        const Strategy = hre.artifacts.require(contract);
         strategy = await Strategy.new();
         console.log('%s address:%s', strategyName, strategy.address);
 
-        if (strategyName === 'MockEthStrategy') {
-            let mock3rdEthPool = await Mock3rdEthPool.new();
-            await strategy.initialize(mockVault.address, mock3rdEthPool.address);
-        } else {
-            await strategy.initialize(mockVault.address);
-        }
-        console.log('strategy initialize finish.');
+        const allParams = [
+            mockVault.address,
+            name,
+            ...customParams
+        ]
+        console.log('allParams:',allParams);
+        
+        await strategy.initialize(...allParams);
+
+        // if (strategyName === 'MockEthStrategy') {
+        //     let mock3rdEthPool = await Mock3rdEthPool.new();
+        //     await strategy.initialize(mockVault.address, mock3rdEthPool.address);
+        // } else {
+        //     await strategy.initialize(mockVault.address);
+        // }
+        // console.log('strategy initialize finish.');
 
         // top up for vault
         await _topUpFamilyBucket();
@@ -190,6 +217,9 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         let initialRatio = wantsInfo._ratios[0];
         let wants0Precision = new BigNumber(10 ** (await decimals(wantsInfo._assets[0])));
 
+        // is ignore want ratio
+        let isIgnoreRatio = await strategy.isWantRatioIgnorable();
+        console.log('isIgnoreRatio:', isIgnoreRatio);
         for (let i = 0; i < wants.length; i++) {
             // local variable
             const asset = wantsInfo._assets[i];
@@ -201,8 +231,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
 
             // calculate amount wanted to deposit
             let amount;
-            // is ignore want ratio
-            let isIgnoreRatio = await strategy.isWantRatioIgnorable();
+            
             if (i !== 0) {
                 // for example,
                 // assets: [ETH, stETH]
@@ -215,7 +244,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
             }
 
             let wantBalance = new BigNumber(await balanceOf(asset, investor));
-            console.log('isIgnoreRatio:', isIgnoreRatio);
+            
             console.log('want:%s,balance:%d,amount:%d', asset, wantBalance, amount);
             // check balance enough
             if (wantBalance.gte(amount)) {

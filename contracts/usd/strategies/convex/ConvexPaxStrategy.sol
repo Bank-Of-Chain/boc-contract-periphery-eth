@@ -16,28 +16,27 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
     address private constant ycDAI = address(0x99d1Fa417f94dcD62BfE781a1213c092a47041Bc);
     address private constant ycUSDC = address(0x9777d7E2b60bB01759D0E2f8be2095df444cb07E);
     address private constant ycUSDT = address(0x1bE5d71F2dA660BFdee8012dDc58D024448A0A59);
-    address private constant curvePool = address(0x06364f10B501e868329afBc005b3492902d6C763);
 
-    function initialize(address _vault, address _harvester) public initializer {
+    function initialize(address _vault, address _harvester,string memory _name) public initializer {
         address[] memory _wants = new address[](4);
         _wants[0] = DAI;
         _wants[1] = USDC;
         _wants[2] = USDT;
         _wants[3] = PAX;
-        super._initialize(_vault, _harvester, _wants);
+        super._initialize(
+            _vault,
+            _harvester,
+            _name,
+            _wants,
+            0x06364f10B501e868329afBc005b3492902d6C763,
+            0xe3DaafC8C14147d5B4A7a56F0BfdED240158e51e
+        );
     }
 
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
-    function getRewardPool() internal pure override returns (IConvexReward) {
-        return IConvexReward(address(0xe3DaafC8C14147d5B4A7a56F0BfdED240158e51e));
-    }
-
-    function name() public pure override returns (string memory) {
-        return "ConvexPaxStrategy";
-    }
 
     function getWantsInfo()
         public

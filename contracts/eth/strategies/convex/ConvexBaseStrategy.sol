@@ -19,8 +19,8 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
     IConvex internal constant BOOSTER = IConvex(address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31));
     IUniswapV2Router2 public constant router2 = IUniswapV2Router2(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
 
-    function _initialize(address _vault) internal {
-        super._initialize(_vault, uint16(ProtocolEnum.Convex), getConvexWants());
+    function _initialize(address _vault,string memory _name) internal {
+        super._initialize(_vault, uint16(ProtocolEnum.Convex), _name,getConvexWants());
         isWantRatioIgnorable = true;
         sellFloor[CRV] = 1e16;
     }

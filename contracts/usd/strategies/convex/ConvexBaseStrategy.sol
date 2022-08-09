@@ -18,21 +18,27 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
     address private constant CRV = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
     address private constant CVX = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
 
-    address internal lpToken;
-    uint256 private pid;
+    address public curvePool;
+    address public lpToken;
+    address public rewardPool;
+    uint256 public pid;
 
     function _initialize(
         address _vault,
         address _harvester,
-        address[] memory _wants
+        string memory _name,
+        address[] memory _wants,
+        address _curvePool,
+        address _rewardPool
     ) internal {
-        super._initialize(_vault, _harvester, uint16(ProtocolEnum.Convex), _wants);
-        pid = getRewardPool().pid();
+        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Convex), _wants);
+        curvePool = _curvePool;
+        rewardPool = _rewardPool;
+        pid = IConvexReward(_rewardPool).pid();
         lpToken = BOOSTER.poolInfo(pid).lptoken;
         isWantRatioIgnorable = true;
     }
 
-    function getRewardPool() internal pure virtual returns(IConvexReward);
 
     /// @dev override method should allow to deposit multi tokens
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
@@ -44,7 +50,7 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
         internal
         override
     {
-        console.log('start to depositTo3rdPool');
+        console.log("start to depositTo3rdPool");
         // add liquidity on curve
         uint256 liquidity = curveAddLiquidity(_assets, _amounts);
         console.log("curveLpAmount:%d", liquidity);
@@ -60,26 +66,30 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
     /// @dev do not remove with one coin, and return underlying
     function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal virtual;
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal override {
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
         console.log("_withdrawSomeLpToken:%d", _lpAmount);
         if (_lpAmount > 0) {
             // unstaking
-            getRewardPool().withdraw(_lpAmount, false);
+            IConvexReward(rewardPool).withdraw(_lpAmount, false);
             BOOSTER.withdraw(pid, _lpAmount);
-            console.log('lpBalance:%d', balanceOfToken(lpToken));
+            console.log("lpBalance:%d", balanceOfToken(lpToken));
             // remove liquidity on curve
-            curveRemoveLiquidity(_lpAmount,_outputCode);
+            curveRemoveLiquidity(_lpAmount, _outputCode);
         }
     }
 
     function claimRewards()
         internal
-        override
         virtual
+        override
         returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
     {
-        getRewardPool().getReward();
+        IConvexReward(rewardPool).getReward();
         _rewardTokens = new address[](2);
         _rewardTokens[0] = CRV;
         _rewardTokens[1] = CVX;
@@ -89,6 +99,6 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
     }
 
     function balanceOfLpToken() internal view returns (uint256) {
-        return getRewardPool().balanceOf(address(this));
+        return IConvexReward(rewardPool).balanceOf(address(this));
     }
 }

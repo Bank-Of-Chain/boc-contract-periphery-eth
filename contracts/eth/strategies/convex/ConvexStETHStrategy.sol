@@ -11,8 +11,8 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address private constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;
 
-    function initialize(address _vault) public {
-        super._initialize(_vault);
+    function initialize(address _vault, string memory _name) external initializer {
+        super._initialize(_vault, _name);
         //set up sell reward path
         address[] memory rewardCRVPath = new address[](2);
         rewardCRVPath[0] = CRV;
@@ -63,11 +63,12 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         return "1.0.0";
     }
 
-    function name() external pure override returns (string memory) {
-        return "ConvexStETHStrategy";
-    }
-
-    function getWantsInfo() public view override returns (address[] memory _assets, uint256[] memory _ratios) {
+    function getWantsInfo()
+        public
+        view
+        override
+        returns (address[] memory _assets, uint256[] memory _ratios)
+    {
         _assets = wants;
         _ratios = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
@@ -75,7 +76,13 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         }
     }
 
-    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory outputsInfo)
+    {
         outputsInfo = new OutputInfo[](1);
         OutputInfo memory info = outputsInfo[0];
         info.outputCode = 0;
@@ -110,7 +117,10 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         // curve LP total supply
         uint256 totalSupply = IERC20Upgradeable(getLpToken()).totalSupply();
         for (uint256 i = 0; i < wants.length; i++) {
-            _amounts[i] = balanceOfToken(_tokens[i]) + (getCurvePool().balances(i) * lpAmount) / totalSupply;
+            _amounts[i] =
+                balanceOfToken(_tokens[i]) +
+                (getCurvePool().balances(i) * lpAmount) /
+                totalSupply;
         }
     }
 
@@ -119,7 +129,10 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         IWeth(wETH).withdraw(balanceOfToken(wETH));
     }
 
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal override {
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        override
+    {
         bool isDeposit = false;
         for (uint256 i = 0; i < _amounts.length; i++) {
             if (_amounts[i] > 0) {
@@ -139,7 +152,11 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         }
     }
 
-    function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts) internal override returns (uint256) {
+    function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        override
+        returns (uint256)
+    {
         uint256[2] memory depositArray;
         depositArray[0] = _amounts[0];
         depositArray[1] = _amounts[1];
@@ -152,14 +169,14 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         return getCurvePool().add_liquidity(depositArray, 0);
     }
 
-    function curveRemoveLiquidity(uint256 liquidity,uint256 _outputCode) internal override {
+    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPoolPayable pool = getCurvePool();
-        if (_outputCode == 0){
+        if (_outputCode == 0) {
             pool.remove_liquidity(liquidity, [uint256(0), uint256(0)]);
-        } else if (_outputCode == 1){
-            pool.remove_liquidity_one_coin(liquidity,0,0);
-        } else if (_outputCode == 2){
-            pool.remove_liquidity_one_coin(liquidity,1,0);
+        } else if (_outputCode == 1) {
+            pool.remove_liquidity_one_coin(liquidity, 0, 0);
+        } else if (_outputCode == 2) {
+            pool.remove_liquidity_one_coin(liquidity, 1, 0);
         }
     }
 }

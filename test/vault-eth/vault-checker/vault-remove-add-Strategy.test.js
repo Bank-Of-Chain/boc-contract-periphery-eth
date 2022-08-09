@@ -23,7 +23,7 @@
 
  // === Constants === //
  const MFC = require('../../../config/mainnet-fork-test-config');
- const {strategiesList} = require('../../../config/strategy-config-eth');
+ const {strategiesList} = require('../../../config/strategy-eth/strategy-config-eth');
  const IStrategy = hre.artifacts.require('IETHStrategy');
  const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
  

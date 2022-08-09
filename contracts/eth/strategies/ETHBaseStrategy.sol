@@ -37,6 +37,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     IETHVault public vault;
     IPriceOracle public priceOracle;
     uint16 public protocol;
+    string public name;
     address[] public wants;
     bool public isWantRatioIgnorable;
 
@@ -49,6 +50,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     function _initialize(
         address _vault,
         uint16 _protocol,
+        string memory _name,
         address[] memory _wants
     ) internal {
         protocol = _protocol;
@@ -58,6 +60,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
 
         _initAccessControl(vault.accessControlProxy());
 
+        name = _name;
         require(_wants.length > 0, "wants is required");
         wants = _wants;
     }
@@ -65,8 +68,6 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     /// @notice Version of strategy
     function getVersion() external pure virtual returns (string memory);
 
-    /// @notice Name of strategy
-    function name() external pure virtual returns (string memory);
 
     /// @notice True means that can ignore ratios given by wants info
     function setIsWantRatioIgnorable(bool _isWantRatioIgnorable) external isVaultManager {
