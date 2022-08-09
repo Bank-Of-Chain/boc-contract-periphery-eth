@@ -30,11 +30,4 @@ contract ETHUniswapV3Strategy is ETHUniswapV3BaseStrategy {
         );
     }
 
-    // function name() public pure override returns (string memory) {
-    //     return "UniswapV3RethEth3000Strategy";
-    // }
-
-    // function getTickSpacing() internal pure override returns (int24) {
-    //     return 60;
-    // }
 }
