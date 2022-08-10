@@ -344,7 +344,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         }
     }
 
-    //assets(USD)
+    //assets(USD) -18
     function assets() public view returns (uint256 value) {
         // estimatedDepositedAssets
         uint256 deposited = curvePoolAssets();
@@ -496,7 +496,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     // Maximum number of borrowings under the specified amount of collateral assets
     function _borrowAvaiable(uint256 liqudity) internal view returns (uint256 borrowAvaible) {
         address borrowToken = getIronBankForex();
-        // uint256 maxBorrrowAmount = calcCanonicalAssetValue(collateralToken, collateralValue, borrowToken);
         uint256 borrowTokenPrice = _borrowTokenPrice(); // decimals 1e30
         //Maximum number of loans available
         uint256 maxBorrowAmount = ((liqudity * decimalUnitOfToken(borrowToken))) /
