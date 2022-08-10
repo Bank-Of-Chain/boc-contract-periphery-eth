@@ -8,7 +8,8 @@ const convexStrategies = [
         addToVault: true,
         customParams: [
             "0x86BBD9ac8B9B44C95FFc6BAAe58E25033B7548AA",//borrowCToken
-            "0xb1Fae59F23CaCe4949Ae734E63E42168aDb0CcB3"//rewardPool
+            "0xb1Fae59F23CaCe4949Ae734E63E42168aDb0CcB3",//rewardPool
+            "0x5b692073F141C31384faE55856CfB6CBfFE91E60" //usdc-ibforex pool
         ]
     },
     {
@@ -19,7 +20,8 @@ const convexStrategies = [
         addToVault: true,
         customParams: [
             "0x1b3E95E8ECF7A7caB6c4De1b344F94865aBD12d5",//borrowCToken
-            "0xa5A5905efc55B05059eE247d5CaC6DD6791Cfc33"//rewardPool
+            "0xa5A5905efc55B05059eE247d5CaC6DD6791Cfc33",//rewardPool
+            "0x6Df0D77F0496CE44e72D695943950D8641fcA5Cf" //usdc-ibforex pool
         ]
     },
     {
@@ -30,7 +32,8 @@ const convexStrategies = [
         addToVault: true,
         customParams: [
             "0x00e5c0774A5F065c285068170b20393925C84BF3",//borrowCToken
-            "0xCd0559ADb6fAa2fc83aB21Cf4497c3b9b45bB29f"//rewardPool
+            "0xCd0559ADb6fAa2fc83aB21Cf4497c3b9b45bB29f",//rewardPool
+            "0x1570af3dF649Fc74872c5B8F280A162a3bdD4EB6" //usdc-ibforex pool
         ]
     },
     {
@@ -41,7 +44,8 @@ const convexStrategies = [
         addToVault: true,
         customParams: [
             "0xecaB2C76f1A8359A06fAB5fA0CEea51280A97eCF",//borrowCToken
-            "0x51a16DA36c79E28dD3C8c0c19214D8aF413984Aa"//rewardPool
+            "0x51a16DA36c79E28dD3C8c0c19214D8aF413984Aa",//rewardPool
+            "0xAcCe4Fe9Ce2A6FE9af83e7CF321a3fF7675e0AB6" //usdc-ibforex pool
         ]
     },
     {
@@ -52,7 +56,8 @@ const convexStrategies = [
         addToVault: true,
         customParams: [
             "0x215F34af6557A6598DbdA9aa11cc556F5AE264B1",//borrowCToken
-            "0xbA8fE590498ed24D330Bb925E69913b1Ac35a81E"//rewardPool
+            "0xbA8fE590498ed24D330Bb925E69913b1Ac35a81E",//rewardPool
+            "0xEB0265938c1190Ab4E3E1f6583bC956dF47C0F93" //usdc-ibforex pool
         ]
     },
     {
@@ -63,7 +68,8 @@ const convexStrategies = [
         addToVault: true,
         customParams: [
             "0x3c9f5385c288cE438Ed55620938A4B967c080101",//borrowCToken
-            "0x8F18C0AF0d7d511E8Bdc6B3c64926B04EDfE4892"//rewardPool
+            "0x8F18C0AF0d7d511E8Bdc6B3c64926B04EDfE4892",//rewardPool
+            "0xef04f337fCB2ea220B6e8dB5eDbE2D774837581c" //usdc-ibforex pool
         ]
     },
     //IronBank-USDC

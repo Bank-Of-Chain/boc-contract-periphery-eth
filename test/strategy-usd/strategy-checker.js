@@ -147,6 +147,8 @@ async function _topUpFamilyBucket() {
 function findStrategyItem(strategyName) {
 
     const result = strategiesList.find((item) => {
+        // console.log('item.name:%s,strategyName:%s',item.name,strategyName);
+        
         return item.name == strategyName;
     });
 
@@ -171,7 +173,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         mockVault = await MockVault.new(accessControlProxy.address, valueInterpreter.address);
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
-        console.log('mock vault address:%s', mockVault.address);
+        console.log('mock vault address:%s,strategyName:%s', mockVault.address,strategyName);
         const strategyItem = findStrategyItem(strategyName);
         console.log('strategyItem:',strategyItem);
         

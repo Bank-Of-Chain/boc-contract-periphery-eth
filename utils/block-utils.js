@@ -6,7 +6,6 @@ const BigNumber = require('bignumber.js');
 const {
     AVERAGE_BLOCK_TIME
 } = require('../config/chain-config.js');
-const { modifier } = require("../test/strategy-usd/convex/ib/synthetix-modifier.js");
 
 /**
  * simulate minting block
