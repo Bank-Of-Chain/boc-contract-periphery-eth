@@ -17,26 +17,28 @@ import "../../../../external/cream/IPriceOracle.sol";
 import "../../../../external/convex/IConvex.sol";
 import "../../../../external/convex/IConvexReward.sol";
 import "../../../../external/curve/ICurveFi.sol";
-import "../../../../external/synthetix/IAddressResolver.sol";
-import "../../../../external/synthetix/IReadProxy.sol";
-import "../../../../external/synthetix/ISynth.sol";
-import "../../../../external/synthetix/ISynthetix.sol";
-import "../../../../external/synthetix/IExchanger.sol";
-import "../../../../external/synthetix/IExchangeState.sol";
-import "../../../../external/synthetix/ISystemStatus.sol";
+import "../../../../external/weth/IWeth.sol";
+
 import "../../../../external/uniswap/IUniswapV2Router2.sol";
+
+interface ICurveMini {
+    function exchange(
+        uint256 from,
+        uint256 to,
+        uint256 _from_amount,
+        uint256 _min_to_amount
+    ) external payable returns (uint256);
+}
 
 contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    // minimum amount to be liquidation
-    uint256 public constant SELL_FLOOR = 1e16;
+    event UpdateBorrowFactor(uint256 _borrowFactor);
 
     // IronBank
     Comptroller public constant comptroller =
         Comptroller(0xAB1c342C7bf5Ec5F02ADEA1c2270670bCa144CbB);
-    IPriceOracle public constant priceOracle =
-        IPriceOracle(0x6B96c414ce762578c3E7930da9114CffC88704Cb);
+    IPriceOracle public priceOracle;
 
     address public constant collateralToken = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
     CTokenInterface public constant collateralCToken =
@@ -50,61 +52,53 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
 
     uint256 public constant BPS = 10000;
     address public constant BOOSTER = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
-    address public constant SETH = 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb;
     address public constant rewardCRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
     address public constant rewardCVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    // kp3r and rkp3r
+    // rkp3r
     address internal constant rkpr = 0xEdB67Ee1B171c4eC66E6c10EC43EDBbA20FaE8e9;
-    // address internal constant kpr = 0x1cEB5cB57C4D4E2b2433641b95Dd330A33185A44;
 
     // use Curve to sell our CVX and CRV rewards to WETH
     address internal constant crvethPool = 0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511; // use curve's new CRV-ETH crypto pool to sell our CRV
     address internal constant cvxethPool = 0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4; // use curve's new CVX-ETH crypto pool to sell our CVX
-    address internal constant sethethPool = 0xc5424B857f758E906013F3555Dad202e4bdB4567; // use curve's sETH-ETH crypto pool to swap our ETH to sETH
-
-    // Synthetix
-    IAddressResolver public constant addressResolver =
-        IAddressResolver(0x823bE81bbF96BEc0e25CA13170F5AaCb5B79ba83);
-    // this is how we check if our market is closed
-    ISystemStatus internal constant systemStatus =
-        ISystemStatus(0x1c86B3CDF2a60Ae3a574f7f71d44E2C50BDdB87E);
-    bytes32 internal constant sethCurrencyKey = "sETH";
-    bytes32 internal constant CONTRACT_SYNTHETIX = "Synthetix";
-    bytes32 internal constant CONTRACT_EXCHANGER = "Exchanger";
-    bytes32 internal constant CONTRACT_EXCHANGE_STATE = "ExchangeState";
-    bytes32 public synthCurrencyKey;
 
     //sushi router
-    address internal constant sushiRouterAddr =
-        address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
+    address internal constant sushiRouterAddr = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
     //uni router
-    address internal constant uniRouterAddr = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    address internal constant uniRouterAddr = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     //uni v3
-    address internal constant uniswapv3 = address(0xE592427A0AEce92De3Edee1F18E0157C05861564);
+    address internal constant uniswapv3 = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     //reward swap path
     mapping(address => address[]) public rewardRoutes;
+
+    address public curve_usdc_ibforex_pool;
+
+    function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
+        require(_borrowFactor >= 0 && _borrowFactor < BPS, "setting output the range");
+        borrowFactor = _borrowFactor;
+
+        emit UpdateBorrowFactor(_borrowFactor);
+    }
 
     function initialize(
         address _vault,
         address _harvester,
         string memory _strategyName,
         address _borrowCToken,
-        address _rewardPool
+        address _rewardPool,
+        address _curve_usdc_ibforex_pool
     ) external initializer {
         borrowCToken = CTokenInterface(_borrowCToken);
         rewardPool = _rewardPool;
         _pid = IConvexReward(rewardPool).pid();
+        curve_usdc_ibforex_pool = _curve_usdc_ibforex_pool;
         address[] memory _wants = new address[](1);
         _wants[0] = collateralToken;
 
-        _initialize(_vault, _harvester, _strategyName, uint16(ProtocolEnum.Convex), _wants);
+        priceOracle = IPriceOracle(comptroller.oracle());
 
-        // init synth forex key
-        address synthForexAddr = getSynthForex();
-        synthCurrencyKey = ISynth(IReadProxy(synthForexAddr).target()).currencyKey();
-        console.logBytes32(synthCurrencyKey);
+        _initialize(_vault, _harvester, _strategyName, uint16(ProtocolEnum.Convex), _wants);
 
         borrowFactor = 8300;
 
@@ -112,31 +106,29 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         // approve sell rewards
         IERC20Upgradeable(rewardCRV).safeApprove(address(crvethPool), uintMax);
         IERC20Upgradeable(rewardCVX).safeApprove(address(cvxethPool), uintMax);
-        IERC20Upgradeable(SETH).safeApprove(
-            addressResolver.getAddress(CONTRACT_SYNTHETIX),
-            uintMax
-        );
 
         // approve deposit
         address curveForexPool = getCurveLpToken();
         address borrowToken = borrowCToken.underlying();
         IERC20Upgradeable(borrowToken).safeApprove(curveForexPool, uintMax);
-        IERC20Upgradeable(synthForexAddr).safeApprove(curveForexPool, uintMax);
-        console.log("synthForexAddr:%s", synthForexAddr);
 
         IERC20Upgradeable(borrowToken).safeApprove(sushiRouterAddr, uintMax);
         IERC20Upgradeable(USDC).safeApprove(uniRouterAddr, uintMax);
+        IERC20Upgradeable(WETH).safeApprove(sushiRouterAddr, uintMax);
 
         //init reward swap path
         address[] memory ib2usdc = new address[](2);
         ib2usdc[0] = borrowToken;
         ib2usdc[1] = USDC;
         rewardRoutes[borrowToken] = ib2usdc;
+        address[] memory weth2usdc = new address[](2);
+        weth2usdc[0] = WETH;
+        weth2usdc[1] = USDC;
+        rewardRoutes[WETH] = weth2usdc;
         address[] memory usdc2usdt = new address[](2);
         usdc2usdt[0] = USDC;
         usdc2usdt[1] = collateralToken;
         rewardRoutes[USDC] = usdc2usdt;
-
     }
 
     function getVersion() external pure override returns (string memory) {
@@ -144,19 +136,16 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     }
 
     // ==== External === //
-    function get3rdPoolAssets() external view override returns (uint256 targetPoolTotalAssets) {
-        uint256 total = IConvexReward(rewardPool).totalSupply();
-        // Calculate the value of coins such as krw
+    // USD-1e18
+    function get3rdPoolAssets() public view override returns (uint256 targetPoolTotalAssets) {
+        address _curvePool = getCurveLpToken();
+        uint256 virtualPrice = ICurveFi(_curvePool).get_virtual_price();
+        uint256 totalSupply = IERC20Upgradeable(_curvePool).totalSupply();
+        //30 = 18+12,div 1e12 for normalized,div 1e18 for virtualPrice
         targetPoolTotalAssets =
-            (ICurveFi(getCurveLpToken()).get_virtual_price() * total) /
-            decimalUnitOfToken(getCurveLpToken());
-        CTokenInterface _borrowCToken = borrowCToken;
-        address borrowToken = _borrowCToken.underlying();
-        uint256 borrowTokenPrice = _borrowTokenPrice();
-        // Calculate the value of the borrowToken and convert it to the value of USDT
-        targetPoolTotalAssets =
-            (targetPoolTotalAssets * borrowTokenPrice) /
-            (_collateralTokenPrice() * decimalUnitOfToken(borrowToken));
+            (virtualPrice * totalSupply * _borrowTokenPrice()) /
+            decimalUnitOfToken(getIronBankForex()) /
+            1e30;
     }
 
     // ==== Public ==== //
@@ -198,27 +187,29 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         )
     {
         isUsd = true;
+        uint256 assetsValue = assets();
+        uint256 debtsValue = debts();
         // The usdValue needs to be filled with precision
-        usdValue = _estimatedTotalUsdValue() * 1e12;
+        usdValue = assetsValue - debtsValue;
         console.log("[%s] getPositionDetail: %s", this.name(), usdValue);
     }
 
     /**
      *  Total strategy valuation, in currency denominated units
      */
-    function _estimatedDepositedAssets() public view returns (uint256 depositedAssets) {
+    function curvePoolAssets() public view returns (uint256 depositedAssets) {
         uint256 rewardBalance = balanceOfToken(rewardPool);
         if (rewardBalance > 0) {
             depositedAssets =
                 (_borrowTokenPrice() *
                     ICurveFi(getCurveLpToken()).calc_withdraw_one_coin(rewardBalance, 0)) /
-                1e18 /
+                1e12 /
                 decimalUnitOfToken(getCurveLpToken());
         } else {
             depositedAssets = 0;
         }
         console.log(
-            "[%s] rewardBalance:%s,depositedAssets:%s",
+            "[%s] rewardBalance:%s,curvePoolAssets:%s",
             this.name(),
             rewardBalance,
             depositedAssets
@@ -226,40 +217,39 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     }
 
     /**
-     *  debt rate
+     *  debt Rate
      */
-    function debtRate() public view returns (uint256 vaule) {
-        uint256 netAssets = _estimatedTotalUsdValue();
-        if (netAssets == 0) {
+    function debtRate() public view returns (uint256) {
+        //collateral Assets
+        uint256 collateral = collateralAssets();
+        //debts
+        uint256 debt = debts();
+        if (collateral == 0) {
             return 0;
         }
-        uint256 debt = debts();
-        return (debt * BPS) / netAssets;
+        return (debt * BPS) / collateral;
     }
 
-    //assets(USD)
+    //assets(USD) -18
     function assets() public view returns (uint256 value) {
         // estimatedDepositedAssets
-        uint256 deposited = _estimatedDepositedAssets();
+        uint256 deposited = curvePoolAssets();
         value += deposited;
         // CToken value
         value += collateralAssets();
+        address _collateralToken = collateralToken;
         // balance
-        uint256 underlyingBalance = balanceOfToken(collateralToken);
+        uint256 underlyingBalance = balanceOfToken(_collateralToken);
         if (underlyingBalance > 0) {
-            value += ((underlyingBalance * _collateralTokenPrice()) /
-                decimalUnitOfToken(collateralToken));
+            value +=
+                ((underlyingBalance * _collateralTokenPrice()) /
+                    decimalUnitOfToken(_collateralToken)) /
+                1e12;
         }
-        console.log(
-            "total assets:%s,deposited:%s,collateral:%s",
-            value,
-            deposited,
-            collateralAssets()
-        );
     }
 
     /**
-     *  debts(USD)
+     *  debts(USD-1e18)
      */
     function debts() public view returns (uint256 value) {
         CTokenInterface _borrowCToken = borrowCToken;
@@ -267,59 +257,25 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         uint256 borrowBalanceCurrent = _borrowCToken.borrowBalanceStored(address(this));
         address borrowToken = _borrowCToken.underlying();
         uint256 borrowTokenPrice = _borrowTokenPrice();
-        console.log("-----_borrowCToken balance-------", borrowBalanceCurrent);
-        value = (borrowBalanceCurrent * borrowTokenPrice) / decimalUnitOfToken(borrowToken) / 1e18;
+        value = (borrowBalanceCurrent * borrowTokenPrice) / decimalUnitOfToken(borrowToken) / 1e12; //div 1e12 for normalized
+        console.log("debts:%s", value);
     }
 
-    function checkWaitingPeriod() public view returns (bool freeToMove) {
-        IExchanger exchanger = IExchanger(addressResolver.getAddress(CONTRACT_EXCHANGER));
-        // check if it's been >5 mins since we traded our sETH for our synth
-        return exchanger.maxSecsLeftInWaitingPeriod(address(this), synthCurrencyKey) == 0;
-    }
-
-    /**
-     * SynthForex is used to re-inject into the Curve pool
-     */
-    function investWithSynthForex() public isKeeper returns (bool) {
-        uint256 balanceOfSynthForex = balanceOfToken(getSynthForex());
-        if (balanceOfSynthForex > 0 && checkWaitingPeriod()) {
-            _invest(0, balanceOfSynthForex);
-            // Calculate APY && Report new valuation
-            address[] memory _rewardTokens = new address[](0);
-
-            uint256[] memory _claimAmounts = new uint256[](0);
-            vault.report(_rewardTokens, _claimAmounts);
-            return true;
-        }
-        return false;
-    }
-
-    function isMarketClosed() public view returns (bool) {
-        // set up our arrays to use
-        bool[] memory tradingSuspended;
-        bytes32[] memory synthArray;
-
-        // use our synth key
-        synthArray = new bytes32[](1);
-        synthArray[0] = synthCurrencyKey;
-
-        // check if trading is open or not. true = market is closed
-        (tradingSuspended, ) = systemStatus.getSynthExchangeSuspensions(synthArray);
-        return tradingSuspended[0];
-    }
-
-    //collateral assets（USDT)
+    //collateral assets（USD-1e18)
     function collateralAssets() public view returns (uint256 value) {
         CTokenInterface collateralC = collateralCToken;
+        address _collateralToken = collateralToken;
         //saving gas
         uint256 exchangeRateMantissa = collateralC.exchangeRateStored();
-        uint256 collateralValue = (balanceOfToken(address(collateralC)) * exchangeRateMantissa) /
-            1e16;
-        uint256 collateralAmount = (collateralValue * decimalUnitOfToken(collateralToken)) /
-            decimalUnitOfToken(address(collateralCToken));
+        uint256 collateralTokenAmount = ((balanceOfToken(address(collateralC)) *
+            exchangeRateMantissa) * decimalUnitOfToken(_collateralToken)) /
+            1e16 /
+            decimalUnitOfToken(address(collateralC));
         uint256 collateralTokenPrice = _collateralTokenPrice();
-        value = (collateralAmount * collateralTokenPrice) / decimalUnitOfToken(collateralToken);
-        console.log("[%s] collateralAssets:%s", this.name(), value);
+        value =
+            (collateralTokenAmount * collateralTokenPrice) /
+            decimalUnitOfToken(_collateralToken) /
+            1e12; //div 1e12 for normalized
     }
 
     // borrow info
@@ -331,72 +287,49 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         } else {
             overflow = currentBorrow - borrowAvaible;
         }
-        console.log(
-            "borrowInfo space:%s,overflow:%s borrowAvaible:%s",
-            space,
-            overflow,
-            borrowAvaible
-        );
     }
 
     function getCurveLpToken() public view returns (address) {
         return IConvex(BOOSTER).poolInfo(_pid).lptoken;
     }
 
-    function getSynthForex() public view returns (address) {
+    function getIronBankForex() public view returns (address) {
         ICurveFi curveForexPool = ICurveFi(getCurveLpToken());
-        return curveForexPool.coins(1);
-    }
-
-    // ==== Internal ==== //
-    /**
-     *  estimatedTotalUsdValue
-     */
-    function _estimatedTotalUsdValue() internal view returns (uint256) {
-        uint256 assetsValue = assets();
-        uint256 debtsValue = debts();
-        console.log("[%s] assets:%s,debts:%s", this.name(), assetsValue, debtsValue);
-        console.log(
-            "[%s] rewardCRV:%s, rewardCVX:%s",
-            this.name(),
-            balanceOfToken(rewardCRV),
-            balanceOfToken(rewardCVX)
-        );
-        //Net Assets
-        return assetsValue - debtsValue;
+        return curveForexPool.coins(0);
     }
 
     /**
      *   Sell reward and reinvestment logic
      */
     function harvest()
-        external
+        public
         virtual
         override
         returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
-        uint256 rewardCRVAmount = IConvexReward(rewardPool).earned(address(this));
-        if (rewardCRVAmount > SELL_FLOOR) {
-            IConvexReward(rewardPool).getReward();
-            uint256 crvBalance = balanceOfToken(rewardCRV);
-            uint256 cvxBalance = balanceOfToken(rewardCVX);
-            console.log("[%s] claim reward:%s,%s", this.name(), crvBalance, cvxBalance);
-            _sellCrvAndCvx(crvBalance, cvxBalance);
-            //sell kpr
-            uint256 rkprBalance = balanceOfToken(rkpr);
-            if (rkprBalance > 0) {
-                IERC20Upgradeable(rkpr).transfer(harvester, rkprBalance);
-            }
-            // ETH to sETH
-            uint256 ethBalance = address(this).balance;
-            ICurveFi(sethethPool).exchange{value: ethBalance}(0, 1, ethBalance, 0);
+        IConvexReward(rewardPool).getReward();
+        uint256 crvBalance = balanceOfToken(rewardCRV);
+        uint256 cvxBalance = balanceOfToken(rewardCVX);
+        console.log("[%s] claim reward:%s,%s", this.name(), crvBalance, cvxBalance);
+        _sellCrvAndCvx(crvBalance, cvxBalance);
+        uint256 ibForexAmount = balanceOfToken(getIronBankForex());
+        if (ibForexAmount > 0) {
+            console.log("harvest ibForexAmount:", ibForexAmount);
+            _invest(ibForexAmount);
         }
-
-        uint256 balanceOfSETH = balanceOfToken(SETH);
-        console.log("sETH balance:%s", balanceOfSETH);
-        if (balanceOfSETH > 0 && !isMarketClosed()) {
-            _sETH2Synth(balanceOfSETH);
+        //sell kpr
+        uint256 rkprBalance = balanceOfToken(rkpr);
+        if (rkprBalance > 0) {
+            IERC20Upgradeable(rkpr).transfer(harvester, rkprBalance);
         }
+        _rewardsTokens = new address[](3);
+        _rewardsTokens[0] = rewardCRV;
+        _rewardsTokens[1] = rewardCVX;
+        _rewardsTokens[2] = rkpr;
+        _claimAmounts = new uint256[](3);
+        _claimAmounts[0] = crvBalance;
+        _claimAmounts[1] = cvxBalance;
+        _claimAmounts[2] = rkprBalance;
         // report empty array for profit
         vault.report(_rewardsTokens, _claimAmounts);
     }
@@ -411,51 +344,52 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         if (_convexAmount > 0) {
             ICurveFi(cvxethPool).exchange(1, 0, _convexAmount, 0, true);
         }
-        console.log("[%s] WETH:%s", this.name(), address(this).balance);
-    }
 
-    function _sETH2Synth(uint256 sETHBalance) internal {
-        bytes32 _synthCurrencyKey = synthCurrencyKey;
-        ISynthetix synthetix = ISynthetix(addressResolver.getAddress(CONTRACT_SYNTHETIX));
-        console.log("[%s] synthetix address:%s", this.name(), address(synthetix));
-        synthetix.exchange(sethCurrencyKey, sETHBalance, _synthCurrencyKey);
-        IExchangeState exchangeState = IExchangeState(
-            addressResolver.getAddress(CONTRACT_EXCHANGE_STATE)
-        );
-        if (
-            exchangeState.maxEntriesInQueue() ==
-            exchangeState.getLengthOfEntries(address(this), _synthCurrencyKey)
-        ) {
-            IExchanger exchanger = IExchanger(addressResolver.getAddress(CONTRACT_EXCHANGER));
-            exchanger.settle(address(this), _synthCurrencyKey);
+        if (address(this).balance > 0) {
+            //ETH wrap to WETH
+            IWeth(WETH).deposit{value: address(this).balance}();
+            console.log("[%s] WETH:%s", this.name(), balanceOfToken(WETH));
+
+            //crv swap to USDC
+            IUniswapV2Router2(sushiRouterAddr).swapExactTokensForTokens(
+                balanceOfToken(WETH),
+                0,
+                rewardRoutes[WETH],
+                address(this),
+                block.timestamp
+            );
+            uint256 usdcBalance = balanceOfToken(USDC);
+            console.log("[%s] USDC:%s", this.name(), usdcBalance);
+            IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, 0);
+            IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, usdcBalance);
+            ICurveMini(curve_usdc_ibforex_pool).exchange(1, 0, usdcBalance, 0);
         }
     }
 
-    // Collateral Token Price In USDT
+    // Collateral Token Price In USD ,decimals 1e30
     function _collateralTokenPrice() internal view returns (uint256) {
-        uint256 collateralTokenPrice = priceOracle.getUnderlyingPrice(address(collateralCToken)) /
-            1e24;
+        uint256 collateralTokenPrice = priceOracle.getUnderlyingPrice(address(collateralCToken));
         console.log("[%s] collateralTokenPrice", this.name(), collateralTokenPrice);
-        require(collateralTokenPrice > 0);
         return collateralTokenPrice;
     }
 
-    // Borrown Token Price In USD
+    // Borrown Token Price In USD ，decimals 1e30
     function _borrowTokenPrice() internal view returns (uint256) {
-        uint256 borrowTokenPrice = (priceOracle.getUnderlyingPrice(address(borrowCToken)) *
-            decimalUnitOfToken(collateralToken));
+        uint256 borrowTokenPrice = _getNormalizedBorrowToken();
         console.log("[%s] borrowTokenPrice", this.name(), borrowTokenPrice);
-        require(borrowTokenPrice > 0);
         return borrowTokenPrice;
+    }
+
+    function _getNormalizedBorrowToken() internal view returns (uint256) {
+        return priceOracle.getUnderlyingPrice(address(borrowCToken)) * 1e12;
     }
 
     // Maximum number of borrowings under the specified amount of collateral assets
     function _borrowAvaiable(uint256 liqudity) internal view returns (uint256 borrowAvaible) {
-        address borrowToken = borrowCToken.underlying();
-        // uint256 maxBorrrowAmount = calcCanonicalAssetValue(collateralToken, collateralValue, borrowToken);
-        uint256 borrowTokenPrice = _borrowTokenPrice();
+        address borrowToken = getIronBankForex();
+        uint256 borrowTokenPrice = _borrowTokenPrice(); // decimals 1e30
         //Maximum number of loans available
-        uint256 maxBorrowAmount = ((liqudity * decimalUnitOfToken(borrowToken)) * 1e18) /
+        uint256 maxBorrowAmount = ((liqudity * decimalUnitOfToken(borrowToken))) /
             borrowTokenPrice;
         //Borrowable quantity under the current borrowFactor factor
         borrowAvaible = (maxBorrowAmount * borrowFactor) / BPS;
@@ -465,14 +399,8 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     function _currentBorrowAvaible() internal view returns (uint256 borrowAvaible) {
         // Pledge discount rate, base 1e18
         (, uint256 rate) = comptroller.markets(address(collateralCToken));
-        uint256 liquidity = (collateralAssets() * rate) / 1e18;
+        uint256 liquidity = (collateralAssets() * 1e12 * rate) / 1e18; //multi 1e12 for liquidity convert to 1e30
         borrowAvaible = _borrowAvaiable(liquidity);
-        console.log(
-            "borrowInfo rate:%s,collateral liquidity:%s borrowAvaible:%s",
-            rate,
-            liquidity,
-            borrowAvaible
-        );
     }
 
     // Add collateral to IronBank
@@ -491,8 +419,8 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     }
 
     // Forex added to Curve pool
-    function curveAddLiquidity(uint256 ibTokenAmount, uint256 sTokenAmount) internal {
-        ICurveFi(getCurveLpToken()).add_liquidity([ibTokenAmount, sTokenAmount], 0);
+    function curveAddLiquidity(uint256 ibTokenAmount) internal {
+        ICurveFi(getCurveLpToken()).add_liquidity([ibTokenAmount, 0], 0);
     }
 
     // curve remove liquidity
@@ -500,20 +428,14 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         ICurveFi(getCurveLpToken()).remove_liquidity_one_coin(shareAmount, 0, 0);
     }
 
-    function _invest(uint256 ibTokenAmount, uint256 synthTokenAmount) internal {
-        curveAddLiquidity(ibTokenAmount, synthTokenAmount);
+    function _invest(uint256 ibTokenAmount) internal {
+        curveAddLiquidity(ibTokenAmount);
 
         address lpToken = getCurveLpToken();
         uint256 liquidity = balanceOfToken(lpToken);
         address booster = BOOSTER;
         //saving gas
         if (liquidity > 0) {
-            console.log(
-                "[%s] deposit to Convex,pid:%s,lp amount:%s",
-                this.name(),
-                _pid,
-                balanceOfToken(lpToken)
-            );
             IERC20Upgradeable(lpToken).safeApprove(booster, 0);
             IERC20Upgradeable(lpToken).safeApprove(booster, liquidity);
             IConvex(booster).deposit(_pid, liquidity, true);
@@ -526,12 +448,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         //saving gas
         borrowC.borrow(borrowAmount);
         receiveAmount = balanceOfToken(borrowC.underlying());
-        console.log(
-            "[%s] borrow amount:%s,receive amount:%s",
-            this.name(),
-            borrowAmount,
-            receiveAmount
-        );
     }
 
     // repay forex
@@ -542,7 +458,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         IERC20Upgradeable(borrowToken).safeApprove(address(borrowC), 0);
         IERC20Upgradeable(borrowToken).safeApprove(address(borrowC), repayAmount);
         borrowC.repayBorrow(repayAmount);
-        // console.log('repay :%s,borrowOverflow:%s,borrowBalanceCurrent:%s', repayAmount, borrowOverflow, borrowCToken.borrowBalanceCurrent(address(this)));
     }
 
     // increase borrow
@@ -551,7 +466,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         if (space > 0) {
             //borrow forex
             uint256 receiveAmount = _borrowForex(space);
-            _invest(receiveAmount, 0);
+            _invest(receiveAmount);
         }
     }
 
@@ -576,19 +491,33 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         curveRemoveLiquidity(cvxLpAmount);
     }
 
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        override
+    {
+        require(_assets[0] == address(collateralToken) && _amounts[0] > 0);
+        uint256 collateralAmount = _amounts[0];
+        _mintCollateralCToken(collateralAmount);
+        (uint256 space, ) = borrowInfo();
+        console.log("[%s] borrow info:space = %s", this.name(), space);
+        if (space > 0) {
+            // borrow forex
+            uint256 receiveAmount = _borrowForex(space);
+            _invest(receiveAmount);
+        }
+    }
+
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
+        // if withdraw all,force claim reward.
+        if (_withdrawShares == _totalShares) {
+            harvest();
+        }
         uint256 totalStaking = balanceOfToken(rewardPool);
         uint256 cvxLpAmount = (totalStaking * _withdrawShares) / _totalShares;
-        console.log(
-            "[%s] _withdrawSomeLpToken:%s, _totalShares:%s",
-            this.name(),
-            _withdrawShares,
-            _totalShares
-        );
         console.log("[%s] cvxLpAmount: %s", this.name(), cvxLpAmount);
         //saving gas
         CTokenInterface borrowC = borrowCToken;
@@ -605,21 +534,10 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
             _repayForex(repayAmount);
             uint256 burnAmount = (balanceOfToken(address(collateralC)) * repayAmount) /
                 currentBorrow;
-            console.log(
-                "burnAmount:%s,repayAmount:%s,currentBorrow:%s",
-                burnAmount,
-                repayAmount,
-                currentBorrow
-            );
             collateralC.redeem(burnAmount);
             //The excess borrowToken is exchanged for U
             uint256 profit = balanceOfToken(borrowToken);
             if (profit > 0) {
-                console.log(
-                    "profit:%d,rewardRoutes[borrowToken]:%d",
-                    profit,
-                    rewardRoutes[borrowToken].length
-                );
                 IUniswapV2Router2(sushiRouterAddr).swapExactTokensForTokens(
                     profit,
                     0,
@@ -638,32 +556,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
                 );
             }
         }
-    }
-
-    // ==== Private ==== //
-
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
-        internal
-        override
-    {
-        require(_assets[0] == address(collateralToken) && _amounts[0] > 0);
-        uint256 collateralAmount = _amounts[0];
-        _mintCollateralCToken(collateralAmount);
-        console.log(
-            "[%s] after _mintCollateralCToken = %s",
-            this.name(),
-            this.estimatedTotalAssets()
-        );
-        (uint256 space, ) = borrowInfo();
-        console.log("[%s] borrow info:space = %s", this.name(), space);
-        if (space > 0) {
-            // borrow forex
-            uint256 receiveAmount = _borrowForex(space);
-            console.log("[%s] after _borrowForex = %s", this.name(), this.estimatedTotalAssets());
-            _invest(receiveAmount, 0);
-            console.log("[%s] after _invest = %s", this.name(), this.estimatedTotalAssets());
-        }
-        console.log("[%s] balanceOfToken(rewardPool):%s", this.name(), balanceOfToken(rewardPool));
     }
 
     // === fallback and receive === //

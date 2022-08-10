@@ -75,8 +75,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     // IronBank
     Comptroller public constant comptroller =
         Comptroller(0xAB1c342C7bf5Ec5F02ADEA1c2270670bCa144CbB);
-    // IPriceOracle public constant priceOracle =
-    //     IPriceOracle(0x6B96c414ce762578c3E7930da9114CffC88704Cb);
     IPriceOracle public priceOracle;
 
     //USDC
@@ -115,8 +113,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     //sushi router
     address internal constant sushiRouterAddr =
         address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
-    //uni router
-    // address internal constant uniRouterAddr = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+
     //reward swap path
     mapping(address => address[]) public rewardRoutes;
 
@@ -188,20 +185,13 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
 
         IERC20Upgradeable(borrowToken).safeApprove(sushiRouterAddr, uintMax);
         IERC20Upgradeable(WETH).safeApprove(sushiRouterAddr, uintMax);
-        // IERC20Upgradeable(USDC).safeApprove(uniRouterAddr, uintMax);
 
-        //init reward swap path
-        // address[] memory ib2usdc = new address[](2);
-        // ib2usdc[0] = borrowToken;
-        // ib2usdc[1] = USDC;
-        // rewardRoutes[borrowToken] = ib2usdc;
 
         address[] memory weth2usdc = new address[](2);
         weth2usdc[0] = WETH;
         weth2usdc[1] = USDC;
         rewardRoutes[WETH] = weth2usdc;
 
-        isWantRatioIgnorable = true;
     }
 
     function getVersion() external pure override returns (string memory) {
@@ -344,7 +334,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         }
     }
 
-    //assets(USD)
+    //assets(USD) -18
     function assets() public view returns (uint256 value) {
         // estimatedDepositedAssets
         uint256 deposited = curvePoolAssets();
@@ -496,7 +486,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     // Maximum number of borrowings under the specified amount of collateral assets
     function _borrowAvaiable(uint256 liqudity) internal view returns (uint256 borrowAvaible) {
         address borrowToken = getIronBankForex();
-        // uint256 maxBorrrowAmount = calcCanonicalAssetValue(collateralToken, collateralValue, borrowToken);
         uint256 borrowTokenPrice = _borrowTokenPrice(); // decimals 1e30
         //Maximum number of loans available
         uint256 maxBorrowAmount = ((liqudity * decimalUnitOfToken(borrowToken))) /

@@ -1,10 +1,5 @@
 const checker = require('../../strategy-checker');
 
-const {
-    advanceBlockOfHours
-} = require('../../../../utils/block-utils');
-// const ConvexIBUSDCBaseStrategy = hre.artifacts.require('ConvexIBUSDCBaseStrategy');
-
 describe('【ConvexIBUSDCAudStrategy Strategy Checker】', function () {
     // eslint-disable-next-line mocha/no-setup-in-describe
     checker.check('ConvexIBUsdcAudStrategy', async function (strategyAddr,keeper) {
