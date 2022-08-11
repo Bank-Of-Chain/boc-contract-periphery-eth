@@ -570,10 +570,9 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         uint256 spaceValue = (space * _borrowTokenPrice()) / borrowTokenDecimals;
         address collaterCTokenAddr = address(collateralCToken);
         (, uint256 rate) = comptroller.markets(collaterCTokenAddr);
-        uint256 totalLp = balanceOfToken(rewardPool);
         address _collateralToken = collateralToken;
         //exit add collateral
-        uint256 exitCollateral = (((spaceValue * 1e18) / rate) *
+        uint256 exitCollateral = ((((spaceValue * 1e18) * BPS) / rate / borrowFactor) *
             decimalUnitOfToken(_collateralToken)) / _collateralTokenPrice();
         uint256 exchangeRateMantissa = CTokenInterface(collaterCTokenAddr).exchangeRateStored();
         uint256 exitCollateralC = (exitCollateral *
@@ -599,50 +598,48 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         uint256 totalLp = balanceOfToken(rewardPool);
         //need add collateral
         address _collateralToken = collateralToken;
-        uint256 needCollateral = (((overflowValue * 1e18) / rate) *
+        uint256 needCollateral = ((((overflowValue * 1e18) * BPS) / rate / borrowFactor) *
             decimalUnitOfToken(_collateralToken)) / _collateralTokenPrice();
         address _curvePool = curvePool;
-        uint256 allUnderlying = ICurveMini(curvePool).calc_withdraw_one_coin(totalLp, 1);
+        uint256 allUnderlying = ICurveMini(_curvePool).calc_withdraw_one_coin(totalLp, 1);
         uint256 removeLp = (totalLp * needCollateral) / allUnderlying;
         IConvexReward(rewardPool).withdraw(removeLp, false);
         IConvex(BOOSTER).withdraw(pId, removeLp);
-        ICurveMini(curvePool).remove_liquidity_one_coin(removeLp, 1, 0);
+        ICurveMini(_curvePool).remove_liquidity_one_coin(removeLp, 1, 0);
         uint256 underlyingBalance = balanceOfToken(_collateralToken);
-        console.log("add collateral:", underlyingBalance);
         // add collateral
         _mintCollateralCToken(underlyingBalance);
     }
 
     function rebalance() external isKeeper {
         (uint256 space, uint256 overflow) = borrowInfo();
-
-        // //========temp code========
-        // uint256 borrowAvaible = _currentBorrowAvaible();
-        // uint256 currentBorrow = borrowCToken.borrowBalanceStored(address(this));
-        // overflow = currentBorrow / 2;
-        // //========temp code========
         console.log("rebalance space:%s,overflow:%s", space, overflow);
         if (space > 0) {
             exitCollateralInvestToCurvePool(space);
         } else if (overflow > 0) {
-            //If collateral already exceeds the limit as a percentage of total assets, it is necessary to start reducing foreign exchange debt
+            //If collateral already exceeds the limit as a percentage of total assets, 
+            //it is necessary to start reducing foreign exchange debt
             if (collateralRate() < maxCollateralRate) {
                 increaseCollateral(overflow);
             } else {
-                address _rewardPool = rewardPool;
-                uint256 totalLp = balanceOfToken(_rewardPool);
-                uint256 removeLp = (totalLp * forexReduceStep) / BPS;
-                IConvexReward(_rewardPool).withdraw(removeLp, false);
-                IConvex(BOOSTER).withdraw(pId, removeLp);
-                ICurveMini(curvePool).remove_liquidity_one_coin(removeLp, 0, 0);
+                uint256 totalLp = balanceOfToken(rewardPool);
+                uint256 borrowAvaible = _currentBorrowAvaible();
+                uint256 reduceLp = totalLp * overflow / borrowAvaible;
+                _redeem(reduceLp);
                 uint256 exitForex = balanceOfToken(getIronBankForex());
                 if (exitForex > 0) {
                     _repayForex(exitForex);
                     console.log("exitForex:", exitForex);
                 }
+                uint256 underlyingBalance = balanceOfToken(collateralToken);
+                // add collateral
+                _mintCollateralCToken(underlyingBalance);
+                console.log("add collateral:", underlyingBalance);
+                
             }
         }
     }
+
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
