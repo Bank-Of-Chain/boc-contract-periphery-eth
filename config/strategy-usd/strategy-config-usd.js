@@ -13,9 +13,9 @@ const strategiesList = [
     ...dForceStrategies,
     ...dodoStrategies,
     ...stargateStrategies,
-    ...sushiStrategies,
+    // ...sushiStrategies,
     ...uniswapStrategies,
-    ...yearnStrategies
+    // ...yearnStrategies
 ]
 
 exports.strategiesList = strategiesList
