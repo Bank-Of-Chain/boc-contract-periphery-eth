@@ -15,7 +15,7 @@ const MFC_TEST = require('../../../config/mainnet-fork-test-config');
 const MFC_PRODUCTION = require('../../../config/mainnet-fork-config');
 const {
 	strategiesList
-} = require('../../../config/strategy-config-usd.js');
+} = require('../../../config/strategy-usd/strategy-config-usd.js');
 
 const {
 	deploy,
