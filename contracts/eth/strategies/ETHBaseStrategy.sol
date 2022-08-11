@@ -127,7 +127,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     function get3rdPoolAssets() external view virtual returns (uint256);
 
     /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
-    function harvest() external virtual {
+    function harvest() external virtual returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts){
         vault.report();
     }
 
