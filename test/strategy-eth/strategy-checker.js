@@ -182,6 +182,11 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         assert.deepEqual(name, strategyName, 'strategy name do not match the file name');
     });
 
+    it('[outputsInfo array length should bigger than zero]', async function () {
+        const ouputsInfo = await strategy.getOutputsInfo();
+        assert(ouputsInfo.length > 0);
+    });
+
     let wants;
     let wantsInfo;
     it('[wants info should be same with wants]', async function () {

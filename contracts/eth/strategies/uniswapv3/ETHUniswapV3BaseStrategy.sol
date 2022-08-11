@@ -171,6 +171,8 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
 
     function claimRewards() internal override virtual returns (bool isWorth, address[] memory assets, uint256[] memory amounts) {
         this.collect();
+        //TODO::need set value for assets、amounts
+        vault.report(assets,amounts);
     }
 
     function collect() external returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts) {
@@ -266,7 +268,6 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         (, int24 tick,,,,,) = pool.slot0();
         require(shouldRebalance(tick), "cannot rebalance");
         rebalance(tick);
-        vault.report();
     }
 
     function rebalance(int24 tick) internal {

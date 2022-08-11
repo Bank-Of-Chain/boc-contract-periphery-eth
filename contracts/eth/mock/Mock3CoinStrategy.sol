@@ -148,7 +148,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
     /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
     function harvest() external payable virtual returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts) {
         claimRewards();
-        vault.report();
+        vault.report(_rewardsTokens,_claimAmounts);
     }
 
     /// @notice Strategy borrow funds from vault

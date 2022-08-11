@@ -20,13 +20,16 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
     /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
     function harvest() external virtual override returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts){
         // sell reward token
-        (bool claimIsWorth, , ) = claimRewards();
+        (bool claimIsWorth, address[] memory __rewardsTokens,uint256[] memory __claimAmounts ) = claimRewards();
+        _rewardsTokens = __rewardsTokens;
+        _claimAmounts = __claimAmounts;
         console.log("claimIsWorth:", claimIsWorth);
         if (claimIsWorth) {
             swapRewardsToWants();
             reInvest();
         }
-        vault.report();
+
+        vault.report(_rewardsTokens,_claimAmounts);
     }
 
     function reInvest() internal {

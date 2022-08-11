@@ -43,8 +43,8 @@ const PegToken = hre.artifacts.require('PegToken');
 const IETHVault = hre.artifacts.require('IETHVault');
 const ETHExchanger = hre.artifacts.require('ETHExchanger');
 const ExchangeAggregator = hre.artifacts.require('ExchangeAggregator');
-const EthOneInchV4Adapter = hre.artifacts.require('EthOneInchV4Adapter');
-const EthParaSwapV5Adapter = hre.artifacts.require('EthParaSwapV5Adapter');
+const EthOneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
+const EthParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
 
 const VaultAdmin = hre.artifacts.require('ETHVaultAdmin');
 const MockS3CoinStrategy = hre.artifacts.require('MockS3CoinStrategy');

@@ -176,7 +176,7 @@ interface IETHVault {
         IExchangeAggregator.ExchangeParam memory exchangeParam
     ) external returns (uint256);
 
-    function report() external;
+    function report(address[] memory _rewardTokens, uint256[] memory _claimAmounts) external;
 
     /// @notice Shutdown the vault when an emergency occurs, cannot mint/burn.
     function setEmergencyShutdown(bool active) external;
