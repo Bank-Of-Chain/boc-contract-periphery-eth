@@ -11,24 +11,17 @@ contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // https://info.uniswap.org/#/pools/0xa9ffb27d36901f87f1d0f20773f7072e38c5bfba
-    address public constant uniswapV3Pool = 0xa9ffb27d36901F87f1D0F20773f7072e38C5bfbA;
     address internal constant uniswapV3Router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address internal constant uniswapV3Quoter = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
 
     address internal constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant rETH2 = 0x20BC832ca081b91433ff6c17f85701B6e92486c5;
     address internal constant sETH2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;
-    address internal constant swise = 0x48C3399719B582dD63eB5AADf12A40B4C3f52FA2;
-
-    address internal constant stakeWisePool = 0xC874b064f465bdD6411D45734b56fac750Cda29A;
-    IPool public stakeWiseIPool;
 
     function initialize(address _vault,string memory _name) public initializer {
-        uniswapV3Initialize(uniswapV3Pool, 10, 10, 41400, 0, 100, 60,10);
+        uniswapV3Initialize(0xa9ffb27d36901F87f1D0F20773f7072e38C5bfbA, 10, 10, 41400, 0, 100, 60,10);
         address[] memory _wants = new address[](1);
         _wants[0] = wETH;
         super._initialize(_vault, uint16(ProtocolEnum.StakeWise),_name, _wants);
-        stakeWiseIPool = IPool(stakeWisePool);
     }
 
     function getWantsInfo() public view override returns (address[] memory _assets, uint256[] memory _ratios) {
@@ -74,7 +67,7 @@ contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
         IUniswapV3(uniswapV3Router).exactInputSingle(params);
         uint256 seth2Amount = balanceOfToken(sETH2);
 
-        uint256 reth2QuoteAmountOut = IQuoter(uniswapV3Quoter).quoteExactInputSingle(sETH2, rETH2, 500, _amounts[0], 0);
+        uint256 reth2QuoteAmountOut = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6).quoteExactInputSingle(sETH2, rETH2, 500, _amounts[0], 0);
         uint256 depositReth2ToSeth2Amount = seth2Amount * amount0 / (amount0 + amount1 * reth2QuoteAmountOut / seth2Amount);
         uint256 depositSeth2Amount = _amounts[0] - depositReth2ToSeth2Amount;
         IERC20(sETH2).approve(uniswapV3Router, 0);
@@ -92,17 +85,21 @@ contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
 
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal override {
         super.withdrawFrom3rdPool(_withdrawShares, _totalShares,_outputCode);
-        IERC20(rETH2).approve(uniswapV3Router, 0);
         uint256 rETH2Amount = balanceOfToken(rETH2);
-        IERC20(rETH2).approve(uniswapV3Router, rETH2Amount);
-        IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(rETH2, sETH2, 500, address(this), block.timestamp, rETH2Amount, 0, 0);
-        IUniswapV3(uniswapV3Router).exactInputSingle(params);
+        if (rETH2Amount > 0) {
+            IERC20(rETH2).approve(uniswapV3Router, 0);
+            IERC20(rETH2).approve(uniswapV3Router, rETH2Amount);
+            IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(rETH2, sETH2, 500, address(this), block.timestamp, rETH2Amount, 0, 0);
+            IUniswapV3(uniswapV3Router).exactInputSingle(params);
+        }
 
-        IERC20(sETH2).approve(uniswapV3Router, 0);
         uint256 sETH2Amount = balanceOfToken(sETH2);
-        IERC20(sETH2).approve(uniswapV3Router, sETH2Amount);
-        params = IUniswapV3.ExactInputSingleParams(sETH2, wETH, 3000, address(this), block.timestamp, sETH2Amount, 0, 0);
-        IUniswapV3(uniswapV3Router).exactInputSingle(params);
+        if (sETH2Amount > 0) {
+            IERC20(sETH2).approve(uniswapV3Router, 0);
+            IERC20(sETH2).approve(uniswapV3Router, sETH2Amount);
+            params = IUniswapV3.ExactInputSingleParams(sETH2, wETH, 3000, address(this), block.timestamp, sETH2Amount, 0, 0);
+            IUniswapV3(uniswapV3Router).exactInputSingle(params);
+        }
     }
 
     function claimRewards() internal override returns (bool isWorth, address[] memory assets, uint256[] memory amounts) {

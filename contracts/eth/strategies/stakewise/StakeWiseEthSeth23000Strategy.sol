@@ -11,27 +11,18 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // https://info.uniswap.org/#/pools/0x7379e81228514a1d2a6cf7559203998e20598346
-    address public constant uniswapV3Pool = 0x7379e81228514a1D2a6Cf7559203998E20598346;
     address internal constant uniswapV3Router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address internal constant uniswapV3Quoter = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
-    address internal constant merkleDistributor = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
 
     address internal constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant sETH2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;
     address internal constant rETH2 = 0x20BC832ca081b91433ff6c17f85701B6e92486c5;
-    address internal constant swise = 0x48C3399719B582dD63eB5AADf12A40B4C3f52FA2;
-
-    address internal constant stakeWisePool = 0xC874b064f465bdD6411D45734b56fac750Cda29A;
-    IPool public stakeWiseIPool;
 
     function initialize(address _vault,string memory _name) public initializer {
-        uniswapV3Initialize(uniswapV3Pool, 60, 60, 41400, 0, 100, 60,60);
+        uniswapV3Initialize(0x7379e81228514a1D2a6Cf7559203998E20598346, 60, 60, 41400, 0, 100, 60,60);
         address[] memory _wants = new address[](1);
         _wants[0] = wETH;
         super._initialize(_vault, uint16(ProtocolEnum.StakeWise), _name,_wants);
-        stakeWiseIPool = IPool(stakeWisePool);
     }
-
 
     function getWantsInfo() public view override returns (address[] memory _assets, uint256[] memory _ratios) {
         _assets = wants;
@@ -69,7 +60,7 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
             (,, tickLower, tickUpper) = getSpecifiedRangesOfTick(tick);
         }
         (uint256 amount0, uint256 amount1) = super.getAmountsForLiquidity(tickLower, tickUpper, pool.liquidity());
-        uint256 quoteAmountOut = IQuoter(uniswapV3Quoter).quoteExactInputSingle(wETH, sETH2, 3000, _amounts[0], 0);
+        uint256 quoteAmountOut = IQuoter(0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6).quoteExactInputSingle(wETH, sETH2, 3000, _amounts[0], 0);
         uint256 depositSeth2ToWethAmount = _amounts[0] * amount1 / (amount1 + amount0 * quoteAmountOut / _amounts[0]);
         uint256 depositWethAmount = _amounts[0] - depositSeth2ToWethAmount;
         IERC20(wETH).approve(uniswapV3Router, 0);
@@ -87,9 +78,11 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
 
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal override {
         super.withdrawFrom3rdPool(_withdrawShares, _totalShares,_outputCode);
+        uint256 sETH2Balance = balanceOfToken(sETH2);
+        if (sETH2Balance <= 0) return;
         IERC20(sETH2).approve(uniswapV3Router, 0);
-        IERC20(sETH2).approve(uniswapV3Router, balanceOfToken(sETH2));
-        IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(sETH2, wETH, 3000, address(this), block.timestamp, balanceOfToken(sETH2), 0, 0);
+        IERC20(sETH2).approve(uniswapV3Router, sETH2Balance);
+        IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(sETH2, wETH, 3000, address(this), block.timestamp, sETH2Balance, 0, 0);
         uint256 amountOut = IUniswapV3(uniswapV3Router).exactInputSingle(params);
     }
 

@@ -197,12 +197,22 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
         override
         returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
     {
+        this.collect();
+    }
+
+    function collect() external returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts) {
+        _rewardTokens = wants;
+        _claimAmounts = new uint256[](2);
         if (baseMintInfo.tokenId > 0) {
-            __collectAll(baseMintInfo.tokenId);
+            (uint256 amount0, uint256 amount1) = __collectAll(baseMintInfo.tokenId);
+            _claimAmounts[0] += amount0;
+            _claimAmounts[1] += amount1;
         }
 
         if (limitMintInfo.tokenId > 0) {
-            __collectAll(limitMintInfo.tokenId);
+            (uint256 amount0, uint256 amount1) = __collectAll(limitMintInfo.tokenId);
+            _claimAmounts[0] += amount0;
+            _claimAmounts[1] += amount1;
         }
     }
 
@@ -304,6 +314,8 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
             removeLiquidity(limitMintInfo.tokenId, limitLiquidity);
             __collectAll(limitMintInfo.tokenId);
         }
+
+        if (baseLiquidity <= 0 && limitLiquidity <= 0) return;
 
         // Mint new base and limit position
         (
