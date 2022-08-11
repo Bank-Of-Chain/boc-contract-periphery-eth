@@ -97,7 +97,7 @@ contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
         if (sETH2Amount > 0) {
             IERC20(sETH2).approve(uniswapV3Router, 0);
             IERC20(sETH2).approve(uniswapV3Router, sETH2Amount);
-            params = IUniswapV3.ExactInputSingleParams(sETH2, wETH, 3000, address(this), block.timestamp, sETH2Amount, 0, 0);
+            IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(sETH2, wETH, 3000, address(this), block.timestamp, sETH2Amount, 0, 0);
             IUniswapV3(uniswapV3Router).exactInputSingle(params);
         }
     }
