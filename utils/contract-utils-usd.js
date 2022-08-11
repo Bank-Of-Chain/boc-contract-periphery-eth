@@ -7,7 +7,7 @@ const BigNumber = require("bignumber.js")
 const { map } = require("lodash")
 
 const MFC = require("../config/mainnet-fork-test-config")
-const { strategiesList } = require("../config/strategy-config-usd")
+const { strategiesList } = require("../config/strategy-usd/strategy-config-usd")
 
 const { getStrategiesWants } = require("./strategy-utils")
 const {
@@ -207,9 +207,10 @@ async function setupCoreProtocolWithMockValueInterpreter (
     let withdrawQueque = new Array()
     for (let i = 0; i < strategiesList.length; i++) {
         let strategyItem = strategiesList[i]
-        let contractArtifact = hre.artifacts.require(strategyItem.name)
+        let contractArtifact = hre.artifacts.require(strategyItem.contract)
         let strategy = await contractArtifact.new()
-        await strategy.initialize(vault.address, harvester.address)
+        let params = [vault.address, harvester.address,strategyItem.name,...strategyItem.customParams]
+        await strategy.initialize(...params)
         withdrawQueque.push(strategy.address)
         addToVaultStrategies.push({
             strategy: strategy.address,

@@ -32,9 +32,7 @@ const {
 
 // === Constants === //
 const MFC = require('../../../config/mainnet-fork-test-config');
-const {strategiesList} = require('../../../config/strategy-config-usd');
 const {getBestSwapInfo} = require("piggy-finance-utils");
-const IStrategy = hre.artifacts.require('IStrategy');
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 
 const EXCHANGE_EXTRA_PARAMS = {

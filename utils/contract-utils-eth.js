@@ -11,7 +11,7 @@ const {
 const MFC = require("../config/mainnet-fork-test-config");
 const {
     strategiesList
-} = require('../config/strategy-config-eth');
+} = require('../config/strategy-eth/strategy-config-eth');
 
 const {
     getStrategiesWants
@@ -122,9 +122,11 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
     let withdrawQueque = new Array();
     for (let i = 0; i < strategiesList.length; i++) {
         let strategyItem = strategiesList[i];
-        let contractArtifact = hre.artifacts.require(strategyItem.name);
+        let contractArtifact = hre.artifacts.require(strategyItem.contract);
         let strategy = await contractArtifact.new();
-        await strategy.initialize(vault.address);
+        let params = [vault.address,strategyItem.name,...strategyItem.customParams]
+        await strategy.initialize(...params)
+        
         withdrawQueque.push(strategy.address);
         addToVaultStrategies.push({
             strategy: strategy.address,
