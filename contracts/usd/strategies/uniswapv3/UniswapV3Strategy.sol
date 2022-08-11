@@ -203,8 +203,6 @@ contract UniswapV3Strategy is BaseClaimableStrategy, UniswapV3LiquidityActionsMi
     function collect() external returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts) {
         _rewardTokens = wants;
         _claimAmounts = new uint256[](2);
-        _claimAmounts[0] = 0;
-        _claimAmounts[1] = 0;
         if (baseMintInfo.tokenId > 0) {
             (uint256 amount0, uint256 amount1) = __collectAll(baseMintInfo.tokenId);
             _claimAmounts[0] += amount0;
