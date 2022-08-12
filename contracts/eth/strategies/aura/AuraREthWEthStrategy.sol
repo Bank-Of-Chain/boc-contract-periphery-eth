@@ -46,7 +46,6 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
     address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
-    address public constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;
 
     mapping(address => address[]) public swapRewardRoutes;
     mapping(address => uint256) public sellFloor;
@@ -59,7 +58,6 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
 
 
         uint256 uintMax = type(uint256).max;
-        // (address[] memory _tokens, , ) = BALANCER_VAULT.getPoolTokens(poolKey);
         for (uint256 i = 0; i < _wants.length; i++) {
             address token = _wants[i];
             // for enter balancer vault
@@ -294,30 +292,12 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
             claimIsWorth = true;
             console.log("earn:", earn);
             IRewardPool(rewardPool).getReward();
-            uint256 extraRewardsLen = IRewardPool(rewardPool).extraRewardsLength();
-            // extraRewardsLen = 0;
-            _rewardsTokens = new address[](2 + extraRewardsLen);
+            _rewardsTokens = new address[](2);
             _rewardsTokens[0] = BAL;
             _rewardsTokens[1] = AURA_TOKEN;
-            _claimAmounts = new uint256[](2 + extraRewardsLen);
+            _claimAmounts = new uint256[](2);
             _claimAmounts[0] = balanceOfToken(BAL);
             _claimAmounts[1] = balanceOfToken(AURA_TOKEN);
-            console.log("extraRewardsLen:%s,BAL:%s", extraRewardsLen, balanceOfToken(BAL));
-            if (extraRewardsLen > 0) {
-                for (uint256 i = 0; i < extraRewardsLen; i++) {
-                    address extraReward = IRewardPool(rewardPool).extraRewards(i);
-                    address rewardToken = IRewardPool(extraReward).rewardToken();
-                    // IRewardPool(extraReward).getReward();
-                    _rewardsTokens[2 + i] = rewardToken;
-                    _claimAmounts[2 + i] = balanceOfToken(rewardToken);
-                    console.log(
-                        "extraReward:%s,rewardToken:%s,balance:%d",
-                        extraReward,
-                        rewardToken,
-                        balanceOfToken(rewardToken)
-                    );
-                }
-            }
         }
     }
 

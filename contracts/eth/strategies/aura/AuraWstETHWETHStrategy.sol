@@ -52,10 +52,6 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     mapping(address => uint256) public sellFloor;
 
     function initialize(address _vault,string memory _name) external initializer {
-        // bytes32 _poolKey = 0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
-        // uint256 _pId = 3;
-        // address _poolLpToken = 0x32296969Ef14EB0c6d29669C550D4a0449130230;
-        // address _rewardPool = 0xDCee1C640cC270121faF145f231fd8fF1d8d5CD4;
         address[] memory _wants = new address[](2);
         _wants[0] = WSTETH; //wstETH
         _wants[1] = WETH; //wETH
@@ -66,7 +62,6 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         swapRewardRoutes[LDO] = ldoSellPath;
 
         uint256 uintMax = type(uint256).max;
-        // (address[] memory _tokens, , ) = BALANCER_VAULT.getPoolTokens(poolKey);
         for (uint256 i = 0; i < _wants.length; i++) {
             address token = _wants[i];
             // for enter balancer vault
