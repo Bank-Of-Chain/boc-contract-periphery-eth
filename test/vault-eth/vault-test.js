@@ -43,8 +43,8 @@ const PegToken = hre.artifacts.require('PegToken');
 const IETHVault = hre.artifacts.require('IETHVault');
 const ETHExchanger = hre.artifacts.require('ETHExchanger');
 const ExchangeAggregator = hre.artifacts.require('ExchangeAggregator');
-const EthOneInchV4Adapter = hre.artifacts.require('EthOneInchV4Adapter');
-const EthParaSwapV5Adapter = hre.artifacts.require('EthParaSwapV5Adapter');
+const EthOneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
+const EthParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
 
 const VaultAdmin = hre.artifacts.require('ETHVaultAdmin');
 const MockS3CoinStrategy = hre.artifacts.require('MockS3CoinStrategy');
@@ -583,5 +583,16 @@ describe("Vault", function () {
         console.log("Balance of ETHi of governance after withdraw: %s", new BigNumber(await pegToken.balanceOf(governance)).toFixed());
 
         Utils.assertBNEq(totalValueInStrategies, 0);
+    });
+
+    it('Verify：multicall', async function (){
+        await iVault.multicall([
+            iVault.contract.methods.setMaxTimestampBetweenTwoReported(1000).encodeABI(),
+            iVault.contract.methods.setRedeemFeeBps(1000).encodeABI(),
+            iVault.contract.methods.setMinimumInvestmentAmount(10000000000000).encodeABI()
+        ],{from:governance});
+        console.log(new BigNumber(await iVault.maxTimestampBetweenTwoReported()).toFixed());
+        console.log(new BigNumber(await iVault.minimumInvestmentAmount()).toFixed());
+        Utils.assertBNEq(new BigNumber(await iVault.maxTimestampBetweenTwoReported()).toFixed(), 1000);
     });
 });
