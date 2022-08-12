@@ -63,9 +63,8 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
         uint256 uintMax = type(uint256).max;
         for (uint256 i = 0; i < _wants.length; i++) {
-            address token = _wants[i];
             // for enter balancer vault
-            IERC20Upgradeable(token).safeApprove(address(BALANCER_VAULT), uintMax);
+            IERC20Upgradeable(_wants[i]).safeApprove(address(BALANCER_VAULT), uintMax);
         }
         //for Booster deposit
         IERC20Upgradeable(getPoolLpToken()).safeApprove(address(AURA_BOOSTER), uintMax);
@@ -325,7 +324,6 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
     function swapRewardsToWants() internal override {
         uint256 balanceOfBal = balanceOfToken(BAL);
-        if (balanceOfBal < sellFloor[BAL]) return;
         if (balanceOfBal > 0) {
             IERC20Upgradeable(BAL).safeApprove(address(uniRouter2), 0);
             IERC20Upgradeable(BAL).safeApprove(address(uniRouter2), balanceOfBal);
