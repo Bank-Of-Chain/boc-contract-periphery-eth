@@ -260,6 +260,33 @@ const convexStrategies = [
         addToVault: true,
         customParams: [
         ]
+    },
+    {
+        name: "ConvexSaaveStrategy",
+        contract: "ConvexSaaveStrategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+        customParams: [
+        ]
+    },
+    {
+        name: "ConvexSusdStrategy",
+        contract: "ConvexSusdStrategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+        customParams: [
+        ]
+    },
+    {
+        name: "ConvexUsdtStrategy",
+        contract: "ConvexUsdtStrategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+        customParams: [
+        ]
     }
 ];
 
