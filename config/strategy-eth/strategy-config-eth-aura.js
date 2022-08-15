@@ -7,6 +7,15 @@ const auraStrategies = [
         addToVault: true,
         customParams: [
         ]
+    },
+    {
+        name: "AuraREthWEthStrategy",
+        contract: "AuraREthWEthStrategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+        customParams: [
+        ]
     }
 ];
 

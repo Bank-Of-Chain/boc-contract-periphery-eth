@@ -18,7 +18,7 @@ import "../../enums/ProtocolEnum.sol";
 
 import "hardhat/console.sol";
 
-contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
+contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     enum JoinKind {
         INIT,
@@ -45,21 +45,17 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     address public constant AURA_TOKEN = 0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF;
     address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address public constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;
+    address public constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
 
     mapping(address => address[]) public swapRewardRoutes;
     mapping(address => uint256) public sellFloor;
 
     function initialize(address _vault,string memory _name) external initializer {
+
         address[] memory _wants = new address[](2);
-        _wants[0] = WSTETH; //wstETH
+        _wants[0] = RETH; //rETH
         _wants[1] = WETH; //wETH
 
-        address[] memory ldoSellPath = new address[](2);
-        ldoSellPath[0] = LDO;
-        ldoSellPath[1] = WETH;
-        swapRewardRoutes[LDO] = ldoSellPath;
 
         uint256 uintMax = type(uint256).max;
         for (uint256 i = 0; i < _wants.length; i++) {
@@ -105,19 +101,19 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     }
 
     function getPoolKey() internal pure returns (bytes32) {
-        return 0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
+        return 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
     }
 
     function getPId() internal pure returns (uint256) {
-        return 3;
+        return 21;
     }
 
     function getPoolLpToken() internal pure returns (address) {
-        return 0x32296969Ef14EB0c6d29669C550D4a0449130230;
+        return 0x1E19CF2D73a72Ef1332C882F20534B6519Be0276;
     }
 
     function getRewardPool() internal pure returns (address) {
-        return 0xDCee1C640cC270121faF145f231fd8fF1d8d5CD4;
+        return 0x6eBDC53B2C07378662940A7593Ad39Fb67778457;
     }
 
     /// @notice Provide the strategy need underlying token and ratio
@@ -146,7 +142,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         OutputInfo memory info1 = outputsInfo[1];
         info1.outputCode = 1;
         info1.outputTokens = new address[](1);
-        info1.outputTokens[0] = WSTETH; //wstETH
+        info1.outputTokens[0] = RETH; //rETH
 
         OutputInfo memory info2 = outputsInfo[2];
         info2.outputCode = 2;
@@ -253,7 +249,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
         IBalancerVault.ExitPoolRequest memory exitRequest;
         if (_outputCode == 0) {
-            //WSTETH + wETH
+            //RETH + wETH
             exitRequest = IBalancerVault.ExitPoolRequest({
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
@@ -261,7 +257,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
                 toInternalBalance: false
             });
         } else if (_outputCode == 1) {
-            //WSTETH
+            //RETH
             exitRequest = IBalancerVault.ExitPoolRequest({
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
@@ -295,30 +291,12 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
             claimIsWorth = true;
             console.log("earn:", earn);
             IRewardPool(rewardPool).getReward();
-            uint256 extraRewardsLen = IRewardPool(rewardPool).extraRewardsLength();
-            // extraRewardsLen = 0;
-            _rewardsTokens = new address[](2 + extraRewardsLen);
+            _rewardsTokens = new address[](2);
             _rewardsTokens[0] = BAL;
             _rewardsTokens[1] = AURA_TOKEN;
-            _claimAmounts = new uint256[](2 + extraRewardsLen);
+            _claimAmounts = new uint256[](2);
             _claimAmounts[0] = balanceOfToken(BAL);
             _claimAmounts[1] = balanceOfToken(AURA_TOKEN);
-            console.log("extraRewardsLen:%s,BAL:%s", extraRewardsLen, balanceOfToken(BAL));
-            if (extraRewardsLen > 0) {
-                for (uint256 i = 0; i < extraRewardsLen; i++) {
-                    address extraReward = IRewardPool(rewardPool).extraRewards(i);
-                    address rewardToken = IRewardPool(extraReward).rewardToken();
-                    // IRewardPool(extraReward).getReward();
-                    _rewardsTokens[2 + i] = rewardToken;
-                    _claimAmounts[2 + i] = balanceOfToken(rewardToken);
-                    console.log(
-                        "extraReward:%s,rewardToken:%s,balance:%d",
-                        extraReward,
-                        rewardToken,
-                        balanceOfToken(rewardToken)
-                    );
-                }
-            }
         }
     }
 
@@ -349,17 +327,5 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
             );
         }
 
-        uint256 balanceOfLdo = balanceOfToken(LDO);
-        if (balanceOfLdo > 0) {
-            IERC20Upgradeable(LDO).safeApprove(address(sushiRouter2), 0);
-            IERC20Upgradeable(LDO).safeApprove(address(sushiRouter2), balanceOfAura);
-            sushiRouter2.swapExactTokensForTokens(
-                balanceOfLdo,
-                0,
-                swapRewardRoutes[LDO],
-                address(this),
-                block.timestamp
-            );
-        }
     }
 }
