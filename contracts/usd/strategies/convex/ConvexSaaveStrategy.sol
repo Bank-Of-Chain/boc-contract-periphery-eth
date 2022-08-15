@@ -11,12 +11,15 @@ import "./ConvexBaseStrategy.sol";
 contract ConvexSaaveStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-
     address private constant CRV = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
     address private constant CVX = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
     address private constant STKAAVE = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
 
-    function initialize(address _vault, address _harvester,string memory _name) public {
+    function initialize(
+        address _vault,
+        address _harvester,
+        string memory _name
+    ) public {
         address[] memory _wants = new address[](2);
         // the oder is same with underlying coins
         // DAI
@@ -36,7 +39,6 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
-
 
     function getWantsInfo()
         public
@@ -129,12 +131,12 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
 
     function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
-        if (_outputCode == 0) {
-            pool.remove_liquidity(liquidity, [uint256(0), uint256(0)], true);
-        } else if (_outputCode == 1) {
+        if (_outputCode == 1) {
             pool.remove_liquidity_one_coin(liquidity, 0, 0, true);
         } else if (_outputCode == 2) {
             pool.remove_liquidity_one_coin(liquidity, 1, 0, true);
+        } else {
+            pool.remove_liquidity(liquidity, [uint256(0), uint256(0)], true);
         }
     }
 

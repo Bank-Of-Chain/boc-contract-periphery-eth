@@ -91,9 +91,9 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         info3.outputTokens[0] = _wants[2];
 
         OutputInfo memory info4 = outputsInfo[4];
-        info3.outputCode = 4;
-        info3.outputTokens = new address[](1);
-        info3.outputTokens[0] = _wants[3];
+        info4.outputCode = 4;
+        info4.outputTokens = new address[](1);
+        info4.outputTokens[0] = _wants[3];
     }
 
     function getPositionDetail()
@@ -129,7 +129,10 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         address[] memory _assets = wants;
         uint256 crv3Amount = ICurveLiquidityPool(curvePool).balances(CRV3_INDEX);
         uint256 crv3Supply = IERC20Upgradeable(CRV3).totalSupply();
-        uint256 thirdPoolAssets = queryTokenValue(_assets[3], ICurveLiquidityPool(curvePool).balances(USD_INDEX));
+        uint256 thirdPoolAssets = queryTokenValue(
+            _assets[3],
+            ICurveLiquidityPool(curvePool).balances(USD_INDEX)
+        );
         for (uint256 i = 0; i < 3; i++) {
             thirdPoolAssets += queryTokenValue(
                 _assets[i],
@@ -166,26 +169,16 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
             IERC20Upgradeable(_assets[3]).safeApprove(_curvePool, 0);
             IERC20Upgradeable(_assets[3]).safeApprove(_curvePool, _amounts[3]);
         }
-        
+
         ICurveLiquidityPool(curvePool).add_liquidity([_amounts[3], balanceOf3Crv], 0);
         return balanceOfToken(lpToken);
     }
 
     function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
-        console.log("liquidity:%d", liquidity);
         ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
-        if (_outputCode == 0) {
-            pool.remove_liquidity(liquidity, [uint256(0), uint256(0)]);
-            uint256 balanceOf3Crv = balanceOfToken(CRV3);
-            ICurveLiquidityPool(POOL3).remove_liquidity(
-                balanceOf3Crv,
-                [uint256(0), uint256(0), uint256(0)]
-            );
-        } else if (_outputCode == 4) {
+        if (_outputCode == 4) {
             pool.remove_liquidity_one_coin(liquidity, 0, 0);
-        } else {
-            pool.remove_liquidity_one_coin(liquidity, 1, 0);
-            uint256 balanceOf3Crv = balanceOfToken(CRV3);
+        } else if (_outputCode > 0 && _outputCode < 4) {
             int128 index;
             if (_outputCode == 1) {
                 index = 0;
@@ -194,7 +187,20 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
             } else if (_outputCode == 3) {
                 index = 2;
             }
+            pool.remove_liquidity_one_coin(liquidity, 1, 0);
+            uint256 balanceOf3Crv = balanceOfToken(CRV3);
             ICurveLiquidityPool(POOL3).remove_liquidity_one_coin(balanceOf3Crv, index, 0);
+        } else {
+            pool.remove_liquidity(liquidity, [uint256(0), uint256(0)]);
+            uint256 balanceOf3Crv = balanceOfToken(CRV3);
+            ICurveLiquidityPool(POOL3).remove_liquidity(
+                balanceOf3Crv,
+                [uint256(0), uint256(0), uint256(0)]
+            );
         }
+        console.log('want0 balance:',balanceOfToken(wants[0]));
+        console.log('want1 balance:',balanceOfToken(wants[1]));
+        console.log('want2 balance:',balanceOfToken(wants[2]));
+        console.log('want3 balance:',balanceOfToken(wants[3]));
     }
 }

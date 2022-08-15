@@ -252,15 +252,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         IAsset[] memory poolAssets = _getPoolAssets(poolKey);
         uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
         IBalancerVault.ExitPoolRequest memory exitRequest;
-        if (_outputCode == 0) {
-            //WSTETH + wETH
-            exitRequest = IBalancerVault.ExitPoolRequest({
-                assets: poolAssets,
-                minAmountsOut: minAmountsOut,
-                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _exitAmount),
-                toInternalBalance: false
-            });
-        } else if (_outputCode == 1) {
+        if (_outputCode == 1) {
             //WSTETH
             exitRequest = IBalancerVault.ExitPoolRequest({
                 assets: poolAssets,
@@ -274,6 +266,14 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
                 userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _exitAmount, 1),
+                toInternalBalance: false
+            });
+        } else {
+            //WSTETH + wETH
+            exitRequest = IBalancerVault.ExitPoolRequest({
+                assets: poolAssets,
+                minAmountsOut: minAmountsOut,
+                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _exitAmount),
                 toInternalBalance: false
             });
         }
