@@ -10,9 +10,8 @@ pragma solidity ^0.8.0;
 import "./ETHVaultStorage.sol";
 import "../strategies/IETHStrategy.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/utils/Multicall.sol";
 
-contract ETHVault is ETHVaultStorage, Multicall {
+contract ETHVault is ETHVaultStorage {
     using StableMath for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using EnumerableSet for EnumerableSet.AddressSet;
