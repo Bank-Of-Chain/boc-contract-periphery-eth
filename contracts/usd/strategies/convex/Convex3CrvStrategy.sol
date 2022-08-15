@@ -11,7 +11,11 @@ import "./ConvexBaseStrategy.sol";
 contract Convex3CrvStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    function initialize(address _vault, address _harvester,string memory _name) public {
+    function initialize(
+        address _vault,
+        address _harvester,
+        string memory _name
+    ) public {
         address[] memory _wants = new address[](3);
         // the oder is same with coins
         // DAI
@@ -134,9 +138,7 @@ contract Convex3CrvStrategy is ConvexBaseStrategy {
 
     function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
-        if (_outputCode == 0) {
-            pool.remove_liquidity(liquidity, [uint256(0), uint256(0), uint256(0)]);
-        } else {
+        if (_outputCode > 0 && _outputCode < 4) {
             int128 index;
             if (_outputCode == 1) {
                 index = 0;
@@ -146,6 +148,8 @@ contract Convex3CrvStrategy is ConvexBaseStrategy {
                 index = 2;
             }
             pool.remove_liquidity_one_coin(liquidity, index, 0);
+        } else {
+            pool.remove_liquidity(liquidity, [uint256(0), uint256(0), uint256(0)]);
         }
     }
 }
