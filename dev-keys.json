@@ -1,0 +1,14 @@
+{
+    "alchemyKey": {
+        "dev": "Rv-cE_tAtlJDMDzFENK0BKeLki3zzI3e",
+        "mumbai": "lPKBjBeb6fpagGIr507PVfZqZOMyVixY",
+        "prod": "u7bYh400nEkBVdhmrBkq5tOg3yVehPs4"
+    },
+    "infura": {
+        "dev": "7fe43aed4a6548a0b4a9b6c7f029c509"
+    },
+    "speedyNodes":{
+        "dev": "f2cbcaf720c374313b5543f8"
+    }
+
+}
