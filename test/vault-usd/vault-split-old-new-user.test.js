@@ -39,9 +39,6 @@ const {
 const {
   advanceBlock
 } = require('../../utils/block-utils');
-const {
-  modifier
-} = require('../strategy-usd/convex/ib/synthetix-modifier');
 
 // === Constants === //
 const MFC = require('../../config/mainnet-fork-test-config');
@@ -123,7 +120,6 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
     // await topUpUsdtByAddress(oneTokenAmount, farmer2);
     // await topUpUsdcByAddress(new BigNumber(10).pow(tokenDecimals).multipliedBy(10000), farmer2);
     // await topUpDaiByAddress(new BigNumber(10).pow(tokenDecimals).multipliedBy(10000), farmer2);
-    await modifier();
 
     // Generate 100 accounts and top up each with 50 USDT and 10 eth
     for (let i = 0; i < acountNumber; i++) {
