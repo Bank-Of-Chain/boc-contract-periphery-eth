@@ -245,9 +245,10 @@ contract ETHVault is ETHVaultStorage {
                 }
             }
         }
-
-        strategies[_strategy].totalDebt -= _amount;
-        totalDebt -= _amount;
+        uint256 _nowStrategyTotalDebt = strategies[_strategy].totalDebt;
+        uint256 _thisWithdrawValue = (_nowStrategyTotalDebt * _amount) / _strategyAssetValue;
+        strategies[_strategy].totalDebt = _nowStrategyTotalDebt - _thisWithdrawValue;
+        totalDebt -= _thisWithdrawValue;
 
         console.log("([vault.redeem] , redeem _amount , totalDebt)");
         console.log(_strategy, _amount, _strategyAssetValue);
@@ -338,7 +339,7 @@ contract ETHVault is ETHVaultStorage {
         _rebase(_totalAssets);
     }
 
-    function report() external isActiveStrategy(msg.sender) nonReentrant {
+    function report() external isActiveStrategy(msg.sender) {
         _report(msg.sender, 0);
     }
 
@@ -648,8 +649,10 @@ contract ETHVault is ETHVaultStorage {
                 _amounts
             );
 
-            strategies[_strategy].totalDebt -= _strategyWithdrawValue;
-            _totalWithdrawValue += _strategyWithdrawValue;
+            uint256 _nowStrategyTotalDebt = strategies[_strategy].totalDebt;
+            uint256 _thisWithdrawValue = (_nowStrategyTotalDebt * _strategyWithdrawValue) / _strategyTotalValue;
+            strategies[_strategy].totalDebt = _nowStrategyTotalDebt - _thisWithdrawValue;
+            _totalWithdrawValue += _thisWithdrawValue;
 
             if (_needWithdrawValue <= 0) {
                 break;
