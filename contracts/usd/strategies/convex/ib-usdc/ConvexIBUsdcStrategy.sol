@@ -186,12 +186,10 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         IERC20Upgradeable(borrowToken).safeApprove(sushiRouterAddr, uintMax);
         IERC20Upgradeable(WETH).safeApprove(sushiRouterAddr, uintMax);
 
-
         address[] memory weth2usdc = new address[](2);
         weth2usdc[0] = WETH;
         weth2usdc[1] = USDC;
         rewardRoutes[WETH] = weth2usdc;
-
     }
 
     function getVersion() external pure override returns (string memory) {
@@ -304,32 +302,43 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         }
         address _curvePool = curvePool;
         uint256 totalLp = IERC20Upgradeable(getCurveLpToken()).totalSupply();
+        uint256 underlyingHoldOn = (ICurveMini(_curvePool).balances(1) * rewardBalance) / totalLp;
         uint256 forexHoldOn = (ICurveMini(_curvePool).balances(0) * rewardBalance) / totalLp;
         uint256 forexDebts = borrowCToken.borrowBalanceStored(address(this));
         if (forexHoldOn > forexDebts) {
             //need swap forex to underlying
-            uint256 addUnderlying = ICurveMini(_curvePool).get_dy(0, 1, forexHoldOn - forexDebts);
-            uint256 forexValue = ((forexHoldOn - forexDebts) * _borrowTokenPrice()) /
+            uint256 useForex = forexHoldOn - forexDebts;
+            uint256 addUnderlying = ICurveMini(_curvePool).get_dy(0, 1, useForex);
+            uint256 useForexValue = (useForex * _borrowTokenPrice()) /
                 decimalUnitOfToken(borrowCToken.underlying());
             uint256 addUnderlyingValue = (addUnderlying * _collateralTokenPrice()) /
                 decimalUnitOfToken(collateralToken);
 
-            if (forexValue > addUnderlyingValue) {
-                negative = (forexValue - addUnderlyingValue) / 1e12;
+            if (useForexValue > addUnderlyingValue) {
+                negative = (useForexValue - addUnderlyingValue) / 1e12;
             } else {
-                positive = (addUnderlyingValue - forexValue) / 1e12;
+                positive = (addUnderlyingValue - useForexValue) / 1e12;
             }
         } else {
             //need swap underlying to forex
             uint256 needUnderlying = ICurveMini(_curvePool).get_dy(0, 1, forexDebts - forexHoldOn);
-            uint256 forexValue = ((forexDebts - forexHoldOn) * _borrowTokenPrice()) /
-                decimalUnitOfToken(getIronBankForex());
-            uint256 needUnderlyingValue = (needUnderlying * _collateralTokenPrice()) /
-                decimalUnitOfToken(collateralToken);
-            if (forexValue > needUnderlyingValue) {
-                positive = (forexValue - needUnderlyingValue) / 1e12;
+            uint256 useUnderlying;
+            uint256 swapForex;
+            if (needUnderlying > underlyingHoldOn) {
+                useUnderlying = underlyingHoldOn;
+                swapForex = ICurveMini(_curvePool).get_dy(1, 0, useUnderlying);
             } else {
-                negative = (needUnderlyingValue - forexValue) / 1e12;
+                useUnderlying = needUnderlying;
+                swapForex = forexDebts - forexHoldOn;
+            }
+            uint256 addForexValue = (swapForex * _borrowTokenPrice()) /
+                decimalUnitOfToken(getIronBankForex());
+            uint256 needUnderlyingValue = (useUnderlying * _collateralTokenPrice()) /
+                decimalUnitOfToken(collateralToken);
+            if (addForexValue > needUnderlyingValue) {
+                positive = (addForexValue - needUnderlyingValue) / 1e12;
+            } else {
+                negative = (needUnderlyingValue - addForexValue) / 1e12;
             }
         }
     }
@@ -617,14 +626,14 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         if (space > 0) {
             exitCollateralInvestToCurvePool(space);
         } else if (overflow > 0) {
-            //If collateral already exceeds the limit as a percentage of total assets, 
+            //If collateral already exceeds the limit as a percentage of total assets,
             //it is necessary to start reducing foreign exchange debt
             if (collateralRate() < maxCollateralRate) {
                 increaseCollateral(overflow);
             } else {
                 uint256 totalLp = balanceOfToken(rewardPool);
                 uint256 borrowAvaible = _currentBorrowAvaible();
-                uint256 reduceLp = totalLp * overflow / borrowAvaible;
+                uint256 reduceLp = (totalLp * overflow) / borrowAvaible;
                 _redeem(reduceLp);
                 uint256 exitForex = balanceOfToken(getIronBankForex());
                 if (exitForex > 0) {
@@ -635,11 +644,9 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
                 // add collateral
                 _mintCollateralCToken(underlyingBalance);
                 console.log("add collateral:", underlyingBalance);
-                
             }
         }
     }
-
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
