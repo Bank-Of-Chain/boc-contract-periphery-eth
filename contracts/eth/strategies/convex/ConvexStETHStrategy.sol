@@ -83,7 +83,7 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         override
         returns (OutputInfo[] memory outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
+        outputsInfo = new OutputInfo[](3);
         OutputInfo memory info = outputsInfo[0];
         info.outputCode = 0;
         info.outputTokens = wants;
