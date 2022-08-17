@@ -8,4 +8,4 @@ WORKDIR /app
 COPY --from=builder /app/ /app/
 COPY . .
 EXPOSE 8545
-ENTRYPOINT ["yarn"]
+ENTRYPOINT ["yarn","chain"]
