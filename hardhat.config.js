@@ -62,7 +62,7 @@ const config = {
             allowUnlimitedContractSize: true,
         },
         localhost: {
-            url: 'http://13.251.131.140:8545',
+            url: 'http://127.0.0.1:8545',
             allowUnlimitedContractSize: true,
             // GasPrice used when performing blocking, in wei
             // gasPrice: 100 * 10 ** 9,
