@@ -252,8 +252,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         (uint256 positive, uint256 negative) = assetDelta();
         //Net Assets
         usdValue = assetsValue - debtsValue + positive - negative;
-        console.log("positive:%s,negative:%s", positive, negative);
-        console.log("PositionDetail: %s,assets:%s,debts:%s", usdValue, assetsValue, debtsValue);
     }
 
     /**
@@ -352,11 +350,11 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         value += collateralAssets();
         address _collateralToken = collateralToken;
         // balance
-        uint256 underlyingBalance = balanceOfToken(collateralToken);
+        uint256 underlyingBalance = balanceOfToken(_collateralToken);
         if (underlyingBalance > 0) {
             value +=
                 ((underlyingBalance * _collateralTokenPrice()) /
-                    decimalUnitOfToken(collateralToken)) /
+                    decimalUnitOfToken(_collateralToken)) /
                 1e12;
         }
     }
@@ -380,14 +378,16 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         address _collateralToken = collateralToken;
         //saving gas
         uint256 exchangeRateMantissa = collateralC.exchangeRateStored();
-        uint256 collateralTokenAmount = ((balanceOfToken(address(collateralC)) *
-            exchangeRateMantissa) * decimalUnitOfToken(_collateralToken)) /
+        //Multiply by 18e to prevent loss of precision
+        uint256 collateralTokenAmount = (((balanceOfToken(address(collateralC)) *
+            exchangeRateMantissa) * decimalUnitOfToken(_collateralToken)) * 1e18) /
             1e16 /
             decimalUnitOfToken(address(collateralC));
         uint256 collateralTokenPrice = _collateralTokenPrice();
         value =
             (collateralTokenAmount * collateralTokenPrice) /
             decimalUnitOfToken(_collateralToken) /
+            1e18 /
             1e12; //div 1e12 for normalized
     }
 
