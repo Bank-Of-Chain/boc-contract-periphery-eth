@@ -250,8 +250,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         uint256 assetsValue = assets();
         uint256 debtsValue = debts();
         (uint256 positive, uint256 negative) = assetDelta();
-        console.log("positive:%s,negative:%s", positive, negative);
-        console.log("PositionDetail: %s,assets:%s,debts:%s", usdValue, assetsValue, debtsValue);
         //Net Assets
         usdValue = assetsValue - debtsValue + positive - negative;
     }
@@ -350,7 +348,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         value += deposited;
         // CToken value
         value += collateralAssets();
-        console.log("curvePoolAssets:%s,collateralAssets:%s", deposited, collateralAssets());
         address _collateralToken = collateralToken;
         // balance
         uint256 underlyingBalance = balanceOfToken(_collateralToken);
@@ -523,11 +520,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         IERC20Upgradeable(_collateralToken).safeApprove(collateralC, 0);
         IERC20Upgradeable(_collateralToken).safeApprove(collateralC, mintAmount);
         CTokenInterface(collateralC).mint(mintAmount);
-        console.log(
-            "mintAmount:%s,collateralC balance:%s",
-            mintAmount,
-            balanceOfToken(collateralC)
-        );
         // enter market
         address[] memory markets = new address[](1);
         markets[0] = collateralC;
