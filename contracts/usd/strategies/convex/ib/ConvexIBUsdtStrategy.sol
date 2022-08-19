@@ -267,14 +267,16 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         address _collateralToken = collateralToken;
         //saving gas
         uint256 exchangeRateMantissa = collateralC.exchangeRateStored();
-        uint256 collateralTokenAmount = ((balanceOfToken(address(collateralC)) *
-            exchangeRateMantissa) * decimalUnitOfToken(_collateralToken)) /
+        //Multiply by 18e to prevent loss of precision
+        uint256 collateralTokenAmount = (((balanceOfToken(address(collateralC)) *
+            exchangeRateMantissa) * decimalUnitOfToken(_collateralToken)) * 1e18) /
             1e16 /
             decimalUnitOfToken(address(collateralC));
         uint256 collateralTokenPrice = _collateralTokenPrice();
         value =
             (collateralTokenAmount * collateralTokenPrice) /
             decimalUnitOfToken(_collateralToken) /
+            1e18 /
             1e12; //div 1e12 for normalized
     }
 

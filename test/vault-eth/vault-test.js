@@ -584,4 +584,15 @@ describe("Vault", function () {
 
         Utils.assertBNEq(totalValueInStrategies, 0);
     });
+
+    it('Verify：multicall', async function (){
+        await iVault.multicall([
+            iVault.contract.methods.setMaxTimestampBetweenTwoReported(1000).encodeABI(),
+            iVault.contract.methods.setRedeemFeeBps(1000).encodeABI(),
+            iVault.contract.methods.setMinimumInvestmentAmount(10000000000000).encodeABI()
+        ],{from:governance});
+        console.log(new BigNumber(await iVault.maxTimestampBetweenTwoReported()).toFixed());
+        console.log(new BigNumber(await iVault.minimumInvestmentAmount()).toFixed());
+        Utils.assertBNEq(new BigNumber(await iVault.maxTimestampBetweenTwoReported()).toFixed(), 1000);
+    });
 });

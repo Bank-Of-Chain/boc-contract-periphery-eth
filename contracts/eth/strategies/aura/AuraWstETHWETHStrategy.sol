@@ -52,10 +52,6 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     mapping(address => uint256) public sellFloor;
 
     function initialize(address _vault,string memory _name) external initializer {
-        // bytes32 _poolKey = 0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
-        // uint256 _pId = 3;
-        // address _poolLpToken = 0x32296969Ef14EB0c6d29669C550D4a0449130230;
-        // address _rewardPool = 0xDCee1C640cC270121faF145f231fd8fF1d8d5CD4;
         address[] memory _wants = new address[](2);
         _wants[0] = WSTETH; //wstETH
         _wants[1] = WETH; //wETH
@@ -66,11 +62,9 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         swapRewardRoutes[LDO] = ldoSellPath;
 
         uint256 uintMax = type(uint256).max;
-        // (address[] memory _tokens, , ) = BALANCER_VAULT.getPoolTokens(poolKey);
         for (uint256 i = 0; i < _wants.length; i++) {
-            address token = _wants[i];
             // for enter balancer vault
-            IERC20Upgradeable(token).safeApprove(address(BALANCER_VAULT), uintMax);
+            IERC20Upgradeable(_wants[i]).safeApprove(address(BALANCER_VAULT), uintMax);
         }
         //for Booster deposit
         IERC20Upgradeable(getPoolLpToken()).safeApprove(address(AURA_BOOSTER), uintMax);
@@ -258,15 +252,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         IAsset[] memory poolAssets = _getPoolAssets(poolKey);
         uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
         IBalancerVault.ExitPoolRequest memory exitRequest;
-        if (_outputCode == 0) {
-            //WSTETH + wETH
-            exitRequest = IBalancerVault.ExitPoolRequest({
-                assets: poolAssets,
-                minAmountsOut: minAmountsOut,
-                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _exitAmount),
-                toInternalBalance: false
-            });
-        } else if (_outputCode == 1) {
+        if (_outputCode == 1) {
             //WSTETH
             exitRequest = IBalancerVault.ExitPoolRequest({
                 assets: poolAssets,
@@ -280,6 +266,14 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
                 userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _exitAmount, 1),
+                toInternalBalance: false
+            });
+        } else {
+            //WSTETH + wETH
+            exitRequest = IBalancerVault.ExitPoolRequest({
+                assets: poolAssets,
+                minAmountsOut: minAmountsOut,
+                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _exitAmount),
                 toInternalBalance: false
             });
         }
@@ -330,7 +324,6 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
     function swapRewardsToWants() internal override {
         uint256 balanceOfBal = balanceOfToken(BAL);
-        if (balanceOfBal < sellFloor[BAL]) return;
         if (balanceOfBal > 0) {
             IERC20Upgradeable(BAL).safeApprove(address(uniRouter2), 0);
             IERC20Upgradeable(BAL).safeApprove(address(uniRouter2), balanceOfBal);

@@ -468,6 +468,17 @@ async function topUpREth2ByAddress(amount = new BigNumber(10 ** 18), to) {
 }
 
 /**
+ * Top up a certain amount of swise for a certain address(default 10 ** 18)
+ */
+async function topUpSwiseByAddress(amount = new BigNumber(10 ** 18), to) {
+    if (isEmpty(to)) return 0;
+    const accounts = await ethers.getSigners();
+    await send.ether(accounts[0].address, addresses.SWISE_WHALE_ADDRESS, 10 ** 18);
+    await impersonates([addresses.SWISE_WHALE_ADDRESS]);
+    return topUpMain(addresses.SWISE_ADDRESS, addresses.SWISE_WHALE_ADDRESS, to, amount);
+}
+
+/**
  * tranfer Back Dai
  * @param {*} address
  */
@@ -548,6 +559,7 @@ module.exports = {
     topUpSEthByAddress,
     topUpSEth2ByAddress,
     topUpREth2ByAddress,
+    topUpSwiseByAddress,
     tranferBackUsdc,
     tranferBackDai,
     tranferBackUsdt,

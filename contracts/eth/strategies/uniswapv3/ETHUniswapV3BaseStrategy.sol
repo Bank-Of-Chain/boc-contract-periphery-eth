@@ -57,12 +57,11 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         uint32 _twapDuration,
         int24 _tickSpacing
     ) internal {
-        uniswapV3Initialize(_pool, _baseThreshold, _limitThreshold, _period, _minTickMove, _maxTwapDeviation, _twapDuration,_tickSpacing);
+        uniswapV3Initialize(_pool, _baseThreshold, _limitThreshold, _period, _minTickMove, _maxTwapDeviation, _twapDuration, _tickSpacing);
         address[] memory _wants = new address[](2);
         _wants[0] = token0;
         _wants[1] = token1;
-        console.log('UniswapV3BaseStrategy _initialize _wants[0]: %s, _wants[1]: %s', _wants[0], _wants[1]);
-        super._initialize(_vault, uint16(ProtocolEnum.UniswapV3), _name,_wants);
+        super._initialize(_vault, uint16(ProtocolEnum.UniswapV3), _name, _wants);
     }
 
     function uniswapV3Initialize(
@@ -170,9 +169,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     function claimRewards() internal override virtual returns (bool isWorth, address[] memory assets, uint256[] memory amounts) {
-        this.collect();
-        //TODO::need set value for assets、amounts
-        vault.report(assets,amounts);
+        (assets, amounts) = this.collect();
     }
 
     function collect() external returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts) {
@@ -201,6 +198,8 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
             console.log('UniswapV3BaseStrategy depositTo3rdPool mintNewPosition');
             (,, int24 tickLower, int24 tickUpper) = getSpecifiedRangesOfTick(tick);
             mintNewPosition(tickLower, tickUpper, balanceOfToken(token0), balanceOfToken(token1), true);
+            lastTimestamp = block.timestamp;
+            lastTick = tick;
             console.log('UniswapV3BaseStrategy depositTo3rdPool mintNewPosition end');
         } else {
             if (shouldRebalance(tick)) {
@@ -226,18 +225,21 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         console.log('UniswapV3BaseStrategy depositTo3rdPool liquidity after: ', __getLiquidityForNFT(baseMintInfo.tokenId));
     }
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal virtual override {
-        console.log('UniswapV3BaseStrategy withdrawFrom3rdPool balanceOfLpToken0 before: ', balanceOfLpToken(baseMintInfo.tokenId));
-        console.log('UniswapV3BaseStrategy withdrawFrom3rdPool balanceOfLpToken1 before: ', balanceOfLpToken(limitMintInfo.tokenId));
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal virtual override {
         withdraw(baseMintInfo.tokenId, _withdrawShares, _totalShares);
         withdraw(limitMintInfo.tokenId, _withdrawShares, _totalShares);
-        console.log('UniswapV3BaseStrategy withdrawFrom3rdPool base balanceOfLpToken after: ', balanceOfLpToken(baseMintInfo.tokenId));
-        console.log('UniswapV3BaseStrategy withdrawFrom3rdPool limit balanceOfLpToken after: ', balanceOfLpToken(limitMintInfo.tokenId));
+        if (_withdrawShares == _totalShares) {
+            baseMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
+            limitMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
+        }
     }
 
     function withdraw(uint256 _tokenId, uint256 _withdrawShares, uint256 _totalShares) internal {
         uint128 withdrawLiquidity = uint128(balanceOfLpToken(_tokenId) * _withdrawShares / _totalShares);
-        if (withdrawLiquidity > 0) {
+        if (withdrawLiquidity <= 0) return;
+        if (_withdrawShares == _totalShares) {
+            __purge(_tokenId, type(uint128).max, 0, 0);
+        } else {
             removeLiquidity(_tokenId, withdrawLiquidity);
         }
     }
@@ -272,18 +274,16 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
 
     function rebalance(int24 tick) internal {
         // Withdraw all current liquidity
-        console.log('UniswapV3BaseStrategy rebalance baseMintInfo.tokenId: ', baseMintInfo.tokenId);
         uint128 baseLiquidity = balanceOfLpToken(baseMintInfo.tokenId);
         if (baseLiquidity > 0) {
-            removeLiquidity(baseMintInfo.tokenId, baseLiquidity);
-            __collectAll(baseMintInfo.tokenId);
+            __purge(baseMintInfo.tokenId, type(uint128).max, 0, 0);
+            baseMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
         }
 
-        console.log('UniswapV3BaseStrategy rebalance limitMintInfo.tokenId: ', limitMintInfo.tokenId);
         uint128 limitLiquidity = balanceOfLpToken(limitMintInfo.tokenId);
         if (limitLiquidity > 0) {
-            removeLiquidity(limitMintInfo.tokenId, limitLiquidity);
-            __collectAll(limitMintInfo.tokenId);
+            __purge(limitMintInfo.tokenId, type(uint128).max, 0, 0);
+            limitMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
         }
 
         if (baseLiquidity <= 0 && limitLiquidity <= 0) return;
@@ -293,12 +293,12 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         uint256 balance0 = balanceOfToken(token0);
         uint256 balance1 = balanceOfToken(token1);
         console.log('UniswapV3BaseStrategy rebalance base mintNewPosition before balance0: %d, balance1: %d', balance0, balance1);
-        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = mintNewPosition(tickLower, tickUpper, balance0, balance1, true);
+        if (balance0 > 0 && balance1 > 0) {
+            mintNewPosition(tickLower, tickUpper, balance0, balance1, true);
+            balance0 = balanceOfToken(token0);
+            balance1 = balanceOfToken(token1);
+        }
 
-        int24 bidLower = tickFloor - limitThreshold;
-        int24 askUpper = tickCeil + limitThreshold;
-        balance0 = balanceOfToken(token0);
-        balance1 = balanceOfToken(token1);
         if (balance0 > 0 || balance1 > 0) {
             console.log('UniswapV3BaseStrategy rebalance limit mintNewPosition before balance0: %d, balance1: %d', balance0, balance1);
             // Place bid or ask order on Uniswap depending on which token is left
@@ -336,6 +336,11 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         // check price not too close to boundary
         int24 maxThreshold = baseThreshold > limitThreshold ? baseThreshold : limitThreshold;
         if (tick < TickMath.MIN_TICK + maxThreshold + tickSpacing || tick > TickMath.MAX_TICK - maxThreshold - tickSpacing) {
+            return false;
+        }
+
+        (, , int24 tickLower, int24 tickUpper) = getSpecifiedRangesOfTick(tick);
+        if (baseMintInfo.tokenId != 0 && tickLower == baseMintInfo.tickLower && tickUpper == baseMintInfo.tickUpper) {
             return false;
         }
 

@@ -186,12 +186,10 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         IERC20Upgradeable(borrowToken).safeApprove(sushiRouterAddr, uintMax);
         IERC20Upgradeable(WETH).safeApprove(sushiRouterAddr, uintMax);
 
-
         address[] memory weth2usdc = new address[](2);
         weth2usdc[0] = WETH;
         weth2usdc[1] = USDC;
         rewardRoutes[WETH] = weth2usdc;
-
     }
 
     function getVersion() external pure override returns (string memory) {
@@ -254,8 +252,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         (uint256 positive, uint256 negative) = assetDelta();
         //Net Assets
         usdValue = assetsValue - debtsValue + positive - negative;
-        console.log("positive:%s,negative:%s", positive, negative);
-        console.log("PositionDetail: %s,assets:%s,debts:%s", usdValue, assetsValue, debtsValue);
     }
 
     /**
@@ -304,32 +300,43 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         }
         address _curvePool = curvePool;
         uint256 totalLp = IERC20Upgradeable(getCurveLpToken()).totalSupply();
+        uint256 underlyingHoldOn = (ICurveMini(_curvePool).balances(1) * rewardBalance) / totalLp;
         uint256 forexHoldOn = (ICurveMini(_curvePool).balances(0) * rewardBalance) / totalLp;
         uint256 forexDebts = borrowCToken.borrowBalanceStored(address(this));
         if (forexHoldOn > forexDebts) {
             //need swap forex to underlying
-            uint256 addUnderlying = ICurveMini(_curvePool).get_dy(0, 1, forexHoldOn - forexDebts);
-            uint256 forexValue = ((forexHoldOn - forexDebts) * _borrowTokenPrice()) /
+            uint256 useForex = forexHoldOn - forexDebts;
+            uint256 addUnderlying = ICurveMini(_curvePool).get_dy(0, 1, useForex);
+            uint256 useForexValue = (useForex * _borrowTokenPrice()) /
                 decimalUnitOfToken(borrowCToken.underlying());
             uint256 addUnderlyingValue = (addUnderlying * _collateralTokenPrice()) /
                 decimalUnitOfToken(collateralToken);
 
-            if (forexValue > addUnderlyingValue) {
-                negative = (forexValue - addUnderlyingValue) / 1e12;
+            if (useForexValue > addUnderlyingValue) {
+                negative = (useForexValue - addUnderlyingValue) / 1e12;
             } else {
-                positive = (addUnderlyingValue - forexValue) / 1e12;
+                positive = (addUnderlyingValue - useForexValue) / 1e12;
             }
         } else {
             //need swap underlying to forex
             uint256 needUnderlying = ICurveMini(_curvePool).get_dy(0, 1, forexDebts - forexHoldOn);
-            uint256 forexValue = ((forexDebts - forexHoldOn) * _borrowTokenPrice()) /
-                decimalUnitOfToken(getIronBankForex());
-            uint256 needUnderlyingValue = (needUnderlying * _collateralTokenPrice()) /
-                decimalUnitOfToken(collateralToken);
-            if (forexValue > needUnderlyingValue) {
-                positive = (forexValue - needUnderlyingValue) / 1e12;
+            uint256 useUnderlying;
+            uint256 swapForex;
+            if (needUnderlying > underlyingHoldOn) {
+                useUnderlying = underlyingHoldOn;
+                swapForex = ICurveMini(_curvePool).get_dy(1, 0, useUnderlying);
             } else {
-                negative = (needUnderlyingValue - forexValue) / 1e12;
+                useUnderlying = needUnderlying;
+                swapForex = forexDebts - forexHoldOn;
+            }
+            uint256 addForexValue = (swapForex * _borrowTokenPrice()) /
+                decimalUnitOfToken(getIronBankForex());
+            uint256 needUnderlyingValue = (useUnderlying * _collateralTokenPrice()) /
+                decimalUnitOfToken(collateralToken);
+            if (addForexValue > needUnderlyingValue) {
+                positive = (addForexValue - needUnderlyingValue) / 1e12;
+            } else {
+                negative = (needUnderlyingValue - addForexValue) / 1e12;
             }
         }
     }
@@ -343,11 +350,11 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         value += collateralAssets();
         address _collateralToken = collateralToken;
         // balance
-        uint256 underlyingBalance = balanceOfToken(collateralToken);
+        uint256 underlyingBalance = balanceOfToken(_collateralToken);
         if (underlyingBalance > 0) {
             value +=
                 ((underlyingBalance * _collateralTokenPrice()) /
-                    decimalUnitOfToken(collateralToken)) /
+                    decimalUnitOfToken(_collateralToken)) /
                 1e12;
         }
     }
@@ -371,14 +378,16 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         address _collateralToken = collateralToken;
         //saving gas
         uint256 exchangeRateMantissa = collateralC.exchangeRateStored();
-        uint256 collateralTokenAmount = ((balanceOfToken(address(collateralC)) *
-            exchangeRateMantissa) * decimalUnitOfToken(_collateralToken)) /
+        //Multiply by 18e to prevent loss of precision
+        uint256 collateralTokenAmount = (((balanceOfToken(address(collateralC)) *
+            exchangeRateMantissa) * decimalUnitOfToken(_collateralToken)) * 1e18) /
             1e16 /
             decimalUnitOfToken(address(collateralC));
         uint256 collateralTokenPrice = _collateralTokenPrice();
         value =
             (collateralTokenAmount * collateralTokenPrice) /
             decimalUnitOfToken(_collateralToken) /
+            1e18 /
             1e12; //div 1e12 for normalized
     }
 
@@ -570,10 +579,9 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         uint256 spaceValue = (space * _borrowTokenPrice()) / borrowTokenDecimals;
         address collaterCTokenAddr = address(collateralCToken);
         (, uint256 rate) = comptroller.markets(collaterCTokenAddr);
-        uint256 totalLp = balanceOfToken(rewardPool);
         address _collateralToken = collateralToken;
         //exit add collateral
-        uint256 exitCollateral = (((spaceValue * 1e18) / rate) *
+        uint256 exitCollateral = ((((spaceValue * 1e18) * BPS) / rate / borrowFactor) *
             decimalUnitOfToken(_collateralToken)) / _collateralTokenPrice();
         uint256 exchangeRateMantissa = CTokenInterface(collaterCTokenAddr).exchangeRateStored();
         uint256 exitCollateralC = (exitCollateral *
@@ -599,47 +607,43 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         uint256 totalLp = balanceOfToken(rewardPool);
         //need add collateral
         address _collateralToken = collateralToken;
-        uint256 needCollateral = (((overflowValue * 1e18) / rate) *
+        uint256 needCollateral = ((((overflowValue * 1e18) * BPS) / rate / borrowFactor) *
             decimalUnitOfToken(_collateralToken)) / _collateralTokenPrice();
         address _curvePool = curvePool;
-        uint256 allUnderlying = ICurveMini(curvePool).calc_withdraw_one_coin(totalLp, 1);
+        uint256 allUnderlying = ICurveMini(_curvePool).calc_withdraw_one_coin(totalLp, 1);
         uint256 removeLp = (totalLp * needCollateral) / allUnderlying;
         IConvexReward(rewardPool).withdraw(removeLp, false);
         IConvex(BOOSTER).withdraw(pId, removeLp);
-        ICurveMini(curvePool).remove_liquidity_one_coin(removeLp, 1, 0);
+        ICurveMini(_curvePool).remove_liquidity_one_coin(removeLp, 1, 0);
         uint256 underlyingBalance = balanceOfToken(_collateralToken);
-        console.log("add collateral:", underlyingBalance);
         // add collateral
         _mintCollateralCToken(underlyingBalance);
     }
 
     function rebalance() external isKeeper {
         (uint256 space, uint256 overflow) = borrowInfo();
-
-        // //========temp code========
-        // uint256 borrowAvaible = _currentBorrowAvaible();
-        // uint256 currentBorrow = borrowCToken.borrowBalanceStored(address(this));
-        // overflow = currentBorrow / 2;
-        // //========temp code========
         console.log("rebalance space:%s,overflow:%s", space, overflow);
         if (space > 0) {
             exitCollateralInvestToCurvePool(space);
         } else if (overflow > 0) {
-            //If collateral already exceeds the limit as a percentage of total assets, it is necessary to start reducing foreign exchange debt
+            //If collateral already exceeds the limit as a percentage of total assets,
+            //it is necessary to start reducing foreign exchange debt
             if (collateralRate() < maxCollateralRate) {
                 increaseCollateral(overflow);
             } else {
-                address _rewardPool = rewardPool;
-                uint256 totalLp = balanceOfToken(_rewardPool);
-                uint256 removeLp = (totalLp * forexReduceStep) / BPS;
-                IConvexReward(_rewardPool).withdraw(removeLp, false);
-                IConvex(BOOSTER).withdraw(pId, removeLp);
-                ICurveMini(curvePool).remove_liquidity_one_coin(removeLp, 0, 0);
+                uint256 totalLp = balanceOfToken(rewardPool);
+                uint256 borrowAvaible = _currentBorrowAvaible();
+                uint256 reduceLp = (totalLp * overflow) / borrowAvaible;
+                _redeem(reduceLp);
                 uint256 exitForex = balanceOfToken(getIronBankForex());
                 if (exitForex > 0) {
                     _repayForex(exitForex);
                     console.log("exitForex:", exitForex);
                 }
+                uint256 underlyingBalance = balanceOfToken(collateralToken);
+                // add collateral
+                _mintCollateralCToken(underlyingBalance);
+                console.log("add collateral:", underlyingBalance);
             }
         }
     }

@@ -45,16 +45,24 @@ const config = {
     defaultNetwork: 'hardhat',
     networks: {
         hardhat: {
+            chains: {
+                1: {
+                    hardforkHistory: {
+                        berlin: 10000000,
+                        london: 20000000,
+                    }
+                }
+            },
             forking: {
                 url: 'https://eth-mainnet.alchemyapi.io/v2/' + keys.alchemyKey.dev,
-                blockNumber: 15270233, // <-- edit here
+                blockNumber: 15312629, // <-- edit here
             },
             blockGasLimit: DEFAULT_BLOCK_GAS_LIMIT,
             timeout: 1800000,
             allowUnlimitedContractSize: true,
         },
         localhost: {
-            url: 'http://localhost:8545',
+            url: 'http://127.0.0.1:8545',
             allowUnlimitedContractSize: true,
             // GasPrice used when performing blocking, in wei
             // gasPrice: 100 * 10 ** 9,

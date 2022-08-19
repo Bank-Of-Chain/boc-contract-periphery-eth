@@ -12,7 +12,7 @@ const strategiesList = [
     ...convexStrategies,
     ...dForceStrategies,
     ...dodoStrategies,
-    ...stargateStrategies,
+    // ...stargateStrategies,
     // ...sushiStrategies,
     ...uniswapStrategies,
     // ...yearnStrategies
