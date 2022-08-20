@@ -104,21 +104,22 @@ const questionOfWhichVault = [{
     type: 'list',
     name: 'type',
     message: 'Please select the product to be deployed？\n',
-    choices: [{
-        key: 'USD Vault',
-        name: 'USD Vault',
-        value: 1,
-    },
-    {
-        key: 'ETH Vault',
-        name: 'ETH Vault',
-        value: 2,
-    },
-    {
-        key: 'USD&ETH Vault',
-        name: 'USD&ETH Vault',
-        value: 3,
-    },
+    choices: [
+        {
+            key: 'USD&ETH Vault',
+            name: 'USD&ETH Vault',
+            value: 3,
+        },
+        {
+            key: 'USD Vault',
+            name: 'USD Vault',
+            value: 1,
+        },
+        {
+            key: 'ETH Vault',
+            name: 'ETH Vault',
+            value: 2,
+        }
     ]
 }];
 
@@ -331,24 +332,28 @@ const addStrategiesToUSDVault = async (vault, allArray, increaseArray) => {
     if (isEmpty(vault)) {
         vault = await USDVaultContract.at(addressMap[USDVault]);
     }
-    return inquirer.prompt(questionOfAddStrategy).then((answers) => {
-        const {
-            type
-        } = answers;
-        if (!type) {
-            return
+    let type = process.env.USDI_STRATEGY_TYPE_VALUE;
+    if (!type) {
+        type = inquirer.prompt(questionOfAddStrategy).then((answers) => {
+            const {
+                type
+            } = answers;
+            return type;
+        });
+    }
+    if (!type) {
+        return
+    }
+
+    const nextArray = type === 1 ? allArray : increaseArray
+
+    return vault.addStrategy(nextArray.map(item => {
+        return {
+            strategy: item.strategy,
+            profitLimitRatio: item.profitLimitRatio,
+            lossLimitRatio: item.lossLimitRatio
         }
-
-        const nextArray = type === 1 ? allArray : increaseArray
-
-        return vault.addStrategy(nextArray.map(item => {
-            return {
-                strategy: item.strategy,
-                profitLimitRatio: item.profitLimitRatio,
-                lossLimitRatio: item.lossLimitRatio
-            }
-        }));
-    })
+    }));
 }
 
 /**
@@ -396,37 +401,46 @@ const addStrategiesToETHVault = async (vault, allArray, increaseArray) => {
     if (isEmpty(vault)) {
         vault = await ETHVaultContract.at(addressMap[ETHVault]);
     }
-    return inquirer.prompt(questionOfAddStrategy).then((answers) => {
-        const {
-            type
-        } = answers;
-        if (!type) {
-            return
+    let type = process.env.ETHI_STRATEGY_TYPE_VALUE;
+    if(!type){
+        type = inquirer.prompt(questionOfAddStrategy).then((answers) => {
+            const {
+                type
+            } = answers;
+            return type ;
+        });
+    }
+    if (!type) {
+        return
+    }
+
+    const nextArray = type === 1 ? allArray : increaseArray
+
+    return vault.addStrategy(nextArray.map(item => {
+        return {
+            strategy: item.strategy,
+            profitLimitRatio: item.profitLimitRatio,
+            lossLimitRatio: item.lossLimitRatio
         }
-
-        const nextArray = type === 1 ? allArray : increaseArray
-
-        return vault.addStrategy(nextArray.map(item => {
-            return {
-                strategy: item.strategy,
-                profitLimitRatio: item.profitLimitRatio,
-                lossLimitRatio: item.lossLimitRatio
-            }
-        }));
-    })
+    }));
 }
 
 const main = async () => {
-    const type = await inquirer.prompt(questionOfWhichVault).then((answers) => {
-        const {
-            type
-        } = answers;
-        if (!type) {
-            return
-        }
+    let type = process.env.VAULT_TYPE_VALUE;
+    console.log('type=',type);
+    if(!type){
+        console.log('start select');
+        type = await inquirer.prompt(questionOfWhichVault).then((answers) => {
+            const {
+                type
+            } = answers;
 
-        return type;
-    })
+            return type;
+        })
+    }
+    if (!type) {
+        return
+    }
 
     const accounts = await ethers.getSigners();
     const balanceBeforeDeploy = await ethers.provider.getBalance(accounts[0].address);
@@ -552,9 +566,9 @@ const deploy_usd = async () => {
         await pegToken.deployed();
         addressMap[USDPegToken] = pegToken.address;
         await cVault.setPegTokenAddress(addressMap[USDPegToken]);
-        await cVault.setRebaseThreshold(1);
-        await cVault.setMaxTimestampBetweenTwoReported(604800);
-        await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+        // await cVault.setRebaseThreshold(1);
+        // await cVault.setMaxTimestampBetweenTwoReported(604800);
+        // await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
     }
 
     if (isEmpty(addressMap[USDVaultBuffer])) {
@@ -662,7 +676,7 @@ const deploy_eth = async () => {
         addressMap[ETHPegToken] = pegToken.address;
         await cVault.setPegTokenAddress(addressMap[ETHPegToken]);
         await cVault.setRebaseThreshold(1);
-        await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+        // await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
         await cVault.setMaxTimestampBetweenTwoReported(604800);
         console.log("maxTimestampBetweenTwoReported:", new BigNumber(await cVault.maxTimestampBetweenTwoReported()).toFixed());
     }

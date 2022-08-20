@@ -46,7 +46,6 @@ const VaultAdmin = hre.artifacts.require("ETHVaultAdmin");
 const IVault = hre.artifacts.require("IETHVault");
 // Treasury
 const Treasury = hre.artifacts.require('Treasury');
-const ETHi = hre.artifacts.require("ETHi");
 const ExchangeAggregator = hre.artifacts.require('ExchangeAggregator');
 const EthOneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
 const EthParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
@@ -89,8 +88,8 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
     }
     const adapters = await exchangeAggregator.getExchangeAdapters();
     let exchangePlatformAdapters = {};
-    for (let i = 0; i < adapters.identifiers_.length; i++) {
-        exchangePlatformAdapters[adapters.identifiers_[i]] = adapters.exchangeAdapters_[i];
+    for (let i = 0; i < adapters._identifiers.length; i++) {
+        exchangePlatformAdapters[adapters._identifiers[i]] = adapters._exchangeAdapters[i];
     }
 
     const pegToken = await PegToken.new();
@@ -207,8 +206,8 @@ const getTokenBalance = async (contractAddress, tokenArray) => {
 const getExchangePlatformAdapters = async (exchangeAggregator) => {
     const adapters = await exchangeAggregator.getExchangeAdapters();
     const exchangePlatformAdapters = {};
-    for (let i = 0; i < adapters.identifiers_.length; i++) {
-        exchangePlatformAdapters[adapters.identifiers_[i]] = adapters.exchangeAdapters_[i];
+    for (let i = 0; i < adapters._identifiers.length; i++) {
+        exchangePlatformAdapters[adapters._identifiers[i]] = adapters._exchangeAdapters[i];
     }
     return exchangePlatformAdapters;
 }

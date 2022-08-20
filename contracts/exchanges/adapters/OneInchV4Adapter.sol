@@ -33,8 +33,8 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
     ];
 
     /// @notice Provides a constant string identifier for an adapter
-    /// @return identifier_ An identifier string
-    function identifier() external pure override returns (string memory identifier_) {
+    /// @return identifier An identifier string
+    function identifier() external pure override returns (string memory) {
         return "oneInchV4";
     }
 

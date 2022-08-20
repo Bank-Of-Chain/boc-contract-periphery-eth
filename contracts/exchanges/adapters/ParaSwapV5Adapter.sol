@@ -33,7 +33,7 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
 
     /// @notice Provides a constant string identifier for an adapter
     /// @return identifier_ An identifier string
-    function identifier() external pure override returns (string memory identifier_) {
+    function identifier() external pure override returns (string memory) {
         return 'paraswap';
     }
 

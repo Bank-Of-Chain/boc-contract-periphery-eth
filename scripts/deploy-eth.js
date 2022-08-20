@@ -358,9 +358,9 @@ const main = async () => {
 		await pegToken.deployed();
 		addressMap[PegToken] = pegToken.address;
 		await cVault.setPegTokenAddress(addressMap[PegToken]);
-		await cVault.setRebaseThreshold(1);
-		await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
-		await cVault.setMaxTimestampBetweenTwoReported(604800);
+		// await cVault.setRebaseThreshold(1);
+		// await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+		// await cVault.setMaxTimestampBetweenTwoReported(604800);
 		console.log("maxTimestampBetweenTwoReported:",new BigNumber(await cVault.maxTimestampBetweenTwoReported()).toFixed());
 	}
 

@@ -66,21 +66,6 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     /**
-     * @dev init underlyingUnitsPerShare only once
-     *      Setting to the zero disables this feature.
-     */
-    function setUnderlyingUnitsPerShare(uint256 _underlyingUnitsPerShare)
-        external
-        onlyRole(BocRoles.GOV_ROLE)
-    {
-        require(
-            underlyingUnitsPerShare == 0 && _underlyingUnitsPerShare > 0,
-            "init only once and must above 0"
-        );
-        underlyingUnitsPerShare = _underlyingUnitsPerShare;
-    }
-
-    /**
      * @dev Sets the treasuryAddress that can receive a portion of yield.
      *      Setting to the zero address disables this feature.
      */
@@ -199,11 +184,11 @@ contract ETHVaultAdmin is ETHVaultStorage {
     /// @dev The strategy added to the strategy list,
     ///      Vault may invest funds into the strategy,
     ///      and the strategy will invest the funds in the 3rd protocol
-    function addStrategy(StrategyAdd[] memory strategyAdds) external isVaultManager {
-        address[] memory _strategies = new address[](strategyAdds.length);
-        for (uint256 i = 0; i < strategyAdds.length; i++) {
-            StrategyAdd memory strategyAdd = strategyAdds[i];
-            address _strategy = strategyAdd.strategy;
+    function addStrategy(StrategyAdd[] memory _strategyAdds) external isVaultManager {
+        address[] memory _strategies = new address[](_strategyAdds.length);
+        for (uint256 i = 0; i < _strategyAdds.length; i++) {
+            StrategyAdd memory _strategyAdd = _strategyAdds[i];
+            address _strategy = _strategyAdd.strategy;
             require(
                 (_strategy != ZERO_ADDRESS) &&
                     (!strategySet.contains(_strategy)) &&
@@ -211,7 +196,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
                 "Strategy is invalid"
             );
             _strategies[i] = _strategy;
-            _addStrategy(_strategy, strategyAdd.profitLimitRatio, strategyAdd.lossLimitRatio);
+            _addStrategy(_strategy, _strategyAdd.profitLimitRatio, _strategyAdd.lossLimitRatio);
             address[] memory _wants = IETHStrategy(_strategy).getWants();
             for (uint256 j = 0; j < _wants.length; j++) {
                 trackedAssetsMap.plus(_wants[j], 1);
@@ -301,21 +286,21 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     //advance queue
-    function setWithdrawalQueue(address[] memory queues) external isKeeper {
-        for (uint256 i = 0; i < queues.length; i++) {
-            address strategy = queues[i];
-            require(strategySet.contains(strategy), "strategy not exist");
+    function setWithdrawalQueue(address[] memory _queues) external isKeeper {
+        for (uint256 i = 0; i < _queues.length; i++) {
+            address _strategy = _queues[i];
+            require(strategySet.contains(_strategy), "strategy not exist");
             if (i < withdrawQueue.length) {
-                withdrawQueue[i] = strategy;
+                withdrawQueue[i] = _strategy;
             } else {
-                withdrawQueue.push(strategy);
+                withdrawQueue.push(_strategy);
             }
         }
-        for (uint256 i = queues.length; i < withdrawQueue.length; i++) {
+        for (uint256 i = _queues.length; i < withdrawQueue.length; i++) {
             if (withdrawQueue[i] == ZERO_ADDRESS) break;
             withdrawQueue[i] = ZERO_ADDRESS;
         }
-        emit SetWithdrawalQueue(queues);
+        emit SetWithdrawalQueue(_queues);
     }
 
     function removeStrategyFromQueue(address[] memory _strategies) external isKeeper {

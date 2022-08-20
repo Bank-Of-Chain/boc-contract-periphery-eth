@@ -178,9 +178,9 @@ async function setupCoreProtocolWithMockValueInterpreter (
     vault = await IVault.at(vault.address);
     await vault.setPegTokenAddress(pegToken.address);
     await vault.setVaultBufferAddress(vaultBuffer.address);
-    await vault.setRebaseThreshold(1);
-    await vault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
-    await vault.setMaxTimestampBetweenTwoReported(604800);
+    // await vault.setRebaseThreshold(1);
+    // await vault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+    // await vault.setMaxTimestampBetweenTwoReported(604800);
 
     //20%
     await vault.setTrusteeFeeBps(2000)
@@ -307,8 +307,8 @@ const getTokenBalance = async (contractAddress, tokenArray) => {
 const getExchangePlatformAdapters = async exchangeAggregator => {
     const adapters = await exchangeAggregator.getExchangeAdapters()
     const exchangePlatformAdapters = {}
-    for (let i = 0; i < adapters.identifiers_.length; i++) {
-        exchangePlatformAdapters[adapters.identifiers_[i]] = adapters.exchangeAdapters_[i]
+    for (let i = 0; i < adapters._identifiers.length; i++) {
+        exchangePlatformAdapters[adapters._identifiers[i]] = adapters._exchangeAdapters[i]
     }
     return exchangePlatformAdapters
 }

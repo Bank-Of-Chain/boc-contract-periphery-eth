@@ -35,8 +35,6 @@ const expect = chai.expect;
 const AccessControlProxy = hre.artifacts.require('AccessControlProxy');
 const Treasury = hre.artifacts.require('Treasury');
 const PriceOracle = hre.artifacts.require('PriceOracle');
-const ETHi = hre.artifacts.require("ETHi");
-const WETHi = hre.artifacts.require("WETHi");
 const Vault = hre.artifacts.require('ETHVault');
 const VaultBuffer = hre.artifacts.require('VaultBuffer');
 const PegToken = hre.artifacts.require('PegToken');
@@ -153,8 +151,8 @@ describe("Vault", function () {
         exchangeAggregator = await ExchangeAggregator.new([ethOneInchV4Adapter.address,ethParaSwapV5Adapter.address], accessControlProxy.address);
         const adapters = await exchangeAggregator.getExchangeAdapters();
         exchangePlatformAdapters = {};
-        for (let i = 0; i < adapters.identifiers_.length; i++) {
-            exchangePlatformAdapters[adapters.identifiers_[i]] = adapters.exchangeAdapters_[i];
+        for (let i = 0; i < adapters._identifiers.length; i++) {
+            exchangePlatformAdapters[adapters._identifiers[i]] = adapters._exchangeAdapters[i];
         }
 
         treasury = await Treasury.new();
@@ -183,8 +181,8 @@ describe("Vault", function () {
         iVault = await IETHVault.at(vault.address);
         await iVault.setVaultBufferAddress(vaultBuffer.address);
         await iVault.setPegTokenAddress(pegToken.address);
-        await iVault.setRebaseThreshold(1);
-        await iVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+        // await iVault.setRebaseThreshold(1);
+        // await iVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
         //20%
         await iVault.setTrusteeFeeBps(2000, {from: governance});
         await iVault.setRedeemFeeBps(0, {from: governance});

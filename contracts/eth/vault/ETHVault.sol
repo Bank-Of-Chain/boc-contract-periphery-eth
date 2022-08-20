@@ -28,6 +28,11 @@ contract ETHVault is ETHVaultStorage {
         treasury = _treasury;
         exchangeManager = _exchangeManager;
         priceProvider = _priceProvider;
+        // 1 / 1000e4
+        rebaseThreshold = 1;
+        // one week
+        maxTimestampBetweenTwoReported = 604800;
+        underlyingUnitsPerShare =  1e18;
     }
 
     modifier whenNotEmergency() {
@@ -63,6 +68,7 @@ contract ETHVault is ETHVaultStorage {
         return assetSet.values();
     }
 
+    /// @notice Check '_asset' is supported or not
     function checkIsSupportAsset(address _asset) public view {
         require(assetSet.contains(_asset), "The asset not support");
     }
@@ -133,6 +139,7 @@ contract ETHVault is ETHVaultStorage {
         return strategySet.values();
     }
 
+    /// @notice Check '_strategy' is active or not
     function checkActiveStrategy(address _strategy) public view {
         require(strategySet.contains(_strategy), "strategy not exist");
     }
@@ -144,7 +151,10 @@ contract ETHVault is ETHVaultStorage {
         return _estimateMint(_asset, _amount);
     }
 
-    /// @notice Minting ETHi with ETH
+    /// @param _asset Address of the asset being deposited
+    /// @param _amount Amount of the asset being deposited
+    /// @dev Support single asset
+    /// @return The amount of share minted
     function mint(
         address _asset,
         uint256 _amount,
@@ -801,8 +811,6 @@ contract ETHVault is ETHVaultStorage {
         address _asset,
         uint256[] memory _outputs,
         address[] memory _trackedAssets,
-        uint256[] memory _assetPrices,
-        uint256[] memory _assetDecimals,
         IExchangeAggregator.ExchangeToken[] memory _exchangeTokens
     ) internal returns (uint256[] memory) {
         uint256 _trackedAssetsLength = _trackedAssets.length;
@@ -878,7 +886,7 @@ contract ETHVault is ETHVaultStorage {
         uint256 _amount,
         address _asset,
         IExchangeAggregator.ExchangeToken[] memory _exchangeTokens
-    ) internal {
+    ) internal view {
         require(
             _amount > 0 && _amount <= _accountBalance,
             "Amount must be gt 0 and lt or eq the balance"
@@ -978,8 +986,6 @@ contract ETHVault is ETHVaultStorage {
                 _asset,
                 _outputs,
                 _trackedAssets,
-                _assetPrices,
-                _assetDecimals,
                 _exchangeTokens
             );
         }
@@ -1089,38 +1095,38 @@ contract ETHVault is ETHVaultStorage {
         toAmounts = new uint256[](_wantsLength);
         uint256 _exchangeTokensLength = _exchangeTokens.length;
         for (uint256 i = 0; i < _exchangeTokensLength; i++) {
-            bool findToToken = false;
+            bool _findToToken = false;
             for (uint256 j = 0; j < _wantsLength; j++) {
                 if (_exchangeTokens[i].toToken == _wants[j]) {
-                    findToToken = true;
+                    _findToToken = true;
                     break;
                 }
             }
-            require(findToToken, "toToken invalid");
+            require(_findToToken, "toToken invalid");
         }
 
         for (uint256 j = 0; j < _wantsLength; j++) {
             for (uint256 i = 0; i < _exchangeTokensLength; i++) {
-                IExchangeAggregator.ExchangeToken memory exchangeToken = _exchangeTokens[i];
+                IExchangeAggregator.ExchangeToken memory _exchangeToken = _exchangeTokens[i];
 
                 // not strategy need token,skip
-                if (_wants[j] != exchangeToken.toToken) continue;
+                if (_wants[j] != _exchangeToken.toToken) continue;
 
-                uint256 toAmount;
-                if (exchangeToken.fromToken == exchangeToken.toToken) {
-                    toAmount = exchangeToken.fromAmount;
+                uint256 _toAmount;
+                if (_exchangeToken.fromToken == _exchangeToken.toToken) {
+                    _toAmount = _exchangeToken.fromAmount;
                 } else {
-                    if (exchangeToken.fromAmount > 0) {
-                        toAmount = _exchange(
-                            exchangeToken.fromToken,
-                            exchangeToken.toToken,
-                            exchangeToken.fromAmount,
-                            exchangeToken.exchangeParam
+                    if (_exchangeToken.fromAmount > 0) {
+                        _toAmount = _exchange(
+                            _exchangeToken.fromToken,
+                            _exchangeToken.toToken,
+                            _exchangeToken.fromAmount,
+                            _exchangeToken.exchangeParam
                         );
                     }
                 }
 
-                toAmounts[j] = toAmount;
+                toAmounts[j] = _toAmount;
                 break;
             }
         }
@@ -1130,7 +1136,7 @@ contract ETHVault is ETHVaultStorage {
         address _fromToken,
         address _toToken,
         uint256 _amount,
-        IExchangeAggregator.ExchangeParam memory exchangeParam
+        IExchangeAggregator.ExchangeParam memory _exchangeParam
     ) internal returns (uint256 exchangeAmount) {
         require(trackedAssetsMap.contains(_toToken), "!T");
 
@@ -1143,17 +1149,17 @@ contract ETHVault is ETHVaultStorage {
         if (_fromToken == NativeToken.NATIVE_TOKEN) {
             // payable(exchangeManager).transfer(_amount);
             exchangeAmount = IExchangeAggregator(exchangeManager).swap{value: _amount}(
-                exchangeParam.platform,
-                exchangeParam.method,
-                exchangeParam.encodeExchangeArgs,
+                _exchangeParam.platform,
+                _exchangeParam.method,
+                _exchangeParam.encodeExchangeArgs,
                 swapDescription
             );
         } else {
             IERC20Upgradeable(_fromToken).safeApprove(exchangeManager, _amount);
             exchangeAmount = IExchangeAggregator(exchangeManager).swap(
-                exchangeParam.platform,
-                exchangeParam.method,
-                exchangeParam.encodeExchangeArgs,
+                _exchangeParam.platform,
+                _exchangeParam.method,
+                _exchangeParam.encodeExchangeArgs,
                 swapDescription
             );
         }
@@ -1168,11 +1174,11 @@ contract ETHVault is ETHVaultStorage {
         require(
             exchangeAmount >=
                 (oracleExpectedAmount *
-                    (MAX_BPS - exchangeParam.slippage - exchangeParam.oracleAdditionalSlippage)) /
+                    (MAX_BPS - _exchangeParam.slippage - _exchangeParam.oracleAdditionalSlippage)) /
                     MAX_BPS,
             "OL"
         );
-        emit Exchange(exchangeParam.platform, _fromToken, _amount, _toToken, exchangeAmount);
+        emit Exchange(_exchangeParam.platform, _fromToken, _amount, _toToken, exchangeAmount);
     }
 
     function _report(address _strategy, uint256 _lendValue) private {
@@ -1315,7 +1321,7 @@ contract ETHVault is ETHVaultStorage {
      * @notice This is a catch all for all functions not declared in core
      */
     fallback() external payable {
-        bytes32 slot = adminImplPosition;
+        bytes32 slot = ADMIN_IMPL_POSITION;
 
         assembly {
             // Copy msg.data. We take full control of memory in this inline assembly
