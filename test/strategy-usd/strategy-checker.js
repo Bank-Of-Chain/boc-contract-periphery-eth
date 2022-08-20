@@ -228,7 +228,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         let depositedAmounts = [];
         let wants0Contract = await ERC20.at(wantsInfo._assets[0]);
         let wants0Precision = new BigNumber(10 ** (await wants0Contract.decimals()));
-        let initialAmount = new BigNumber(10000);
+        let initialAmount = new BigNumber(0.5);
         let initialRatio = wantsInfo._ratios[0];
         let isIgnoreRatio = await strategy.isWantRatioIgnorable();
         console.log('isIgnoreRatio:', isIgnoreRatio);
@@ -270,7 +270,9 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
             return strategy.debtRate().catch(() => -1)
         }
         const debtRate = new BigNumber(await debtRateQuery());
-        depositUSD = depositUSD.dividedBy(10 ** 18);
+        console.log('depositUSD##:%d',depositUSD);
+        depositUSD = new BigNumber(ethers.utils.formatEther(depositUSD.toString()))//depositUSD.dividedBy(10 ** 18);
+        
         let delta = depositUSD.minus(estimatedTotalAssets);
         console.log('depositUSD:%s,estimatedTotalAssets:%s,delta:%s', depositUSD.toFixed(), estimatedTotalAssets.toFixed(), delta.toFixed());
         console.log('debtRate=%s', debtRate.toString());
@@ -346,7 +348,8 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
             let usd = new BigNumber(await valueInterpreter.calcCanonicalAssetValueInUsd(want, balance));
             withdrawUSD = withdrawUSD.plus(usd);
         }
-        withdrawUSD = withdrawUSD.dividedBy(10 ** 18);
+        // withdrawUSD = withdrawUSD.dividedBy(10 ** 18);
+        withdrawUSD = new BigNumber(ethers.utils.formatEther(withdrawUSD.toString()))
         console.log('depositUSD:%s,withdrawUSD:%s,rewardUSD:%s', depositUSD.toFixed(), withdrawUSD.toFixed(), rewardUsd.toFixed());
         let strategyTotalWithdrawUsd = depositUSD.plus(rewardUsd);
         assert(strategyTotalWithdrawUsd.isGreaterThanOrEqualTo(depositUSD), 'the value of stablecoins user got do not increase');

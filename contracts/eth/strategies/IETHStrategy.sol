@@ -51,7 +51,7 @@ interface IETHStrategy {
     function get3rdPoolAssets() external view returns (uint256);
 
     /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
-    function harvest() external;
+    function harvest() external returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts);
 
     /// @notice Strategy borrow funds from vault, enable payable because it needs to receive ETH from vault
     /// @param _assets borrow token address

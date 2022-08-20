@@ -129,7 +129,10 @@ contract ETHVault is ETHVaultStorage {
             if (estimatedTotalAssets > 0) {
                 _value =
                     _value +
-                    IPriceOracle(priceProvider).valueInUsd(NativeToken.NATIVE_TOKEN, estimatedTotalAssets);
+                    IPriceOracle(priceProvider).valueInUsd(
+                        NativeToken.NATIVE_TOKEN,
+                        estimatedTotalAssets
+                    );
             }
         }
     }
@@ -232,12 +235,11 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /// @notice redeem the funds from specified strategy.
-    function redeem(address _strategy, uint256 _amount, uint256 _outputCode)
-        external
-        isKeeper
-        isActiveStrategy(_strategy)
-        nonReentrant
-    {
+    function redeem(
+        address _strategy,
+        uint256 _amount,
+        uint256 _outputCode
+    ) external isKeeper isActiveStrategy(_strategy) nonReentrant {
         uint256 _strategyAssetValue = strategies[_strategy].totalDebt;
         require(_amount <= _strategyAssetValue);
 
@@ -292,7 +294,8 @@ contract ETHVault is ETHVaultStorage {
                     //minProductIndex is assigned to the first index whose proportion is not 0
                     _minProductIndex = i;
                 } else if (
-                    _toAmounts[_minProductIndex] * _ratios[i] > _toAmounts[i] * _ratios[_minProductIndex]
+                    _toAmounts[_minProductIndex] * _ratios[i] >
+                    _toAmounts[i] * _ratios[_minProductIndex]
                 ) {
                     _minProductIndex = i;
                 }
@@ -314,7 +317,12 @@ contract ETHVault is ETHVaultStorage {
                     _toAmounts[i] = _actualAmount;
                 }
 
-                console.log("token %s actualAmount %s ratios %s", _wants[i], _actualAmount, _ratios[i]);
+                console.log(
+                    "token %s actualAmount %s ratios %s",
+                    _wants[i],
+                    _actualAmount,
+                    _ratios[i]
+                );
                 if (_wants[i] == NativeToken.NATIVE_TOKEN) {
                     _lendValue += _actualAmount;
                     _ethAmount = _actualAmount;
@@ -330,7 +338,7 @@ contract ETHVault is ETHVaultStorage {
         } else {
             _ethStrategy.borrow(_wants, _toAmounts);
         }
-        _report(_strategy, _lendValue);
+        _report(_strategy, new address[](0),new uint256[](0),_lendValue);
         emit LendToStrategy(_strategy, _wants, _toAmounts, _lendValue);
     }
 
@@ -344,17 +352,38 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /// @notice Change USDi supply with Vault total assets.
-    function rebase() external whenNotEmergency whenNotAdjustPosition whenNotRebasePaused nonReentrant {
+    function rebase()
+        external
+        whenNotEmergency
+        whenNotAdjustPosition
+        whenNotRebasePaused
+        nonReentrant
+    {
         uint256 _totalAssets = _totalAssetInVault() + totalDebt;
         _rebase(_totalAssets);
     }
 
-    function report() external isActiveStrategy(msg.sender) {
-        _report(msg.sender, 0);
+    /**
+        * @dev Report the current asset of strategy caller
+     * @param _rewardTokens The reward token list
+     * @param _claimAmounts The claim amount list
+     * Emits a {StrategyReported} event.
+     */
+    function report(address[] memory _rewardTokens, uint256[] memory _claimAmounts)
+        external
+        isActiveStrategy(msg.sender)
+    {
+        _report(msg.sender, _rewardTokens, _claimAmounts, 0);
     }
 
     /// @notice start  Adjust  Position
-    function startAdjustPosition() external isKeeper whenNotAdjustPosition whenNotEmergency nonReentrant {
+    function startAdjustPosition()
+        external
+        isKeeper
+        whenNotAdjustPosition
+        whenNotEmergency
+        nonReentrant
+    {
         adjustPositionPeriod = true;
         address[] memory _trackedAssets = _getTrackedAssets();
 
@@ -375,7 +404,13 @@ contract ETHVault is ETHVaultStorage {
                 if (_amount > 0) {
                     _totalValueInVault =
                         _totalValueInVault +
-                        _calculateAssetValue(_assetPrices, _assetDecimals, i, _trackedAsset, _amount);
+                        _calculateAssetValue(
+                            _assetPrices,
+                            _assetDecimals,
+                            i,
+                            _trackedAsset,
+                            _amount
+                        );
                 }
             }
             uint256 _totalAssets = _totalValueInVault + _totalDebt;
@@ -431,7 +466,13 @@ contract ETHVault is ETHVaultStorage {
                 );
             _vaultValueOfNow =
                 _vaultValueOfNow +
-                _calculateAssetValue(_assetPrices, _assetDecimals, i, _trackedAsset, _vaultAmounts[i]);
+                _calculateAssetValue(
+                    _assetPrices,
+                    _assetDecimals,
+                    i,
+                    _trackedAsset,
+                    _vaultAmounts[i]
+                );
             _vaultValueOfBefore =
                 _vaultValueOfBefore +
                 _calculateAssetValue(
@@ -460,9 +501,9 @@ contract ETHVault is ETHVaultStorage {
             if (_vaultValueOfNow + _transferValue < _vaultValueOfBefore) {
                 _old2LendAssets = _vaultValueOfBefore - _vaultValueOfNow - _transferValue;
             }
-            if(_vaultValueOfBefore <= _transferValue){
+            if (_vaultValueOfBefore <= _transferValue) {
                 _redeemValue = 0;
-                console.log("_redeemValue=",_redeemValue);
+                console.log("_redeemValue=", _redeemValue);
             }
             if (_totalValueOfNow > _totalValueOfBefore) {
                 uint256 _gain = _totalValueOfNow - _totalValueOfBefore;
@@ -570,7 +611,11 @@ contract ETHVault is ETHVaultStorage {
         uint256 _trackedAssetsLength = _trackedAssets.length;
         uint256[] memory _assetPrices = new uint256[](_trackedAssetsLength);
         uint256[] memory _assetDecimals = new uint256[](_trackedAssetsLength);
-        uint256 _totalAssetInVault = _totalAssetInVault(_trackedAssets, _assetPrices, _assetDecimals);
+        uint256 _totalAssetInVault = _totalAssetInVault(
+            _trackedAssets,
+            _assetPrices,
+            _assetDecimals
+        );
         return _totalAssetInVault;
     }
 
@@ -638,7 +683,7 @@ contract ETHVault is ETHVaultStorage {
                 _needWithdrawValue -= _strategyWithdrawValue;
             } else {
                 //If there is less than 0.001 ETH left, then all redemption
-                if(_needWithdrawValue + 1e15 >= _strategyTotalValue){
+                if (_needWithdrawValue + 1e15 >= _strategyTotalValue) {
                     _strategyWithdrawValue = _strategyTotalValue;
                 } else {
                     _strategyWithdrawValue = _needWithdrawValue;
@@ -688,7 +733,10 @@ contract ETHVault is ETHVaultStorage {
         for (uint256 i = 0; i < _transferAssetsLength; i++) {
             address _trackedAsset = _transferAssets[i];
             if (assetSet.contains(_trackedAsset)) {
-                uint256 _assetBalancesInVaultBuffer = _balanceOfToken(_trackedAsset, vaultBufferAddress);
+                uint256 _assetBalancesInVaultBuffer = _balanceOfToken(
+                    _trackedAsset,
+                    vaultBufferAddress
+                );
                 if (_assetBalancesInVaultBuffer > 0) {
                     uint256 _value = _calculateAssetValue(
                         _assetPrices,
@@ -830,9 +878,12 @@ contract ETHVault is ETHVaultStorage {
                 } else {
                     _amounts[i] = _withdrawAmount;
                     for (uint256 j = 0; j < _exchangeTokens.length; j++) {
-                        IExchangeAggregator.ExchangeToken memory _exchangeToken = _exchangeTokens[j];
+                        IExchangeAggregator.ExchangeToken memory _exchangeToken = _exchangeTokens[
+                            j
+                        ];
                         if (
-                            _exchangeToken.fromToken == _withdrawToken && _exchangeToken.toToken == _asset
+                            _exchangeToken.fromToken == _withdrawToken &&
+                            _exchangeToken.toToken == _asset
                         ) {
                             _amounts[i] = 0;
                             uint256 _toAmount = _exchange(
@@ -873,7 +924,13 @@ contract ETHVault is ETHVaultStorage {
                 } else {
                     _actualAmount =
                         _actualAmount +
-                        _calculateAssetValue(_assetPrices, _assetDecimals, i, _trackedAsset, _amount);
+                        _calculateAssetValue(
+                            _assetPrices,
+                            _assetDecimals,
+                            i,
+                            _trackedAsset,
+                            _amount
+                        );
                     IERC20Upgradeable(_trackedAsset).safeTransfer(msg.sender, _amount);
                 }
             }
@@ -908,7 +965,11 @@ contract ETHVault is ETHVaultStorage {
         uint256[] memory _assetPrices,
         uint256[] memory _assetDecimals
     ) internal returns (uint256 _sharesAmount, uint256 _actualAsset) {
-        uint256 _totalAssetInVault = _totalAssetInVault(_trackedAssets, _assetPrices, _assetDecimals);
+        uint256 _totalAssetInVault = _totalAssetInVault(
+            _trackedAssets,
+            _assetPrices,
+            _assetDecimals
+        );
         uint256 _actualAmount = _amount;
         uint256 _currentTotalAssets = _totalAssetInVault + totalDebt;
         console.log("_actualAmount,_totalAssetInVault,_currentTotalAssets");
@@ -1017,7 +1078,11 @@ contract ETHVault is ETHVaultStorage {
         // It's possible that a strategy was off on its asset total, perhaps
         // a reward token sold for more or for less than anticipated.
         if (!rebasePaused) {
-            uint256 _totalAssetInVault = _totalAssetInVault(_trackedAssets, _assetPrices, _assetDecimals);
+            uint256 _totalAssetInVault = _totalAssetInVault(
+                _trackedAssets,
+                _assetPrices,
+                _assetDecimals
+            );
             _rebase(_totalAssetInVault + totalDebt);
         }
         emit Burn(msg.sender, _asset, _amount, _actualAmount, _shareAmount, _assets, _amounts);
@@ -1067,7 +1132,10 @@ contract ETHVault is ETHVaultStorage {
                 }
             }
             console.log("(_totalShares,_totalValue)=", _totalShares, _totalAssets);
-            uint256 _newUnderlyingUnitsPerShare = _totalAssets.divPreciselyScale(_totalShares, 1e27);
+            uint256 _newUnderlyingUnitsPerShare = _totalAssets.divPreciselyScale(
+                _totalShares,
+                1e27
+            );
             console.log("(_newUnderlyingUnitsPerShare,_underlyingUnitsPerShare)=");
             console.log(_newUnderlyingUnitsPerShare, _underlyingUnitsPerShare);
             if (_newUnderlyingUnitsPerShare != _underlyingUnitsPerShare) {
@@ -1140,12 +1208,13 @@ contract ETHVault is ETHVaultStorage {
     ) internal returns (uint256 exchangeAmount) {
         require(trackedAssetsMap.contains(_toToken), "!T");
 
-        IExchangeAdapter.SwapDescription memory swapDescription = IExchangeAdapter.SwapDescription({
-            amount: _amount,
-            srcToken: _fromToken,
-            dstToken: _toToken,
-            receiver: address(this)
-        });
+        IExchangeAdapter.SwapDescription memory swapDescription = IExchangeAdapter
+            .SwapDescription({
+                amount: _amount,
+                srcToken: _fromToken,
+                dstToken: _toToken,
+                receiver: address(this)
+            });
         if (_fromToken == NativeToken.NATIVE_TOKEN) {
             // payable(exchangeManager).transfer(_amount);
             exchangeAmount = IExchangeAggregator(exchangeManager).swap{value: _amount}(
@@ -1181,7 +1250,12 @@ contract ETHVault is ETHVaultStorage {
         emit Exchange(_exchangeParam.platform, _fromToken, _amount, _toToken, exchangeAmount);
     }
 
-    function _report(address _strategy, uint256 _lendValue) private {
+    function _report(
+        address _strategy,
+        address[] memory _rewardTokens,
+        uint256[] memory _claimAmounts,
+        uint256 _lendValue
+    ) private {
         StrategyParams memory _strategyParam = strategies[_strategy];
         uint256 _lastStrategyTotalDebt = _strategyParam.totalDebt + _lendValue;
         uint256 _nowStrategyTotalDebt = IETHStrategy(_strategy).estimatedTotalAssets();
@@ -1195,15 +1269,19 @@ contract ETHVault is ETHVaultStorage {
         }
 
         if (_strategyParam.enforceChangeLimit) {
-            if (block.timestamp - strategies[_strategy].lastReport < maxTimestampBetweenTwoReported) {
+            if (
+                block.timestamp - strategies[_strategy].lastReport < maxTimestampBetweenTwoReported
+            ) {
                 if (_gain > 0) {
                     require(
-                        _gain <= ((_lastStrategyTotalDebt * _strategyParam.profitLimitRatio) / MAX_BPS),
+                        _gain <=
+                            ((_lastStrategyTotalDebt * _strategyParam.profitLimitRatio) / MAX_BPS),
                         "GL"
                     );
                 } else if (_loss > 0) {
                     require(
-                        _loss <= ((_lastStrategyTotalDebt * _strategyParam.lossLimitRatio) / MAX_BPS),
+                        _loss <=
+                            ((_lastStrategyTotalDebt * _strategyParam.lossLimitRatio) / MAX_BPS),
                         "LL"
                     );
                 }
@@ -1226,11 +1304,17 @@ contract ETHVault is ETHVaultStorage {
             _loss,
             _lastStrategyTotalDebt,
             _nowStrategyTotalDebt,
+            _rewardTokens,
+            _claimAmounts,
             _type
         );
     }
 
-    function _balanceOfToken(address _trackedAsset, address _owner) internal view returns (uint256) {
+    function _balanceOfToken(address _trackedAsset, address _owner)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 _balance;
         if (_trackedAsset == NativeToken.NATIVE_TOKEN) {
             _balance = _owner.balance;
