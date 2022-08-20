@@ -13,6 +13,9 @@ contract MockPriceOracle is IPriceOracle {
         //USDC
         address cUSDC = 0x76Eb2FE28b36B3ee97F3Adae0C69606eeDB2A37c;
         priceMap[cUSDC] = originPriceOracle.getUnderlyingPrice(cUSDC);
+        //USDT
+        address cUSDT = 0x48759F220ED983dB51fA7A8C0D2AAb8f3ce4166a;
+        priceMap[cUSDT] = originPriceOracle.getUnderlyingPrice(cUSDT);
         //cAUD
         address cAUD = 0x86BBD9ac8B9B44C95FFc6BAAe58E25033B7548AA;
         priceMap[cAUD] = originPriceOracle.getUnderlyingPrice(cAUD);

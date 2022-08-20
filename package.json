@@ -48,7 +48,7 @@
     "bignumber.js": "^9.0.1",
     "eslint-plugin-mocha": "^9.0.0",
     "piggy-finance-utils": "^1.0.55",
-    "boc-contract-core": "1.5.10-alpha3"
+    "boc-contract-core": "1.6.0-alpha1"
   },
   "scripts": {
     "chain": "hardhat node --hostname 0.0.0.0",
@@ -59,11 +59,13 @@
     "deploy-usd": "yarn topup && hardhat run scripts/deploy-usd.js --network localhost ",
     "deploy-eth": "yarn topup && hardhat run scripts/deploy-eth.js --network localhost ",
     "deploy": "yarn topup && hardhat run scripts/deploy.js --network localhost ",
+    "deploy-all": "yarn topup && cross-env VAULT_TYPE_VALUE=3 ETHI_STRATEGY_TYPE_VALUE=1 USDI_STRATEGY_TYPE_VALUE=1 hardhat run scripts/deploy.js --network localhost ",
     "deploy_v1.5.3-hotfix": "yarn topup && npm run grant && hardhat run scripts/deploy_v1.5.3-hotfix.js --network localhost",
     "deploy_v1.5.3-add-strategies": "yarn topup && npm run grant && hardhat run scripts/deploy_v1.5.3-add-strategies.js --network localhost",
     "grant": "hardhat run scripts/grant.js --network localhost",
     "lend": "hardhat run scripts/simple-lend.js --network localhost",
     "uniswap-v3-swap": "hardhat run scripts/uniswap-v3-swap.js --network localhost",
+    "uniswap-v3-increase-observation": "hardhat run scripts/uniswap-v3-increase-observation.js --network localhost",
     "lint:sol": "solhint --config ./.solhint.json --max-warnings 0 \"contracts/**/*.sol\"",
     "release": "hardhat run scripts/deploy.js --network mainnet",
     "release_v1.5.3:mainnet": "hardhat run scripts/deploy_v1.5.3-add-strategies.js --network mainnet",

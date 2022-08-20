@@ -56,7 +56,7 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
 
     /// @dev Collects all uncollected amounts from the nft position and sends it to the vaultProxy
     function __collect(uint256 _nftId, uint128 _amount0, uint128 _amount1) internal returns (uint256 amount0, uint256 amount1){
-        (amount0, amount1) =  nonfungiblePositionManager.collect(INonfungiblePositionManager.CollectParams({
+        (amount0, amount1) = nonfungiblePositionManager.collect(INonfungiblePositionManager.CollectParams({
             tokenId : _nftId,
             recipient : address(this),
             amount0Max : _amount0,
@@ -94,18 +94,56 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
         emit UniV3NFTPositionAdded(tokenId, liquidity, amount0, amount1);
     }
 
+    /// @dev Purges a position by removing all liquidity, collecting and transferring all tokens owed to the vault, and burning the nft.
+    /// _liquidity == 0 signifies no liquidity to be removed (i.e., only collect and burn).
+    /// 0 < _liquidity 0 < max uint128 signifies the full amount of liquidity is known (more gas-efficient).
+    /// _liquidity == max uint128 signifies the full amount of liquidity is unknown.
+    function __purge(
+        uint256 _nftId,
+        uint128 _liquidity,
+        uint256 _amount0Min,
+        uint256 _amount1Min
+    ) internal {
+        if (_liquidity == type(uint128).max) {
+            // This consumes a lot of unnecessary gas because of all the SLOAD operations,
+            // when we only care about `liquidity`.
+            // Should ideally only be used in the rare case where a griefing attack
+            // (i.e., frontrunning the tx and adding extra liquidity dust) is a concern.
+            _liquidity = __getLiquidityForNFT(_nftId);
+        }
+
+        if (_liquidity > 0) {
+            nonfungiblePositionManager.decreaseLiquidity(
+                INonfungiblePositionManager.DecreaseLiquidityParams({
+            tokenId : _nftId,
+            liquidity : _liquidity,
+            amount0Min : _amount0Min,
+            amount1Min : _amount1Min,
+            deadline : block.timestamp
+            })
+            );
+        }
+
+        __collectAll(_nftId);
+
+        // Reverts if liquidity or uncollected tokens are remaining
+        nonfungiblePositionManager.burn(_nftId);
+
+        emit UniV3NFTPositionRemoved(_nftId);
+    }
+
     /// @dev Removes liquidity from the uniswap position and transfers the tokens back to the vault
     function __removeLiquidity(INonfungiblePositionManager.DecreaseLiquidityParams memory _params)
     internal
     returns (uint256, uint256)
     {
         (uint256 amount0, uint256 amount1) = nonfungiblePositionManager.decreaseLiquidity(_params);
-        console.log('__removeLiquidity,amount0:%d,amount1:%d',amount0,amount1);
+        console.log('__removeLiquidity,amount0:%d,amount1:%d', amount0, amount1);
         if (amount0 > 0 || amount1 > 0) {
-            (amount0,amount1) = __collect(_params.tokenId, uint128(amount0), uint128(amount1));
-            console.log('__collect,amount0:%d,amount1:%d',amount0,amount1);
+            (amount0, amount1) = __collect(_params.tokenId, uint128(amount0), uint128(amount1));
+            console.log('__collect,amount0:%d,amount1:%d', amount0, amount1);
         }
-        return (amount0,amount1);
+        return (amount0, amount1);
     }
 
     function __getPositionTotal(uint256 _nftId, uint160 _sqrtPriceX96) internal view returns (uint256, uint256){

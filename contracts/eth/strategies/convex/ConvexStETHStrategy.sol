@@ -83,7 +83,7 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         override
         returns (OutputInfo[] memory outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
+        outputsInfo = new OutputInfo[](3);
         OutputInfo memory info = outputsInfo[0];
         info.outputCode = 0;
         info.outputTokens = wants;
@@ -171,12 +171,12 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
 
     function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPoolPayable pool = getCurvePool();
-        if (_outputCode == 0) {
-            pool.remove_liquidity(liquidity, [uint256(0), uint256(0)]);
-        } else if (_outputCode == 1) {
+        if (_outputCode == 1) {
             pool.remove_liquidity_one_coin(liquidity, 0, 0);
         } else if (_outputCode == 2) {
             pool.remove_liquidity_one_coin(liquidity, 1, 0);
+        } else {
+            pool.remove_liquidity(liquidity, [uint256(0), uint256(0)]);
         }
     }
 }

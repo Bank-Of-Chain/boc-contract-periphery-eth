@@ -40,6 +40,7 @@ const EXCHANGE_EXTRA_PARAMS = {
         useHttp: true,
         network: 1,
         protocols: 'CURVE'
+        // protocols: 'CURVE_V2,SUSHI,CURVE,UNISWAP_V2,UNISWAP_V3'
     },
     // paraswap: {
     //     network: 1,
