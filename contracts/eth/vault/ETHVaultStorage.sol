@@ -9,7 +9,6 @@ import "boc-contract-core/contracts/library/StableMath.sol";
 import "boc-contract-core/contracts/token/IPegToken.sol";
 import "boc-contract-core/contracts/vault/IVaultBuffer.sol";
 import "boc-contract-core/contracts/library/BocRoles.sol";
-import "../token/ETHi.sol";
 import "../strategies/IETHStrategy.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 import "boc-contract-core/contracts/exchanges/IExchangeAggregator.sol";
@@ -116,9 +115,6 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     //max percentage 100%
     uint256 internal constant MAX_BPS = 10000;
 
-    // ETHi
-    ETHi internal ethi;
-
     // all strategy
     EnumerableSet.AddressSet internal strategySet;
     // Assets supported by the Vault, i.e. Stablecoins
@@ -150,7 +146,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     //withdraw strategy set
     address[] public withdrawQueue;
     //keccak256("ETHi.vault.governor.admin.impl");
-    bytes32 constant adminImplPosition =
+    bytes32 constant ADMIN_IMPL_POSITION =
         0xfa89c25d41afc3612e6438675f8ecd0190711981b04c08aa14be180784e299e7;
 
     // Pausing bools
@@ -186,7 +182,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
      */
     function setAdminImpl(address newImpl) external onlyGovOrDelegate {
         require(AddressUpgradeable.isContract(newImpl), "new implementation is not a contract");
-        bytes32 position = adminImplPosition;
+        bytes32 position = ADMIN_IMPL_POSITION;
         assembly {
             sstore(position, newImpl)
         }

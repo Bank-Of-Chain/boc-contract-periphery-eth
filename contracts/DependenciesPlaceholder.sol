@@ -4,7 +4,6 @@ import 'boc-contract-core/contracts/treasury/Treasury.sol';
 import 'boc-contract-core/contracts/vault/Vault.sol';
 import 'boc-contract-core/contracts/vault/VaultBuffer.sol';
 import 'boc-contract-core/contracts/vault/VaultAdmin.sol';
-import 'boc-contract-core/contracts/token/USDi.sol';
 import 'boc-contract-core/contracts/token/PegToken.sol';
 import 'boc-contract-core/contracts/harvester/Harvester.sol';
 import 'boc-contract-core/contracts/harvester/Dripper.sol';

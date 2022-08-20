@@ -126,7 +126,7 @@ describe('【Vault unit exchange】', function () {
                     address: toToken,
                     symbol: toTokenSymbol,
                     decimals: toTokenDecimals
-                }, fromAmount.div(2).toFixed(), 4999, 4999, platformAdapter, EXCHANGE_EXTRA_PARAMS);
+                }, fromAmount.div(2), 4999, 4999, platformAdapter, EXCHANGE_EXTRA_PARAMS);
 
                 let exchangeParam = {
                         platform: SWAP_INFO.platform,
