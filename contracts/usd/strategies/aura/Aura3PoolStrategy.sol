@@ -218,14 +218,7 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         IAsset[] memory poolAssets = _getPoolAssets(poolKey);
         uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
         IBalancerVault.ExitPoolRequest memory exitRequest;
-        if (_outputCode == 0) {
-            exitRequest = IBalancerVault.ExitPoolRequest({
-                assets: poolAssets,
-                minAmountsOut: minAmountsOut,
-                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _exitAmount),
-                toInternalBalance: false
-            });
-        } else {
+        if (_outputCode > 0 && _outputCode < 4) {
             uint256 index;
             if (_outputCode == 1) {
                 index = 0;
@@ -238,6 +231,13 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
                 assets: poolAssets,
                 minAmountsOut: minAmountsOut,
                 userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _exitAmount, index),
+                toInternalBalance: false
+            });
+        } else {
+            exitRequest = IBalancerVault.ExitPoolRequest({
+                assets: poolAssets,
+                minAmountsOut: minAmountsOut,
+                userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _exitAmount),
                 toInternalBalance: false
             });
         }
