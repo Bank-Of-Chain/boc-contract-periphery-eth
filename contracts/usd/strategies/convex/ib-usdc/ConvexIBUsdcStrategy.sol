@@ -416,7 +416,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
      *  Sell reward and reinvestment logic
      */
     function harvest()
-        external
+        public
         virtual
         override
         returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
@@ -656,9 +656,10 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         uint256 _outputCode
     ) internal override {
         // claim when withdraw all.
-        if (_withdrawShares == _totalShares) _claimAndInvest();
+        if (_withdrawShares == _totalShares) harvest();
         uint256 _totalStaking = balanceOfToken(rewardPool);
         uint256 _cvxLpAmount = (_totalStaking * _withdrawShares) / _totalShares;
+
         //saving gas
         CTokenInterface _borrowC = borrowCToken;
         //saving gas

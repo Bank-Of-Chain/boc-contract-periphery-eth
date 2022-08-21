@@ -18,7 +18,7 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
     function swapRewardsToWants() internal virtual;
 
     /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
-    function harvest() external virtual override returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts){
+    function harvest() public virtual override returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts){
         // sell reward token
         (bool _claimIsWorth, address[] memory __rewardsTokens,uint256[] memory __claimAmounts ) = claimRewards();
         _rewardsTokens = __rewardsTokens;
@@ -64,15 +64,7 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
     {
         // if withdraw all need claim rewards
         if (_repayShares == _totalShares) {
-            (
-                bool _claimIsWorth,
-                address[] memory __assets,
-                uint256[] memory __amounts
-            ) = claimRewards();
-            if (_claimIsWorth) {
-                // transfer rewards to treasury
-                transferTokensToTarget(vault.treasury(), __assets, __amounts);
-            }
+            harvest();
         }
         return super.repay(_repayShares, _totalShares, _outputCode);
     }

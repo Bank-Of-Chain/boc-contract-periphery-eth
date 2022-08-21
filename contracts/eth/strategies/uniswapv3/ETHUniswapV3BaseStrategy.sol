@@ -238,6 +238,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     function rebalance(int24 _tick) internal {
+        harvest();
         // Withdraw all current liquidity
         uint128 _baseLiquidity = balanceOfLpToken(baseMintInfo.tokenId);
         if (_baseLiquidity > 0) {
