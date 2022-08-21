@@ -4,6 +4,8 @@ require('@nomiclabs/hardhat-truffle5');
 require('hardhat-gas-reporter');
 require('hardhat-contract-sizer');
 require('@openzeppelin/hardhat-upgrades');
+require('hardhat-log-remover');
+
 const {
     removeConsoleLog
 } = require('hardhat-preprocessor');

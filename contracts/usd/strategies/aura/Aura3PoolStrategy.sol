@@ -14,8 +14,6 @@ import "../../../external/aura/IAuraBooster.sol";
 import "boc-contract-core/contracts/strategy/BaseClaimableStrategy.sol";
 import "../../enums/ProtocolEnum.sol";
 
-import "hardhat/console.sol";
-
 contract Aura3PoolStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -175,7 +173,6 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         override
     {
         uint256 _receiveLpAmount = _depositToBalancer(_assets, _amounts);
-        console.log("_receiveLpAmount:", _receiveLpAmount);
         AURA_BOOSTER.deposit(getPId(), _receiveLpAmount, true);
     }
 
@@ -205,10 +202,8 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         uint256 _outputCode
     ) internal override {
         uint256 _withdrawAmount = (getStakingAmount() * _withdrawShares) / _totalShares;
-        console.log("_withdrawAmount:", _withdrawAmount);
         //unstaking
         IRewardPool(getRewardPool()).redeem(_withdrawAmount, address(this), address(this));
-        console.log("lpAmount:", balanceOfToken(getPoolLpToken()));
         _withdrawFromBalancer(_withdrawAmount, _outputCode);
     }
 
@@ -242,9 +237,6 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
             });
         }
         BALANCER_VAULT.exitPool(_poolKey, address(this), _recipient, _exitRequest);
-        console.log("after withdraw want0 balancer:%d",balanceOfToken(wants[0]));
-        console.log("after withdraw want1 balancer:%d",balanceOfToken(wants[1]));
-        console.log("after withdraw want2 balancer:%d",balanceOfToken(wants[2]));
     }
 
     function claimRewards()
@@ -261,7 +253,6 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         _claimAmounts = new uint256[](2 + _extraRewardsLen);
         _claimAmounts[0] = balanceOfToken(BAL);
         _claimAmounts[1] = balanceOfToken(AURA_TOKEN);
-        console.log("_extraRewardsLen:", _extraRewardsLen);
         if (_extraRewardsLen > 0) {
             for (uint256 i = 0; i < _extraRewardsLen; i++) {
                 address _extraReward = IRewardPool(_rewardPool).extraRewards(i);

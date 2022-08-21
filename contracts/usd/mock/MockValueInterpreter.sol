@@ -9,8 +9,6 @@ import "boc-contract-core/contracts/price-feeds/derivatives/IDerivativePriceFeed
 import "boc-contract-core/contracts/price-feeds/primitives/IPrimitivePriceFeed.sol";
 import "boc-contract-core/contracts/util/Helpers.sol";
 
-import "hardhat/console.sol";
-
 /// @title MockValueInterpreter Contract
 /// @author Enzyme Council <security@enzyme.finance>
 /// @notice Interprets price feeds to provide covert value between asset pairs
@@ -96,8 +94,6 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
             return (_amount, true);
         }
         _isValid = true;
-        console.log("_quoteAsset##:%s,price:%d ",_quoteAsset,priceValue[_quoteAsset]);
-        console.log("_baseAsset##:%s,decimals:%d ",_baseAsset,Helpers.getDecimals(_baseAsset));
         _value =
             (priceValue[_baseAsset] * _amount * (10**Helpers.getDecimals(_quoteAsset))) /
             priceValue[_quoteAsset] /

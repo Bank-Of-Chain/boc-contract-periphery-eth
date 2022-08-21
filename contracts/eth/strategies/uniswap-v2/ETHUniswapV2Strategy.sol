@@ -9,7 +9,6 @@ import "../../../utils/actions/UniswapV2LiquidityActionsMixin.sol";
 import "../../../external/uniswap/IUniswapV2Pair.sol";
 import "./../../enums/ProtocolEnum.sol";
 import "../ETHBaseStrategy.sol";
-import "hardhat/console.sol";
 
 contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -68,7 +67,6 @@ contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin
     function lpValueInEth() internal view returns (uint256 lpValue) {
         uint256 _totalSupply = uniswapV2Pair.totalSupply();
         (uint112 _reserve0, uint112 _reserve1, ) = uniswapV2Pair.getReserves();
-        console.log("_reserve0:%d,_reserve1:%d",_reserve0,_reserve1);
         uint256 lpDecimalUnit = 1e18;
         uint256 part0 = (uint256(_reserve0) * (lpDecimalUnit)) / _totalSupply;
         uint256 part1 = (uint256(_reserve1) * (lpDecimalUnit)) / _totalSupply;

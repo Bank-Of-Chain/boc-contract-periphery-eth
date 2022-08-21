@@ -147,7 +147,6 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         override
         returns (uint256)
     {
-        console.log("start adding _liquidity");
         address _curvePool = curvePool;
         bool _has3Crv;
         for (uint256 i = 0; i < 3; i++) {
@@ -198,9 +197,5 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
                 [uint256(0), uint256(0), uint256(0)]
             );
         }
-        console.log("want0 balance:",balanceOfToken(wants[0]));
-        console.log("want1 balance:",balanceOfToken(wants[1]));
-        console.log("want2 balance:",balanceOfToken(wants[2]));
-        console.log("want3 balance:",balanceOfToken(wants[3]));
     }
 }

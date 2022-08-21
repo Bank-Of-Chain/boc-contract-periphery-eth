@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "../AssetHelpers.sol";
 import "./../../external/uniswapV3/INonfungiblePositionManager.sol";
 import "./../../external/uniswapV3/libraries/PositionValue.sol";
-import "hardhat/console.sol";
 
 /// @title UniswapV3LiquidityActionsMixin Contract
 /// @notice Mixin contract for interacting with Uniswap v3
@@ -138,10 +137,8 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
     returns (uint256, uint256)
     {
         (uint256 _amount0, uint256 _amount1) = nonfungiblePositionManager.decreaseLiquidity(_params);
-        console.log("__removeLiquidity,_amount0:%d,_amount1:%d", _amount0, _amount1);
         if (_amount0 > 0 || _amount1 > 0) {
             (_amount0, _amount1) = __collect(_params.tokenId, uint128(_amount0), uint128(_amount1));
-            console.log("__collect,_amount0:%d,_amount1:%d", _amount0, _amount1);
         }
         return (_amount0, _amount1);
     }

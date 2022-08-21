@@ -73,7 +73,6 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
         )
     {
         uint256 _rewardCRVAmount = getRewardPool().earned(address(this));
-        console.log("_rewardCRVAmount:%d", _rewardCRVAmount);
         if (_rewardCRVAmount > sellFloor[CRV]) {
             getRewardPool().getReward();
             _assets = getConvexRewards();
@@ -86,7 +85,6 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
     }
 
     function swapRewardsToWants() internal virtual override {
-        console.log("Convext::swapRewardsToWants");
         address[] memory _rewardTokens = getConvexRewards();
         for (uint256 i = 0; i < _rewardTokens.length; i++) {
             uint256 _rewardAmount = balanceOfToken(_rewardTokens[i]);

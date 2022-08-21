@@ -6,8 +6,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
 import "./../../../enums/ProtocolEnum.sol";
 
@@ -195,7 +193,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         uint256 _debtsValue = debts();
         // The usdValue needs to be filled with precision
         _usdValue = _assetsValue - _debtsValue;
-        console.log("[%s] getPositionDetail: %s", this.name(), _usdValue);
     }
 
     /**
@@ -212,12 +209,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         } else {
             _depositedAssets = 0;
         }
-        console.log(
-            "[%s] _rewardBalance:%s,curvePoolAssets:%s",
-            this.name(),
-            _rewardBalance,
-            _depositedAssets
-        );
     }
 
     /**
@@ -262,7 +253,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         address _borrowToken = _borrowCToken.underlying();
         uint256 _borrowTokenPrice = _borrowTokenPrice();
         _value = (_borrowBalanceCurrent * _borrowTokenPrice) / decimalUnitOfToken(_borrowToken) / 1e12; //div 1e12 for normalized
-        console.log("debts:%s", _value);
     }
 
     //_collateral assets（USD-1e18)
@@ -316,11 +306,9 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         IConvexReward(rewardPool).getReward();
         uint256 _crvBalance = balanceOfToken(REWARD_CRV);
         uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
-        console.log("[%s] claim reward:%s,%s", this.name(), _crvBalance, _cvxBalance);
         _sellCrvAndCvx(_crvBalance, _cvxBalance);
         uint256 _ibForexAmount = balanceOfToken(getIronBankForex());
         if (_ibForexAmount > 0) {
-            console.log("harvest _ibForexAmount:", _ibForexAmount);
             _invest(_ibForexAmount);
         }
         //sell kpr
@@ -354,7 +342,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         if (address(this).balance > 0) {
             //ETH wrap to WETH
             IWeth(WETH).deposit{value: address(this).balance}();
-            console.log("[%s] WETH:%s", this.name(), balanceOfToken(WETH));
 
             //crv swap to USDC
             IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(
@@ -365,7 +352,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
                 block.timestamp
             );
             uint256 _usdcBalance = balanceOfToken(USDC);
-            console.log("[%s] USDC:%s", this.name(), _usdcBalance);
             IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, 0);
             IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, _usdcBalance);
             ICurveMini(curve_usdc_ibforex_pool).exchange(1, 0, _usdcBalance, 0);
@@ -375,14 +361,12 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     // Collateral Token Price In USD ,decimals 1e30
     function _collateralTokenPrice() internal view returns (uint256) {
         uint256 _collateralTokenPrice = priceOracle.getUnderlyingPrice(address(COLLATERAL_CTOKEN));
-        console.log("[%s] _collateralTokenPrice", this.name(), _collateralTokenPrice);
         return _collateralTokenPrice;
     }
 
     // Borrown Token Price In USD ，decimals 1e30
     function _borrowTokenPrice() internal view returns (uint256) {
         uint256 _borrowTokenPrice = _getNormalizedBorrowToken();
-        console.log("[%s] _borrowTokenPrice", this.name(), _borrowTokenPrice);
         return _borrowTokenPrice;
     }
 
@@ -416,7 +400,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         // mint Collateral
         IERC20Upgradeable(COLLATERAL_TOKEN).safeApprove(_collateralC, 0);
         IERC20Upgradeable(COLLATERAL_TOKEN).safeApprove(_collateralC, mintAmount);
-        console.log("[%s] mint amount:%s", this.name(), mintAmount);
         COLLATERAL_CTOKEN.mint(mintAmount);
         // enter market
         address[] memory _markets = new address[](1);
@@ -505,7 +488,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         uint256 _collateralAmount = _amounts[0];
         _mintCollateralCToken(_collateralAmount);
         (uint256 _space, ) = borrowInfo();
-        console.log("[%s] borrow info:_space = %s", this.name(), _space);
         if (_space > 0) {
             // borrow forex
             uint256 _receiveAmount = _borrowForex(_space);
@@ -524,7 +506,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         }
         uint256 _totalStaking = balanceOfToken(rewardPool);
         uint256 _cvxLpAmount = (_totalStaking * _withdrawShares) / _totalShares;
-        console.log("[%s] _cvxLpAmount: %s", this.name(), _cvxLpAmount);
         //saving gas
         CTokenInterface _borrowC = borrowCToken;
         //saving gas
@@ -552,7 +533,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
                     block.timestamp
                 );
                 uint256 _usdcBalance = balanceOfToken(USDC);
-                console.log("_usdcBalance:%d", _usdcBalance);
                 IUniswapV2Router2(UNI_ROUTER_ADDR).swapExactTokensForTokens(
                     _usdcBalance,
                     0,

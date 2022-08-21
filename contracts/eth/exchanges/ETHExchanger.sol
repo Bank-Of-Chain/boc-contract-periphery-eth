@@ -8,7 +8,6 @@ import "../../external/uniswap/IUniswapV3.sol";
 import "../../external/lido/IWstETH.sol";
 import "../../external/weth/IWeth.sol";
 import "./IETHExchanger.sol";
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 
 contract ETHExchanger is IETHExchanger {
@@ -34,7 +33,6 @@ contract ETHExchanger is IETHExchanger {
         uint256 _stETHBalanceAfter = IERC20(stETH).balanceOf(address(this));
         _stEthAmount = _stETHBalanceAfter - _stETHBalanceBefore;
         IERC20(stETH).transfer(_receiver, _stEthAmount);
-        console.log("use %d eth swap to %d stEth", _ethAmount, _stEthAmount);
     }
 
     function stEth2Eth(address _receiver, uint256 _stEthAmount) public override returns (uint256 _ethAmount) {
@@ -46,7 +44,6 @@ contract ETHExchanger is IETHExchanger {
         uint256 _balanceAfter = address(this).balance;
         _ethAmount = _balanceAfter - _balanceBefore;
         payable(_receiver).transfer(_ethAmount);
-        console.log("use %d steth swap to %d eth", _stEthAmount, _ethAmount);
     }
 
     function eth2wstEth(address _receiver) public payable override returns (uint256 _wstEthAmount) {
@@ -56,7 +53,6 @@ contract ETHExchanger is IETHExchanger {
         ICurveFi(CURVE_ETH_STETH_POOL).exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
         uint256 _stETHBalanceAfter = IERC20(stETH).balanceOf(address(this));
         uint256 _stEthAmount = _stETHBalanceAfter - _stETHBalanceBefore;
-        console.log("_stEthAmount2:", _stEthAmount);
 
         IERC20(stETH).approve(wstETH, 0);
         IERC20(stETH).approve(wstETH, _stEthAmount);
@@ -89,7 +85,6 @@ contract ETHExchanger is IETHExchanger {
         IERC20(wETH).approve(UNISWAP_V3_ROUTER, _wethAmount);
         IUniswapV3.ExactInputSingleParams memory _params = IUniswapV3.ExactInputSingleParams(wETH, rETH, 500, _receiver, block.timestamp, _wethAmount, 0, 0);
         _rEthAmount = IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(_params);
-        console.log("_rEthAmount:", _rEthAmount);
     }
 
     function rEth2Eth(address _receiver, uint256 _rEthAmount) public override returns (uint256 _ethAmount) {

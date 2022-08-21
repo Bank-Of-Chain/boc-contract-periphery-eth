@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "../oracle/PriceOracle.sol";
 import "../strategies/IETHStrategy.sol";
-import "hardhat/console.sol";
 
 contract MockVault is AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -43,7 +42,6 @@ contract MockVault is AccessControlMixin {
                 payable(address(_strategy)).transfer(_amount);
             } else {
                 IERC20Upgradeable _item = IERC20Upgradeable(_token);
-                console.log("balance:%d,amount:%d", _item.balanceOf(address(this)), _amount);
                 _item.safeTransfer(_strategy, _amount);
             }
         }
@@ -56,7 +54,6 @@ contract MockVault is AccessControlMixin {
         if (_usdValue > _totalValue) {
             _usdValue = _totalValue;
         }
-        console.log('outputCode:',_outputCode);
         IETHStrategy(_strategy).repay(_usdValue, _totalValue,_outputCode);
     }
 

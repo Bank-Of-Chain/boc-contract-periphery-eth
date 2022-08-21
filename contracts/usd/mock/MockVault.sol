@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "boc-contract-core/contracts/price-feeds/IValueInterpreter.sol";
 import "boc-contract-core/contracts/strategy/IStrategy.sol";
-import "hardhat/console.sol";
 
 contract MockVault is AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -28,11 +27,9 @@ contract MockVault is AccessControlMixin {
             address _token = _assets[i];
             uint256 _amount = _amounts[i];
             IERC20Upgradeable _item = IERC20Upgradeable(_token);
-            console.log("balance:%d,_amount:%d", _item.balanceOf(address(this)), _amount);
             require(_item.balanceOf(address(this)) >= _amount, "Insufficient tokens");
             _item.safeTransfer(_strategy, _amount);
         }
-        console.log("transfer completely");
         IStrategy(_strategy).borrow(_assets, _amounts);
     }
 

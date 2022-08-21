@@ -7,7 +7,6 @@ import "./IPriceOracle.sol";
 import "../../external/lido/IWstETH.sol";
 import "../../external/rocketpool/RocketTokenRETHInterface.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
@@ -64,7 +63,6 @@ contract PriceOracle is IPriceOracle, Initializable {
         uint256 _twapPrice  = getTwapPrice(WETH_RETH_UNI_V3_POOL,3600);
         uint256 _exchangeRate = RocketTokenRETHInterface(rETH).getExchangeRate();
         uint256 _weigthedPrice = (_exchangeRate + _twapPrice) / 2;
-        console.log("reth weigthedPrice:",_weigthedPrice);
         return _weigthedPrice;
     }
 
@@ -183,7 +181,6 @@ contract PriceOracle is IPriceOracle, Initializable {
         int24 _twap = int24((_tickCumulatives[1] - _tickCumulatives[0]) / int32(_twapDuration));
 
         uint256 _priceSqrt = (TickMath.getSqrtRatioAtTick(_twap) * 1e18) / 2**96;
-        console.log("reth _priceSqrt:", _priceSqrt);
         uint256 _twapPrice = _priceSqrt**2 / 1e18;
         return _twapPrice;
     }

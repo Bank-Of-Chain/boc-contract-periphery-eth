@@ -103,7 +103,6 @@ contract Convex3CrvStrategy is ConvexBaseStrategy {
         for (uint256 i = 0; i < _tokens.length; i++) {
             uint256 _depositedTokenAmount = (pool.balances(i) * _lpAmount) / _totalSupply;
             _amounts[i] = balanceOfToken(_tokens[i]) + _depositedTokenAmount;
-            console.log("token %s balance %d", _tokens[i], _amounts[i]);
         }
     }
 
@@ -124,9 +123,7 @@ contract Convex3CrvStrategy is ConvexBaseStrategy {
         returns (uint256)
     {
         address _curvePool = curvePool;
-        console.log("start adding _liquidity");
         for (uint256 i = 0; i < _assets.length; i++) {
-            console.log("amount: %d", _amounts[i]);
             if (_amounts[i] > 0) {
                 IERC20Upgradeable(_assets[i]).safeApprove(_curvePool, 0);
                 IERC20Upgradeable(_assets[i]).safeApprove(_curvePool, _amounts[i]);

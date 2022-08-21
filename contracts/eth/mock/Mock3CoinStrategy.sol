@@ -13,8 +13,6 @@ import "boc-contract-core/contracts/library/StableMath.sol";
 import "../oracle/IPriceOracle.sol";
 import "../vault/IETHVault.sol";
 
-import "hardhat/console.sol";
-
 contract MockS3CoinStrategy is Initializable, AccessControlMixin {
     
     using SafeERC20Upgradeable for IERC20Upgradeable;

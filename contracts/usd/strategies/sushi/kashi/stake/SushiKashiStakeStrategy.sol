@@ -5,8 +5,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/strategy/BaseClaimableStrategy.sol";
 
 import "../../../../enums/ProtocolEnum.sol";
@@ -113,7 +111,6 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
         _rewardsTokens[0] = SUSHI;
         _claimAmounts = new uint256[](1);
         _claimAmounts[0] = balanceOfToken(SUSHI);
-        console.log("[%s] claim rewards sushi balance is %d", this.name(), _claimAmounts[0]);
     }
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
@@ -135,22 +132,16 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
             bytes32(0),
             bytes32(0)
         );
-        console.log("[%s] set master contract approval successfully", this.name());
         // 2. ACTION_BENTO_DEPOSIT
         IERC20Upgradeable(_asset).safeApprove(address(_bentoBox), 0);
         IERC20Upgradeable(_asset).safeApprove(address(_bentoBox), _amount);
         (, uint256 shareOut) = _bentoBox.deposit(_asset, address(this), address(this), _amount, 0);
-        console.log("[%s] deposit bento successfully", this.name());
-        console.log("[%s] _share out is %d", this.name(), shareOut);
         // 3. ACTION_ADD_ASSET
         uint256 _lpAmount = _kashiPair.addAsset(address(this), false, shareOut);
-        console.log("[%s] add asset successfully", this.name());
-        console.log("[%s] lp amount is %d", this.name(), _lpAmount);
         // 4. deposit into MasterChef
         IERC20Upgradeable(address(_kashiPair)).safeApprove(address(MASTERCHEF), 0);
         IERC20Upgradeable(address(_kashiPair)).safeApprove(address(MASTERCHEF), _lpAmount);
         MASTERCHEF.deposit(poolId, _lpAmount);
-        console.log("[%s] deposit successfully", this.name());
     }
 
     function withdrawFrom3rdPool(
@@ -165,35 +156,17 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
         IKashiPair _kashiPair = kashiPari;
         address _want = wants[0];
         uint256 _withdrawAmount = (_lpAmount * _withdrawShares) / _totalShares;
-        console.log(
-            "[%s] lp amount wanted is %d, lp amount is %d",
-            this.name(),
-            _withdrawAmount,
-            balanceOfLpToken()
-        );
         // 1. withdraw from MasterChef
         MASTERCHEF.withdraw(poolId, _withdrawAmount);
-        console.log("[%s] withdraw successfully", this.name());
         (, uint128 base) = _kashiPair.totalAsset();
-        console.log("[%s] kashiPair totalAsset base is %d", this.name(), base);
         uint256 _pairLeft = base - _withdrawAmount;
         if (_pairLeft < KASHI_MINIMUM) {
             _withdrawAmount = _withdrawAmount - (KASHI_MINIMUM - _pairLeft);
-            console.log(
-                "[%s] kashi totalSupply will be less than minimum, so cut the withdrawn lp amount"
-            );
         }
         // 2. ACTION_REMOVE_ASSET
         uint256 _share = _kashiPair.removeAsset(address(this), _withdrawAmount);
-        console.log("[%s] remove asset successfully", this.name());
-        console.log("[%s] _share is %d", this.name(), _share);
         // 3. ACTION_BENTO_WITHDRAW
         bentoBox.withdraw(_want, address(this), address(this), 0, _share);
-        console.log(
-            "[%s] real amount out is %d",
-            this.name(),
-            IERC20Upgradeable(_want).balanceOf(address(this))
-        );
     }
 
     function balanceOfLpToken() public view returns (uint256) {

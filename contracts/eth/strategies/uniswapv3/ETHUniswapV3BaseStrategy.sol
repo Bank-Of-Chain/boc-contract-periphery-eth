@@ -14,7 +14,6 @@ import "./../../../external/uniswapV3/INonfungiblePositionManager.sol";
 import "./../../../external/uniswapV3/libraries/LiquidityAmounts.sol";
 import "../../../utils/actions/UniswapV3LiquidityActionsMixin.sol";
 import "./../../enums/ProtocolEnum.sol";
-import "hardhat/console.sol";
 
 abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3LiquidityActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -98,7 +97,6 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         }
 
         (uint256 _amount0, uint256 _amount1) = getAmountsForLiquidity(_tickLower, _tickUpper, pool.liquidity());
-        console.log("UniswapV3BaseStrategy getWantsInfo _amount0: %d, _amount1: %d", _amount0, _amount1);
         _ratios = new uint256[](2);
         _ratios[0] = _amount0;
         _ratios[1] = _amount1;
@@ -116,29 +114,13 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         _tickCeil = _tickFloor + tickSpacing;
         _tickLower = _tickFloor - baseThreshold;
         _tickUpper = _tickCeil + baseThreshold;
-        console.log("UniswapV3BaseStrategy getSpecifiedRangesOfTick _tick:");
-        console.logInt(_tick);
-        console.log("UniswapV3BaseStrategy getSpecifiedRangesOfTick _tickFloor:");
-        console.logInt(_tickFloor);
-        console.log("UniswapV3BaseStrategy getSpecifiedRangesOfTick _tickCeil:");
-        console.logInt(_tickCeil);
-        console.log("UniswapV3BaseStrategy getSpecifiedRangesOfTick _tickLower:");
-        console.logInt(_tickLower);
-        console.log("UniswapV3BaseStrategy getSpecifiedRangesOfTick _tickUpper:");
-        console.logInt(_tickUpper);
     }
 
     function getAmountsForLiquidity(int24 _tickLower, int24 _tickUpper, uint128 _liquidity) internal view returns (uint256, uint256) {
         (uint160 _sqrtPriceX96, , , , , ,) = pool.slot0();
-        console.log("UniswapV3BaseStrategy getAmountsForLiquidity _sqrtPriceX96:", _sqrtPriceX96);
-        console.log("UniswapV3BaseStrategy getAmountsForLiquidity TickMath.getSqrtRatioAtTick(_tickLower):", TickMath.getSqrtRatioAtTick(_tickLower));
-        console.log("UniswapV3BaseStrategy getAmountsForLiquidity TickMath.getSqrtRatioAtTick(_tickUpper):", TickMath.getSqrtRatioAtTick(_tickUpper));
-        console.log("UniswapV3BaseStrategy getAmountsForLiquidity _liquidity:", _liquidity);
         (uint256 _amount0, uint256 _amount1) = LiquidityAmounts.getAmountsForLiquidity(
             _sqrtPriceX96, TickMath.getSqrtRatioAtTick(_tickLower), TickMath.getSqrtRatioAtTick(_tickUpper), _liquidity
             );
-        console.log("UniswapV3BaseStrategy getAmountsForLiquidity _amount0:", _amount0);
-        console.log("UniswapV3BaseStrategy getAmountsForLiquidity _amount1:", _amount1);
         return (_amount0, _amount1);
     }
 
@@ -157,15 +139,11 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
 
     function balanceOfPoolWants(MintInfo memory _mintInfo) internal view returns (uint256, uint256) {
         if (_mintInfo.tokenId == 0) return (0, 0);
-        console.log("UniswapV3BaseStrategy balanceOfPoolWants _mintInfo.tokenId:", _mintInfo.tokenId);
-        console.logInt(_mintInfo.tickLower);
-        console.logInt(_mintInfo.tickUpper);
         return getAmountsForLiquidity(_mintInfo.tickLower, _mintInfo.tickUpper, balanceOfLpToken(_mintInfo.tokenId));
     }
 
     function get3rdPoolAssets() external view override returns (uint256 totalAssets) {
         address _pool = IUniswapV3Factory(nonfungiblePositionManager.factory()).getPool(token0, token1, fee);
-        console.log("UniswapV3BaseStrategy get3rdPoolAssets _pool: %s", _pool);
         totalAssets = queryTokenValueInETH(token0, IERC20Minimal(token0).balanceOf(_pool));
         totalAssets += queryTokenValueInETH(token1, IERC20Minimal(token1).balanceOf(_pool));
     }
@@ -193,22 +171,16 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     function swapRewardsToWants() internal virtual override {}
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal virtual override {
-        console.log("UniswapV3BaseStrategy depositTo3rdPool balanceOfToken0 before: ", balanceOfToken(token0));
-        console.log("UniswapV3BaseStrategy depositTo3rdPool balanceOfToken1 before: ", balanceOfToken(token1));
         (, int24 _tick,,,,,) = pool.slot0();
         if (baseMintInfo.tokenId == 0) {
-            console.log("UniswapV3BaseStrategy depositTo3rdPool mintNewPosition");
             (,, int24 _tickLower, int24 _tickUpper) = getSpecifiedRangesOfTick(_tick);
             mintNewPosition(_tickLower, _tickUpper, balanceOfToken(token0), balanceOfToken(token1), true);
             lastTimestamp = block.timestamp;
             lastTick = _tick;
-            console.log("UniswapV3BaseStrategy depositTo3rdPool mintNewPosition end");
         } else {
             if (shouldRebalance(_tick)) {
-                console.log("UniswapV3BaseStrategy depositTo3rdPool rebalance");
                 rebalance(_tick);
             } else {
-                console.log("UniswapV3BaseStrategy depositTo3rdPool addLiquidity");
                 //add liquidity
                 INonfungiblePositionManager.IncreaseLiquidityParams memory _params = INonfungiblePositionManager.IncreaseLiquidityParams({
                 tokenId : baseMintInfo.tokenId,
@@ -221,10 +193,6 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
                 __addLiquidity(_params);
             }
         }
-
-        console.log("UniswapV3BaseStrategy depositTo3rdPool balanceOfToken0 after: ", balanceOfToken(token0));
-        console.log("UniswapV3BaseStrategy depositTo3rdPool balanceOfToken1 after: ", balanceOfToken(token1));
-        console.log("UniswapV3BaseStrategy depositTo3rdPool liquidity after: ", __getLiquidityForNFT(baseMintInfo.tokenId));
     }
 
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal virtual override {
@@ -247,7 +215,6 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     function removeLiquidity(uint256 _tokenId, uint128 _liquidity) internal {
-        console.log("UniswapV3BaseStrategy removeLiquidity liquidity %d", _liquidity);
         // remove liquidity
         INonfungiblePositionManager.DecreaseLiquidityParams memory _params = INonfungiblePositionManager.DecreaseLiquidityParams({
         tokenId : _tokenId,
@@ -256,11 +223,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         amount1Min : 0,
         deadline : block.timestamp
         });
-        console.log("UniswapV3BaseStrategy removeLiquidity balanceOfToken0 before: ", balanceOfToken(token0));
-        console.log("UniswapV3BaseStrategy removeLiquidity balanceOfToken1 before: ", balanceOfToken(token1));
         __removeLiquidity(_params);
-        console.log("UniswapV3BaseStrategy removeLiquidity balanceOfToken0 after: ", balanceOfToken(token0));
-        console.log("UniswapV3BaseStrategy removeLiquidity balanceOfToken1 after: ", balanceOfToken(token1));
     }
 
     function balanceOfLpToken(uint256 _tokenId) public view returns (uint128) {
@@ -294,7 +257,6 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         (int24 _tickFloor, int24 _tickCeil, int24 _tickLower, int24 _tickUpper) = getSpecifiedRangesOfTick(_tick);
         uint256 _balance0 = balanceOfToken(token0);
         uint256 _balance1 = balanceOfToken(token1);
-        console.log("UniswapV3BaseStrategy rebalance base mintNewPosition before _balance0: %d, _balance1: %d", _balance0, _balance1);
         if (_balance0 > 0 && _balance1 > 0) {
             mintNewPosition(_tickLower, _tickUpper, _balance0, _balance1, true);
             _balance0 = balanceOfToken(token0);
@@ -302,16 +264,12 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         }
 
         if (_balance0 > 0 || _balance1 > 0) {
-            console.log("UniswapV3BaseStrategy rebalance limit mintNewPosition before _balance0: %d, _balance1: %d", _balance0, _balance1);
             // Place bid or ask order on Uniswap depending on which token is left
             if (getLiquidityForAmounts(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1) > getLiquidityForAmounts(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1)) {
                 mintNewPosition(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1, false);
-                console.log("UniswapV3BaseStrategy rebalance limit bid mintNewPosition");
             } else {
                 mintNewPosition(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1, false);
-                console.log("UniswapV3BaseStrategy rebalance limit ask mintNewPosition");
             }
-            console.log("UniswapV3BaseStrategy rebalance limit mintNewPosition after _balance0: %d, _balance1: %d", balanceOfToken(token0), balanceOfToken(token1));
         }
         lastTimestamp = block.timestamp;
         lastTick = _tick;
@@ -387,22 +345,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         recipient : address(this),
         deadline : block.timestamp
         });
-        console.log("UniswapV3BaseStrategy mintNewPosition token0: ");
-        console.logAddress(token0);
-        console.log("UniswapV3BaseStrategy mintNewPosition token1: ");
-        console.logAddress(token1);
-        console.log("UniswapV3BaseStrategy mintNewPosition _tickLower: ");
-        console.logInt(_tickLower);
-        console.log("UniswapV3BaseStrategy mintNewPosition _tickUpper: ");
-        console.logInt(_tickUpper);
-        console.log("UniswapV3BaseStrategy mintNewPosition _amount0Desired: ", _amount0Desired);
-        console.log("UniswapV3BaseStrategy mintNewPosition _amount1Desired: ", _amount1Desired);
-        console.log("UniswapV3BaseStrategy mintNewPosition _base: ", _base);
         (tokenId, liquidity, _amount0, _amount1) = __mint(_params);
-        console.log("UniswapV3BaseStrategy mintNewPosition tokenId: ", tokenId);
-        console.log("UniswapV3BaseStrategy mintNewPosition liquidity: ", liquidity);
-        console.log("UniswapV3BaseStrategy mintNewPosition _amount0: ", _amount0);
-        console.log("UniswapV3BaseStrategy mintNewPosition _amount1: ", _amount1);
         if (_base) {
             baseMintInfo = MintInfo({tokenId : tokenId, tickLower : _tickLower, tickUpper : _tickUpper});
         } else {

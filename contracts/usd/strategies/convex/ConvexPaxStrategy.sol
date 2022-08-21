@@ -134,21 +134,17 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
             [uint256(0), uint256(0), uint256(0), uint256(0)]
         );
         uint256 _yDaiBalance = balanceOfToken(ycDAI);
-        console.log("daiBalance:%d", _yDaiBalance);
         if (_yDaiBalance > 0) {
             IYearnVault(ycDAI).withdraw(_yDaiBalance);
         }
         uint256 _yUsdcBalance = balanceOfToken(ycUSDC);
-        console.log("_yUsdcBalance:%d", _yUsdcBalance);
         if (_yUsdcBalance > 0) {
             IYearnVault(ycUSDC).withdraw(_yUsdcBalance);
         }
         uint256 _yUsdtBalance = balanceOfToken(ycUSDT);
-        console.log("_yUsdtBalance:%d", _yUsdtBalance);
         if (_yUsdtBalance > 0) {
             IYearnVault(ycUSDT).withdraw(_yUsdtBalance);
         }
         uint256 _yTusdBalance = balanceOfToken(PAX);
-        console.log("PaxBalance:%d", _yTusdBalance);
     }
 }

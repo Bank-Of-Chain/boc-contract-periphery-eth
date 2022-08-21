@@ -6,8 +6,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
 import "./../../../enums/ProtocolEnum.sol";
 
@@ -373,7 +371,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         address _borrowToken = _borrowCToken.underlying();
         uint256 _borrowTokenPrice = _borrowTokenPrice();
         _value = (_borrowBalanceCurrent * _borrowTokenPrice) / decimalUnitOfToken(_borrowToken) / 1e12; //div 1e12 for normalized
-        console.log("debts:%s", _value);
     }
 
     //_collateral assets（USD-1e18)
@@ -404,7 +401,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         } else {
             _overflow = _currentBorrow - _borrowAvaible;
         }
-        console.log("borrowInfo _space:%s,_overflow:%s ", _space, _overflow);
     }
 
     function getCurveLpToken() public view returns (address) {
@@ -436,7 +432,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             IConvexReward(_rewardPool).getReward();
             uint256 _crvBalance = balanceOfToken(REWARD_CRV);
             uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
-            console.log("[%s] claim reward:%s,%s", this.name(), _crvBalance, _cvxBalance);
             _sellCrvAndCvx(_crvBalance, _cvxBalance);
             //sell kpr
             uint256 _rkprBalance = balanceOfToken(RKPR);
@@ -476,14 +471,12 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     // Collateral Token Price In USD ,decimals 1e30
     function _collateralTokenPrice() internal view returns (uint256) {
         uint256 _collateralTokenPrice = priceOracle.getUnderlyingPrice(address(COLLATERAL_CTOKEN));
-        console.log("[%s] _collateralTokenPrice", this.name(), _collateralTokenPrice);
         return _collateralTokenPrice;
     }
 
     // Borrown Token Price In USD ，decimals 1e30
     function _borrowTokenPrice() internal view returns (uint256) {
         uint256 _borrowTokenPrice = _getNormalizedBorrowToken();
-        console.log("[%s] _borrowTokenPrice", this.name(), _borrowTokenPrice);
         require(_borrowTokenPrice > 0);
         return _borrowTokenPrice;
     }
@@ -535,7 +528,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         //----by fixed ratio
         _underlyingPart = (underlyingPartRatio * _underlyingTokenAmount) / BPS;
         _forexPart = _underlyingTokenAmount - _underlyingPart;
-        console.log("_underlyingPart:%s,_forexPart:%s", _underlyingPart, _forexPart);
     }
 
     function _invest(uint256 _ibTokenAmount, uint256 _underlyingTokenAmount) internal {
@@ -543,7 +535,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
 
         address _lpToken = getCurveLpToken();
         uint256 _liquidity = balanceOfToken(_lpToken);
-        console.log("receive _liquidity:%s", _liquidity);
         address _booster = BOOSTER;
         //saving gas
         if (_liquidity > 0) {
@@ -589,12 +580,10 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             decimalUnitOfToken(_collaterCTokenAddr)) /
             _exchangeRateMantissa /
             decimalUnitOfToken(_collateralToken);
-        console.log("_exitCollateralC:%s", _exitCollateralC);
         CTokenInterface(_collaterCTokenAddr).redeem(
             MathUpgradeable.min(_exitCollateralC, balanceOfToken(_collaterCTokenAddr))
         );
         uint256 _balanceOfCollateral = balanceOfToken(_collateralToken);
-        console.log("_exitCollateral:%s,actual receive:%s", _exitCollateral, _balanceOfCollateral);
         _invest(0, _balanceOfCollateral);
     }
 
@@ -622,7 +611,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
 
     function rebalance() external isKeeper {
         (uint256 _space, uint256 _overflow) = borrowInfo();
-        console.log("rebalance _space:%s,_overflow:%s", _space, _overflow);
         if (_space > 0) {
             exitCollateralInvestToCurvePool(_space);
         } else if (_overflow > 0) {
@@ -638,12 +626,10 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
                 uint256 _exitForex = balanceOfToken(getIronBankForex());
                 if (_exitForex > 0) {
                     _repayForex(_exitForex);
-                    console.log("_exitForex:", _exitForex);
                 }
                 uint256 _underlyingBalance = balanceOfToken(COLLATERAL_TOKEN);
                 // add _collateral
                 _mintCollateralCToken(_underlyingBalance);
-                console.log("add _collateral:", _underlyingBalance);
             }
         }
     }
@@ -673,7 +659,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         if (_withdrawShares == _totalShares) _claimAndInvest();
         uint256 _totalStaking = balanceOfToken(rewardPool);
         uint256 _cvxLpAmount = (_totalStaking * _withdrawShares) / _totalShares;
-        console.log("[%s] _cvxLpAmount: %s", this.name(), _cvxLpAmount);
         //saving gas
         CTokenInterface _borrowC = borrowCToken;
         //saving gas
@@ -686,7 +671,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             uint256 _currentBorrow = _borrowC.borrowBalanceCurrent(address(this));
             uint256 _repayAmount = (_currentBorrow * _withdrawShares) / _totalShares;
             // _repayAmount = MathUpgradeable.min(_repayAmount, _borrowTokenBalance);
-            console.log("Current Debts:%s", _currentBorrow);
             address _curvePool = curvePool;
             //资不抵债时，将USDC换成债务token
             if (_borrowTokenBalance < _repayAmount) {
@@ -695,9 +679,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
                 uint256 _forSwap = (_underlyingBalance * (_repayAmount - _borrowTokenBalance)) /
                     _reserve;
                 uint256 _swapUse = MathUpgradeable.min(_forSwap, _underlyingBalance);
-                console.log("_swapUse:%s,underlying:%s", _swapUse, _underlyingBalance);
                 uint256 _extra = ICurveMini(_curvePool).exchange(1, 0, _swapUse, 0);
-                console.log("exchange _extra:", _extra);
             }
             _repayAmount = MathUpgradeable.min(_repayAmount, balanceOfToken(_borrowToken));
             _repayForex(_repayAmount);

@@ -3,7 +3,7 @@
 
 // import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 // import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-// import "hardhat/console.sol";
+//
 
 // import "../../../external/curve/ICurveLiquidityPool.sol";
 // import "../../../external/yearn/IYearnVault.sol";
@@ -114,11 +114,9 @@
 //         override
 //         returns (uint256)
 //     {
-//         console.log("start adding liquidity");
 //         IYearnVault[] memory yTokens = getYTokens();
 //         uint256[] memory yTokenAmounts = new uint256[](4);
 //         for (uint256 i = 0; i < _assets.length; i++) {
-//             console.log("amount: %d", _amounts[i]);
 //             if (_amounts[i] > 0) {
 //                 address yTokenAddress = address(yTokens[i]);
 //                 IERC20Upgradeable(_assets[i]).safeApprove(yTokenAddress, 0);
@@ -137,7 +135,6 @@
 //     }
 
 //     function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
-//         console.log("liquidity:%d", liquidity);
 //         getCurvePool().remove_liquidity(liquidity, [uint256(0), uint256(0), uint256(0), uint256(0)]);
 //         IYearnVault[] memory yTokens = getYTokens();
 //         for (uint256 i = 0; i < yTokens.length; i++) {

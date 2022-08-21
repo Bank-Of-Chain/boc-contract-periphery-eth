@@ -23,7 +23,6 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
         (bool _claimIsWorth, address[] memory __rewardsTokens,uint256[] memory __claimAmounts ) = claimRewards();
         _rewardsTokens = __rewardsTokens;
         _claimAmounts = __claimAmounts;
-        console.log("_claimIsWorth:", _claimIsWorth);
         if (_claimIsWorth) {
             swapRewardsToWants();
             reInvest();

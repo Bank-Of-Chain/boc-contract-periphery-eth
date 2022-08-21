@@ -16,8 +16,6 @@ import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../ETHBaseClaimableStrategy.sol";
 import "../../enums/ProtocolEnum.sol";
 
-import "hardhat/console.sol";
-
 contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     enum JoinKind {
@@ -206,7 +204,6 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         override
     {
         uint256 _receiveLpAmount = _depositToBalancer(_assets, _amounts);
-        console.log("_receiveLpAmount:", _receiveLpAmount);
         AURA_BOOSTER.deposit(getPId(), _receiveLpAmount, true);
     }
 
@@ -238,7 +235,6 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         uint256 _withdrawAmount = (getStakingAmount() * _withdrawShares) / _totalShares;
         //unstaking
         IRewardPool(getRewardPool()).redeem(_withdrawAmount, address(this), address(this));
-        console.log("lpAmount:", balanceOfToken(getPoolLpToken()));
         _withdrawFromBalancer(_withdrawAmount, _outputCode);
     }
 
@@ -289,7 +285,6 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         uint256 earn = IRewardPool(_rewardPool).earned(address(this));
         if (earn > sellFloor[BAL]) {
             _claimIsWorth = true;
-            console.log("earn:", earn);
             IRewardPool(_rewardPool).getReward();
             _rewardsTokens = new address[](2);
             _rewardsTokens[0] = BAL;

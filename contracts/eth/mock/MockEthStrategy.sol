@@ -5,8 +5,6 @@ pragma solidity ^0.8.0;
 import "../strategies/ETHBaseStrategy.sol";
 import "./Mock3rdEthPool.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
-
-import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 contract MockEthStrategy is ETHBaseStrategy {
@@ -17,7 +15,6 @@ contract MockEthStrategy is ETHBaseStrategy {
         address _vault,
         address _mock3rdPool
     ) public initializer {
-        console.log("MockEthStrategy--initialize");
         mock3rdPool = Mock3rdEthPool(payable(_mock3rdPool));
 
         address[] memory _wants = new address[](2);

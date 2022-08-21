@@ -3,8 +3,6 @@ pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 import '../../external/paraswap/IParaswapV5.sol';
-
-import 'hardhat/console.sol';
 import './ExchangeHelpers.sol';
 
 abstract contract ParaSwapV5ActionsMixin is ExchangeHelpers {

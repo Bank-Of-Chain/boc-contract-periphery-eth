@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/exchanges/IExchangeAdapter.sol";
 import "boc-contract-core/contracts/library/RevertReasonParser.sol";
 import "../utils/ExchangeHelpers.sol";
@@ -56,10 +54,8 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
         if(_sd.srcToken != NativeToken.NATIVE_TOKEN){
             IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, 0);
             IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, _sd.amount);
-            console.log("[OneInchV4Adapter] start swap");
             (_success, _result) = AGGREGATION_ROUTER_V4.call(_callData);
         }else{
-            console.log("[OneInchV4Adapter] start swap");
             (_success, _result) = payable(AGGREGATION_ROUTER_V4).call{value: _sd.amount}(_callData);
         }
 
@@ -67,11 +63,9 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
         if (!_success) {
             revert(RevertReasonParser.parse(_result, "1inch V4 swap failed: "));
         }
-        console.log("[OneInchV4Adapter] swap ok");
 
         uint256 _exchangeAmount = getTokenBalance(_sd.dstToken, address(this)) - _toTokenBefore;
         _sd.dstToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(_exchangeAmount):IERC20(_sd.dstToken).safeTransfer(_sd.receiver, _exchangeAmount);
-        console.log("swap and transfer ok, return _sd.receiver:%s, token:%s, _exchangeAmount:%s", _sd.receiver, _sd.dstToken, _exchangeAmount);
         return _exchangeAmount;
     }
 

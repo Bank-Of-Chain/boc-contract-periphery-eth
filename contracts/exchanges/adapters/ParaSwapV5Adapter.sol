@@ -7,7 +7,6 @@ import "boc-contract-core/contracts/exchanges/IExchangeAdapter.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 import "boc-contract-core/contracts/library/RevertReasonParser.sol";
 import "@openzeppelin/contracts~v3/math/SafeMath.sol";
-import "hardhat/console.sol";
 
 /// @title ParaSwapV4Adapter Contract
 /// @author Enzyme Council <security@enzyme.finance>
@@ -62,7 +61,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.SellData memory _data) = abi.decode(_encodedCallArgs, (Utils.SellData));
-        console.log("multiSwap");
         __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
         __validateToTokenAddress(_data.path[_data.path.length - 1].to, _sd.dstToken);
         // data.fromAmount can not be modify, even 1 (decimals in 18)
@@ -78,7 +76,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.MegaSwapSellData memory data) = abi.decode(_encodedCallArgs, (Utils.MegaSwapSellData));
-        console.log("megaSwap");
 
         __validateFromTokenAmount(data.fromToken, _sd.srcToken);
         for (uint256 i = 0; i < data.path.length; i++) {
@@ -98,7 +95,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.SellData memory _data) = abi.decode(_encodedCallArgs, (Utils.SellData));
-        console.log("protectedMultiSwap");
 
         __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
         __validateToTokenAddress(_data.path[_data.path.length - 1].to, _sd.dstToken);
@@ -114,7 +110,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.MegaSwapSellData memory _data) = abi.decode(_encodedCallArgs, (Utils.MegaSwapSellData));
-        console.log("protectedMegaSwap");
 
         __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
         for (uint256 i = 0; i < _data.path.length; i++) {
@@ -134,7 +129,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.SimpleData memory _data) = abi.decode(_encodedCallArgs, (Utils.SimpleData));
-        console.log("protectedSimpleSwap");
 
         __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
         __validateToTokenAddress(_data.toToken, _sd.dstToken);
@@ -151,8 +145,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (Utils.SimpleData memory _data) = abi.decode(_encodedCallArgs, (Utils.SimpleData));
-        console.log("simpleSwap");
-        console.log("simpleSwap _data.fromToken:%s", _data.fromToken);
 
         __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
         __validateToTokenAddress(_data.toToken, _sd.dstToken);
@@ -169,7 +161,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
         (uint256 _amountIn,uint256 _amountOutMin,address[] memory _path) = __decodeSwapOnUniswapArgs(_encodedCallArgs);
-        console.log("swapOnUniswap");
 
         address _toToken = _path[_path.length - 1];
         __validateFromTokenAmount(_path[0], _sd.srcToken);
@@ -184,7 +175,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
             _path
         );
         uint256 _amount = getTokenBalance(_sd.dstToken, address(this)).sub(_toTokenBefore);
-        console.log("=========transferToken _amount========:%s", _amount);
         _toToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(_amount):IERC20(_toToken).safeTransfer(_sd.receiver, _amount);
         return _amount;
 
@@ -201,7 +191,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         uint256 _amountOutMin,
         address[] memory _path
         ) = __decodeSwapOnUniswapForkArgs(_encodedCallArgs);
-        console.log("swapOnUniswapFork");
 
         address _toToken = _path[_path.length - 1];
 
@@ -220,7 +209,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
             _path
         );
         uint256 _amount = getTokenBalance(_sd.dstToken, address(this)) - _toTokenBefore;
-        console.log("=========transferToken _amount========:%s", _amount);
         _toToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(_amount):IERC20(_toToken).safeTransfer(_sd.receiver, _amount);
         return _amount;
     }
@@ -236,8 +224,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         address _weth,
         uint256[] memory _pools
         ) = __decodeSwapOnUniswapV2ForkArgs(_encodedCallArgs);
-        console.log("swapOnUniswapV2Fork _sd.dstToken:%s, _tokenIn:%s", _sd.dstToken, _tokenIn);
-        console.log("swapOnUniswapV2Fork _amountIn:%s, _amountOutMin:%s", _amountIn, _amountOutMin);
         __validateFromTokenAmount(_tokenIn, _sd.srcToken);
 
         _amountOutMin = _sd.amount.mul(_amountOutMin).div(_amountIn);
@@ -253,7 +239,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         );
         uint256 _amount = getTokenBalance(_sd.dstToken, address(this)) - _toTokenBefore;
         _sd.dstToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(_amount):IERC20(_sd.dstToken).safeTransfer(_sd.receiver, _amount);
-        console.log("swapOnUniswapV2Fork transfer ok, _sd.receiver:%s, _amount:%s, _sd.dstToken:%s", _sd.receiver, _amount, _sd.dstToken);
         return _amount;
     }
 
@@ -269,7 +254,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         address _exchange,
         bytes memory _payload
         ) = __decodeSwapOnZeroXv2Args(_encodedCallArgs);
-        console.log("swapOnZeroXv2");
 
         __validateFromTokenAmount(_fromToken, _sd.srcToken);
         __validateToTokenAddress(_toToken, _sd.dstToken);
@@ -303,7 +287,6 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         address _exchange,
         bytes memory _payload
         ) = __decodeSwapOnZeroXv4Args(_encodedCallArgs);
-        console.log("swapOnZeroXv4");
         __validateFromTokenAmount(_fromToken, _sd.srcToken);
         __validateToTokenAddress(_toToken, _sd.dstToken);
 

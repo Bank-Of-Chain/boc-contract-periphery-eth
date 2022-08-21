@@ -5,8 +5,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/strategy/BaseClaimableStrategy.sol";
 import "./../../enums/ProtocolEnum.sol";
 
@@ -143,15 +141,7 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         IERC20Upgradeable(_assets[1]).safeTransfer(_lpTokenPool, _amounts[1]);
         (uint256 _shares, uint256 _baseInput, uint256 _quoteInput) = DodoVault(_lpTokenPool)
             .buyShares(address(this));
-        console.log("[%s] buyShares success, _shares=%s,", address(this), _shares);
-        console.log(
-            "[%s] buyShares success, _baseInput=%s, _quoteInput=%s",
-            address(this),
-            _baseInput,
-            _quoteInput
-        );
         uint256 _lpAmount = IERC20Upgradeable(_lpTokenPool).balanceOf(address(this));
-        console.log("[%s] _lpAmount=", address(this), _lpAmount);
         // Pledge lptoken for mining
         __deposit(_lpAmount);
     }
@@ -161,7 +151,6 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-        console.log("[%s] _withdrawSomeLpToken=", address(this), _withdrawShares, _totalShares);
         uint256 _lpAmount = balanceOfLpToken(address(this));
 
         if (_lpAmount > 0 && _withdrawShares > 0) {

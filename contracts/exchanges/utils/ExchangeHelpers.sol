@@ -5,7 +5,6 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts~v3/math/SafeMath.sol";
 import "@openzeppelin/contracts~v3/token/ERC20/SafeERC20.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
-import "hardhat/console.sol";
 
 abstract contract ExchangeHelpers {
     using SafeMath for uint256;
@@ -39,7 +38,6 @@ abstract contract ExchangeHelpers {
         }else{
             _tokenBalance = IERC20(_dstToken).balanceOf(_owner);
         }
-        console.log("getTokenBalance dstToken:%s, balance:%s, owner:%s", _dstToken, _tokenBalance, _owner);
         return _tokenBalance;
     }
 

@@ -4,8 +4,6 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
 import "./../../../enums/ProtocolEnum.sol";
 import "../../../../external/yearn/IYearnVault.sol";
@@ -82,8 +80,6 @@ contract YearnEarnStrategy is BaseStrategy {
         _amounts = new uint256[](1);
 
         _amounts[0] = _estimatedDepositedAssets() + balanceOfToken(underlyingToken);
-
-        console.log("[%s] getPositionDetail: %s", this.name(), _amounts[0]);
     }
 
     /**
@@ -91,7 +87,6 @@ contract YearnEarnStrategy is BaseStrategy {
      */
     function estimatedDepositedAssets() public view returns (uint256 depositedAssets) {
         depositedAssets = queryTokenValue(wants[0], _estimatedDepositedAssets());
-        console.log("[%s] estimatedDepositedAssets:%s", this.name(), depositedAssets);
     }
 
     /**
@@ -102,7 +97,6 @@ contract YearnEarnStrategy is BaseStrategy {
         depositedAssets =
             (_yVault.calcPoolValueInToken() * balanceOfToken(address(_yVault))) /
             _yVault.totalSupply();
-        console.log("[%s] _estimatedDepositedAssets:%s", this.name(), depositedAssets);
     }
 
     // ==== Internal ==== //

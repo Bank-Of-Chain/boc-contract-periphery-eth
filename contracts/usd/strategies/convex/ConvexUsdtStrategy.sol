@@ -116,12 +116,10 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
             [uint256(0), uint256(0), uint256(0)]
         );
         uint256 _daiBalance = balanceOfToken(cDAI);
-        console.log("_daiBalance:%d", _daiBalance);
         if (_daiBalance > 0) {
             ICToken(cDAI).redeem(_daiBalance);
         }
         uint256 _usdcBalance = balanceOfToken(cUSDC);
-        console.log("_usdcBalance:%d", _usdcBalance);
         if (_usdcBalance > 0) {
             ICToken(cUSDC).redeem(_usdcBalance);
         }
