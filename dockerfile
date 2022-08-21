@@ -1,11 +1,11 @@
 FROM node:16 as builder
 WORKDIR /app
-COPY package.json .
-RUN yarn install
+#COPY package.json .
+#RUN yarn install
 
 FROM node:16
 WORKDIR /app
 COPY --from=builder /app/ /app/
 COPY . .
 EXPOSE 8545
-ENTRYPOINT ["yarn","chain"]
+ENTRYPOINT ["sh","docker-entrypoint.sh"]
