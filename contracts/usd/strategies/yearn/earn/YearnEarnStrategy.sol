@@ -59,12 +59,12 @@ contract YearnEarnStrategy is BaseStrategy {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -74,8 +74,8 @@ contract YearnEarnStrategy is BaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;

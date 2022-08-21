@@ -6,5 +6,5 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20Metadat
 interface IERC20_LUSD is IERC20MetadataUpgradeable {
     function borrowerOperationsAddress() external view returns (address);
 
-    function mint(address _to, uint256 amount) external;
+    function mint(address _to, uint256 _amount) external;
 }

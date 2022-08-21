@@ -9,8 +9,8 @@
 
 pragma solidity >=0.8.0 <0.9.0;
 
-import '../../external/uniswap/IUniswapV3SwapRouter.sol';
-import '../AssetHelpers.sol';
+import "../../external/uniswap/IUniswapV3SwapRouter.sol";
+import "../AssetHelpers.sol";
 
 /// @title UniswapV3ActionsMixin Contract
 /// @author Enzyme Council <security@enzyme.finance>
@@ -30,19 +30,19 @@ abstract contract UniswapV3ActionsMixin is AssetHelpers {
     ) internal returns (uint256) {
         __approveAssetMaxAsNeeded(_pathAddresses[0], UNISWAP_V3_ROUTER, _outgoingAssetAmount);
 
-        bytes memory encodedPath;
+        bytes memory _encodedPath;
 
         for (uint256 i=0; i < _pathAddresses.length; i++) {
             if (i != _pathAddresses.length - 1) {
-                encodedPath = abi.encodePacked(encodedPath, _pathAddresses[i], _pathFees[i]);
+                _encodedPath = abi.encodePacked(_encodedPath, _pathAddresses[i], _pathFees[i]);
             } else {
-                encodedPath = abi.encodePacked(encodedPath, _pathAddresses[i]);
+                _encodedPath = abi.encodePacked(_encodedPath, _pathAddresses[i]);
             }
         }
 
-        IUniswapV3SwapRouter.ExactInputParams memory input = IUniswapV3SwapRouter
+        IUniswapV3SwapRouter.ExactInputParams memory _input = IUniswapV3SwapRouter
         .ExactInputParams({
-        path: encodedPath,
+        path: _encodedPath,
         recipient: _recipient,
         deadline: block.timestamp + 1,
         amountIn: _outgoingAssetAmount,
@@ -50,7 +50,7 @@ abstract contract UniswapV3ActionsMixin is AssetHelpers {
         });
 
         // Execute fill
-        return IUniswapV3SwapRouter(UNISWAP_V3_ROUTER).exactInput(input);
+        return IUniswapV3SwapRouter(UNISWAP_V3_ROUTER).exactInput(_input);
     }
 
     ///////////////////
@@ -58,8 +58,8 @@ abstract contract UniswapV3ActionsMixin is AssetHelpers {
     ///////////////////
 
     /// @notice Gets the `UNISWAP_V3_ROUTER` variable
-    /// @return router_ The `UNISWAP_V3_ROUTER` variable value
-    function getUniswapV3Router() public pure returns (address router_) {
+    /// @return _router The `UNISWAP_V3_ROUTER` variable value
+    function getUniswapV3Router() public pure returns (address _router) {
         return UNISWAP_V3_ROUTER;
     }
 }

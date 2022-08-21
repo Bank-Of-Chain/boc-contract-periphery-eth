@@ -52,19 +52,19 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
     {
         console.log("start to depositTo3rdPool");
         // add liquidity on curve
-        uint256 liquidity = curveAddLiquidity(_assets, _amounts);
-        console.log("curveLpAmount:%d", liquidity);
-        if (liquidity > 0) {
+        uint256 _liquidity = curveAddLiquidity(_assets, _amounts);
+        console.log("curveLpAmount:%d", _liquidity);
+        if (_liquidity > 0) {
             console.log("deposit into Convex, pid:%d, lp amount:%d", pid, balanceOfToken(lpToken));
             IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), 0);
-            IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), liquidity);
+            IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), _liquidity);
             // deposit into convex booster and stake at reward pool automically
-            BOOSTER.deposit(pid, liquidity, true);
+            BOOSTER.deposit(pid, _liquidity, true);
         }
     }
 
     /// @dev do not remove with one coin, and return underlying
-    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal virtual;
+    function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal virtual;
 
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,

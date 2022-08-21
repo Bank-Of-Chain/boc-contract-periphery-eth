@@ -16,21 +16,25 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    event Response(bool success, bytes data);
+    event Response(bool _success, bytes _data);
 
-    address private immutable AGGREGATION_ROUTER_V4 = address(0x1111111254fb6c44bAC0beD2854e76F90643097d);
+    address private constant AGGREGATION_ROUTER_V4 = 0x1111111254fb6c44bAC0beD2854e76F90643097d;
 
     bytes4[] private SWAP_METHOD_SELECTOR = [
-    bytes4(keccak256('swap(address,(address,address,address,address,uint256,uint256,uint256,bytes),bytes)')),
-    bytes4(keccak256('unoswap(address,uint256,uint256,bytes32[])')),
-    bytes4(keccak256('unoswapWithPermit(address,uint256,uint256,bytes32[],bytes)')),
-    bytes4(keccak256('uniswapV3Swap(uint256,uint256,uint256[])')),
-    bytes4(keccak256('uniswapV3SwapTo(address,uint256,uint256,uint256[])')),
-    bytes4(keccak256('uniswapV3SwapToWithPermit(address,address,uint256,uint256,uint256[],bytes)')),
-    bytes4(keccak256('clipperSwap(address,address,uint256,uint256)')),
-    bytes4(keccak256('clipperSwapTo(address,address,address,uint256,uint256)')),
-    bytes4(keccak256('clipperSwapToWithPermit(address,address,address,uint256,uint256,bytes)'))
+    bytes4(keccak256("swap(address,(address,address,address,address,uint256,uint256,uint256,bytes),bytes)")),
+    bytes4(keccak256("unoswap(address,uint256,uint256,bytes32[])")),
+    bytes4(keccak256("unoswapWithPermit(address,uint256,uint256,bytes32[],bytes)")),
+    bytes4(keccak256("uniswapV3Swap(uint256,uint256,uint256[])")),
+    bytes4(keccak256("uniswapV3SwapTo(address,uint256,uint256,uint256[])")),
+    bytes4(keccak256("uniswapV3SwapToWithPermit(address,address,uint256,uint256,uint256[],bytes)")),
+    bytes4(keccak256("clipperSwap(address,address,uint256,uint256)")),
+    bytes4(keccak256("clipperSwapTo(address,address,address,uint256,uint256)")),
+    bytes4(keccak256("clipperSwapToWithPermit(address,address,address,uint256,uint256,bytes)"))
     ];
+
+     receive() external payable {}
+
+     fallback() external payable {}
 
     /// @notice Provides a constant string identifier for an adapter
     /// @return identifier An identifier string
@@ -43,9 +47,9 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
         bytes calldata _data,
         SwapDescription calldata _sd
     ) external payable override returns (uint256) {
-        bool success;
-        bytes memory result;
-        uint256 toTokenBefore = getTokenBalance(_sd.dstToken, address(this));
+        bool _success;
+        bytes memory _result;
+        uint256 _toTokenBefore = getTokenBalance(_sd.dstToken, address(this));
 
         bytes memory _callData = _getCallData(_data, _sd);
 
@@ -53,22 +57,22 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, 0);
             IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, _sd.amount);
             console.log("[OneInchV4Adapter] start swap");
-            (success, result) = AGGREGATION_ROUTER_V4.call(_callData);
+            (_success, _result) = AGGREGATION_ROUTER_V4.call(_callData);
         }else{
             console.log("[OneInchV4Adapter] start swap");
-            (success, result) = payable(AGGREGATION_ROUTER_V4).call{value: _sd.amount}(_callData);
+            (_success, _result) = payable(AGGREGATION_ROUTER_V4).call{value: _sd.amount}(_callData);
         }
 
-        emit Response(success, result);
-        if (!success) {
-            revert(RevertReasonParser.parse(result, '1inch V4 swap failed: '));
+        emit Response(_success, _result);
+        if (!_success) {
+            revert(RevertReasonParser.parse(_result, "1inch V4 swap failed: "));
         }
         console.log("[OneInchV4Adapter] swap ok");
 
-        uint256 exchangeAmount = getTokenBalance(_sd.dstToken, address(this)) - toTokenBefore;
-        _sd.dstToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(exchangeAmount):IERC20(_sd.dstToken).safeTransfer(_sd.receiver, exchangeAmount);
-        console.log('swap and transfer ok, return _sd.receiver:%s, token:%s, exchangeAmount:%s', _sd.receiver, _sd.dstToken, exchangeAmount);
-        return exchangeAmount;
+        uint256 _exchangeAmount = getTokenBalance(_sd.dstToken, address(this)) - _toTokenBefore;
+        _sd.dstToken == NativeToken.NATIVE_TOKEN?payable(_sd.receiver).transfer(_exchangeAmount):IERC20(_sd.dstToken).safeTransfer(_sd.receiver, _exchangeAmount);
+        console.log("swap and transfer ok, return _sd.receiver:%s, token:%s, _exchangeAmount:%s", _sd.receiver, _sd.dstToken, _exchangeAmount);
+        return _exchangeAmount;
     }
 
     function _getCallData(bytes calldata _data, SwapDescription calldata _sd) private view returns(bytes memory){
@@ -176,6 +180,4 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
         }
     }
 
-    receive() external payable {
-    }
 }

@@ -64,12 +64,12 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
 
         // not support remove_liquidity_one_coin
     }
@@ -81,12 +81,12 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
-        isUsd = true;
-        usdValue =
+        _isUsd = true;
+        _usdValue =
             (ICurveLiquidityPool(curvePool).get_virtual_price() * balanceOfLpToken()) /
             decimalUnitOfToken(lpToken);
     }
@@ -102,53 +102,53 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
         override
         returns (uint256)
     {
-        uint256[] memory depositAmounts = new uint256[](4);
-        address[] memory yTokens = new address[](4);
-        yTokens[0] = ycDAI;
-        yTokens[1] = ycUSDC;
-        yTokens[2] = ycUSDT;
-        yTokens[3] = PAX;
+        uint256[] memory _depositAmounts = new uint256[](4);
+        address[] memory _yTokens = new address[](4);
+        _yTokens[0] = ycDAI;
+        _yTokens[1] = ycUSDC;
+        _yTokens[2] = ycUSDT;
+        _yTokens[3] = PAX;
         for (uint256 i = 0; i < _assets.length; i++) {
             if (_amounts[i] > 0) {
                 // The last coin, PAX, does not require investment into yearn
                 if (_assets.length - 1 != i) {
-                    IERC20Upgradeable(_assets[i]).safeApprove(yTokens[i], 0);
-                    IERC20Upgradeable(_assets[i]).safeApprove(yTokens[i], _amounts[i]);
-                    IYearnVault(yTokens[i]).deposit(_amounts[i]);
+                    IERC20Upgradeable(_assets[i]).safeApprove(_yTokens[i], 0);
+                    IERC20Upgradeable(_assets[i]).safeApprove(_yTokens[i], _amounts[i]);
+                    IYearnVault(_yTokens[i]).deposit(_amounts[i]);
                 }
-                depositAmounts[i] = balanceOfToken(yTokens[i]);
-                IERC20Upgradeable(yTokens[i]).safeApprove(curvePool, 0);
-                IERC20Upgradeable(yTokens[i]).safeApprove(curvePool, depositAmounts[i]);
+                _depositAmounts[i] = balanceOfToken(_yTokens[i]);
+                IERC20Upgradeable(_yTokens[i]).safeApprove(curvePool, 0);
+                IERC20Upgradeable(_yTokens[i]).safeApprove(curvePool, _depositAmounts[i]);
             }
         }
         ICurveLiquidityPool(curvePool).add_liquidity(
-            [depositAmounts[0], depositAmounts[1], depositAmounts[2], depositAmounts[3]],
+            [_depositAmounts[0], _depositAmounts[1], _depositAmounts[2], _depositAmounts[3]],
             0
         );
         return balanceOfToken(lpToken);
     }
 
-    function curveRemoveLiquidity(uint256 removeLiquidity, uint256 _outputCode) internal override {
+    function curveRemoveLiquidity(uint256 _removeLiquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool(curvePool).remove_liquidity(
-            removeLiquidity,
+            _removeLiquidity,
             [uint256(0), uint256(0), uint256(0), uint256(0)]
         );
-        uint256 yDaiBalance = balanceOfToken(ycDAI);
-        console.log("daiBalance:%d", yDaiBalance);
-        if (yDaiBalance > 0) {
-            IYearnVault(ycDAI).withdraw(yDaiBalance);
+        uint256 _yDaiBalance = balanceOfToken(ycDAI);
+        console.log("daiBalance:%d", _yDaiBalance);
+        if (_yDaiBalance > 0) {
+            IYearnVault(ycDAI).withdraw(_yDaiBalance);
         }
-        uint256 yUsdcBalance = balanceOfToken(ycUSDC);
-        console.log("yUsdcBalance:%d", yUsdcBalance);
-        if (yUsdcBalance > 0) {
-            IYearnVault(ycUSDC).withdraw(yUsdcBalance);
+        uint256 _yUsdcBalance = balanceOfToken(ycUSDC);
+        console.log("_yUsdcBalance:%d", _yUsdcBalance);
+        if (_yUsdcBalance > 0) {
+            IYearnVault(ycUSDC).withdraw(_yUsdcBalance);
         }
-        uint256 yUsdtBalance = balanceOfToken(ycUSDT);
-        console.log("yUsdtBalance:%d", yUsdtBalance);
-        if (yUsdtBalance > 0) {
-            IYearnVault(ycUSDT).withdraw(yUsdtBalance);
+        uint256 _yUsdtBalance = balanceOfToken(ycUSDT);
+        console.log("_yUsdtBalance:%d", _yUsdtBalance);
+        if (_yUsdtBalance > 0) {
+            IYearnVault(ycUSDT).withdraw(_yUsdtBalance);
         }
-        uint256 yTusdBalance = balanceOfToken(PAX);
-        console.log("PaxBalance:%d", yTusdBalance);
+        uint256 _yTusdBalance = balanceOfToken(PAX);
+        console.log("PaxBalance:%d", _yTusdBalance);
     }
 }

@@ -125,13 +125,13 @@ contract ETHVault is ETHVaultStorage {
     function totalValueInStrategies() public view returns (uint256 _value) {
         uint256 _strategyLength = strategySet.length();
         for (uint256 i = 0; i < _strategyLength; i++) {
-            uint256 estimatedTotalAssets = IETHStrategy(strategySet.at(i)).estimatedTotalAssets();
-            if (estimatedTotalAssets > 0) {
+            uint256 _estimatedTotalAssets = IETHStrategy(strategySet.at(i)).estimatedTotalAssets();
+            if (_estimatedTotalAssets > 0) {
                 _value =
                     _value +
                     IPriceOracle(priceProvider).valueInUsd(
                         NativeToken.NATIVE_TOKEN,
-                        estimatedTotalAssets
+                        _estimatedTotalAssets
                     );
             }
         }
@@ -1205,10 +1205,10 @@ contract ETHVault is ETHVaultStorage {
         address _toToken,
         uint256 _amount,
         IExchangeAggregator.ExchangeParam memory _exchangeParam
-    ) internal returns (uint256 exchangeAmount) {
+    ) internal returns (uint256 _exchangeAmount) {
         require(trackedAssetsMap.contains(_toToken), "!T");
 
-        IExchangeAdapter.SwapDescription memory swapDescription = IExchangeAdapter
+        IExchangeAdapter.SwapDescription memory _swapDescription = IExchangeAdapter
             .SwapDescription({
                 amount: _amount,
                 srcToken: _fromToken,
@@ -1217,37 +1217,37 @@ contract ETHVault is ETHVaultStorage {
             });
         if (_fromToken == NativeToken.NATIVE_TOKEN) {
             // payable(exchangeManager).transfer(_amount);
-            exchangeAmount = IExchangeAggregator(exchangeManager).swap{value: _amount}(
+            _exchangeAmount = IExchangeAggregator(exchangeManager).swap{value: _amount}(
                 _exchangeParam.platform,
                 _exchangeParam.method,
                 _exchangeParam.encodeExchangeArgs,
-                swapDescription
+                _swapDescription
             );
         } else {
             IERC20Upgradeable(_fromToken).safeApprove(exchangeManager, _amount);
-            exchangeAmount = IExchangeAggregator(exchangeManager).swap(
+            _exchangeAmount = IExchangeAggregator(exchangeManager).swap(
                 _exchangeParam.platform,
                 _exchangeParam.method,
                 _exchangeParam.encodeExchangeArgs,
-                swapDescription
+                _swapDescription
             );
         }
 
-        uint256 oracleExpectedAmount = IPriceOracle(priceProvider).valueInTargetToken(
+        uint256 _oracleExpectedAmount = IPriceOracle(priceProvider).valueInTargetToken(
             _fromToken,
             _amount,
             _toToken
         );
-        console.log("(oracleExpectedAmount,exchangeAmount)=");
-        console.log(oracleExpectedAmount, exchangeAmount);
+        console.log("(_oracleExpectedAmount,_exchangeAmount)=");
+        console.log(_oracleExpectedAmount, _exchangeAmount);
         require(
-            exchangeAmount >=
-                (oracleExpectedAmount *
+            _exchangeAmount >=
+                (_oracleExpectedAmount *
                     (MAX_BPS - _exchangeParam.slippage - _exchangeParam.oracleAdditionalSlippage)) /
                     MAX_BPS,
             "OL"
         );
-        emit Exchange(_exchangeParam.platform, _fromToken, _amount, _toToken, exchangeAmount);
+        emit Exchange(_exchangeParam.platform, _fromToken, _amount, _toToken, _exchangeAmount);
     }
 
     function _report(

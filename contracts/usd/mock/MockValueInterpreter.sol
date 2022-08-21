@@ -44,7 +44,7 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
     /// @param _baseAssets The assets to convert
     /// @param _amounts The amounts of the _baseAssets to convert
     /// @param _quoteAsset The asset to which to convert
-    /// @return value_ The sum value of _baseAssets, denominated in the _quoteAsset
+    /// @return _value The sum value of _baseAssets, denominated in the _quoteAsset
     /// @dev Does not alter protocol state,
     /// but not a view because calls to price feeds can potentially update third party state.
     /// Does not handle a derivative quote asset.
@@ -52,37 +52,37 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
         address[] memory _baseAssets,
         uint256[] memory _amounts,
         address _quoteAsset
-    ) external view override returns (uint256 value_) {
+    ) external view override returns (uint256 _value) {
         for (uint256 i = 0; i < _baseAssets.length; i++) {
-            (uint256 assetValue, bool assetValueIsValid) = __calcAssetValue(
+            (uint256 _assetValue, bool _assetValueIsValid) = __calcAssetValue(
                 _baseAssets[i],
                 _amounts[i],
                 _quoteAsset
             );
-            value_ = value_ + assetValue;
+            _value = _value + _assetValue;
         }
-        return value_;
+        return _value;
     }
 
     /// @notice Calculates the value of a given amount of one asset in terms of another asset
     /// @param _baseAsset The asset from which to convert
     /// @param _amount The amount of the _baseAsset to convert
     /// @param _quoteAsset The asset to which to convert
-    /// @return value_ The equivalent quantity in the _quoteAsset
+    /// @return _value The equivalent quantity in the _quoteAsset
     /// @dev Does not alter protocol state,
     /// but not a view because calls to price feeds can potentially update third party state
     function calcCanonicalAssetValue(
         address _baseAsset,
         uint256 _amount,
         address _quoteAsset
-    ) external view override returns (uint256 value_) {
+    ) external view override returns (uint256 _value) {
         if (_baseAsset == _quoteAsset || _amount == 0) {
             return _amount;
         }
-        bool isValid_;
-        (value_, isValid_) = __calcAssetValue(_baseAsset, _amount, _quoteAsset);
-        require(isValid_, "Invalid rate");
-        return value_;
+        bool _isValid;
+        (_value, _isValid) = __calcAssetValue(_baseAsset, _amount, _quoteAsset);
+        require(_isValid, "Invalid rate");
+        return _value;
     }
 
     /// @dev Helper to differentially calculate an asset value
@@ -91,14 +91,14 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
         address _baseAsset,
         uint256 _amount,
         address _quoteAsset
-    ) private view returns (uint256 value_, bool isValid_) {
+    ) private view returns (uint256 _value, bool _isValid) {
         if (_baseAsset == _quoteAsset || _amount == 0) {
             return (_amount, true);
         }
-        isValid_ = true;
-        console.log('_quoteAsset##:%s,price:%d ',_quoteAsset,priceValue[_quoteAsset]);
-        console.log('_baseAsset##:%s,decimals:%d ',_baseAsset,Helpers.getDecimals(_baseAsset));
-        value_ =
+        _isValid = true;
+        console.log("_quoteAsset##:%s,price:%d ",_quoteAsset,priceValue[_quoteAsset]);
+        console.log("_baseAsset##:%s,decimals:%d ",_baseAsset,Helpers.getDecimals(_baseAsset));
+        _value =
             (priceValue[_baseAsset] * _amount * (10**Helpers.getDecimals(_quoteAsset))) /
             priceValue[_quoteAsset] /
             (10**Helpers.getDecimals(_baseAsset));
@@ -114,7 +114,7 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
         external
         view
         override
-        returns (uint256 value_)
+        returns (uint256 _value)
     {
         return (priceValue[_baseAsset] * _amount) / (10**Helpers.getDecimals(_baseAsset));
     }
@@ -124,15 +124,15 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
       * _baseAsset: source token address
       * @return usd(1e18)
      */
-    function price(address _baseAsset) external view override returns (uint256 value_) {
+    function price(address _baseAsset) external view override returns (uint256 _value) {
         return priceValue[_baseAsset];
     }
 
     ///////////////////
     // STATE SETTERS //
     ///////////////////
-    function setPrice(address _baseAsset, uint256 value_) external {
-        priceValue[_baseAsset] = value_;
+    function setPrice(address _baseAsset, uint256 _value) external {
+        priceValue[_baseAsset] = _value;
     }
 
     ///////////////////
@@ -151,18 +151,18 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
     // STATE GETTERS //
     ///////////////////
     /// @notice Gets the `AGGREGATED_DERIVATIVE_PRICE_FEED` variable
-    /// @return aggregatedDerivativePriceFeed_ The `AGGREGATED_DERIVATIVE_PRICE_FEED` variable value
+    /// @return _aggregatedDerivativePriceFeed The `AGGREGATED_DERIVATIVE_PRICE_FEED` variable value
     function getAggregatedDerivativePriceFeed()
         external
         view
-        returns (address aggregatedDerivativePriceFeed_)
+        returns (address _aggregatedDerivativePriceFeed)
     {
         return AGGREGATED_DERIVATIVE_PRICE_FEED;
     }
 
     /// @notice Gets the `PRIMITIVE_PRICE_FEED` variable
-    /// @return primitivePriceFeed_ The `PRIMITIVE_PRICE_FEED` variable value
-    function getPrimitivePriceFeed() external view returns (address primitivePriceFeed_) {
+    /// @return _primitivePriceFeed The `PRIMITIVE_PRICE_FEED` variable value
+    function getPrimitivePriceFeed() external view returns (address _primitivePriceFeed) {
         return PRIMITIVE_PRICE_FEED;
     }
 }

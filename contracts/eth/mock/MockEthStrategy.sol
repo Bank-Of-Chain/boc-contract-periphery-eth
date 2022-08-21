@@ -10,8 +10,8 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 contract MockEthStrategy is ETHBaseStrategy {
-    Mock3rdEthPool mock3rdPool;
-    address private constant stETH = address(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+    Mock3rdEthPool private mock3rdPool;
+    address private constant stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
     function initialize(
         address _vault,
@@ -66,8 +66,8 @@ contract MockEthStrategy is ETHBaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isETH,
-            uint256 ethValue
+            bool _isETH,
+            uint256 _ethValue
         )
     {
         _tokens = wants;

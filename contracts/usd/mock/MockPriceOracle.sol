@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import '../../external/cream/IPriceOracle.sol';
+import "../../external/cream/IPriceOracle.sol";
 
 contract MockPriceOracle is IPriceOracle {
 
-    mapping (address => uint) priceMap;
-    address constant originPriceOracleAddr = 0xE4e9F6cfe8aC8C75A3dBeF809dbe4fc40e6FDc4b;
+    mapping(address => uint) private priceMap;
+    address private constant originPriceOracleAddr = 0xE4e9F6cfe8aC8C75A3dBeF809dbe4fc40e6FDc4b;
 
     constructor(){
         IPriceOracle originPriceOracle = IPriceOracle(originPriceOracleAddr);
@@ -36,17 +36,17 @@ contract MockPriceOracle is IPriceOracle {
         priceMap[cKRW] = originPriceOracle.getUnderlyingPrice(cKRW);
     }
 
-    function setUnderlyingPrice(address cToken,uint256 price) external {
-        priceMap[cToken] = price;
+    function setUnderlyingPrice(address _cToken,uint256 _price) external {
+        priceMap[_cToken] = _price;
     }
 
     /**
-      * @notice Get the underlying price of a cToken asset
-      * @param cToken The cToken to get the underlying price of
-      * @return The underlying asset price mantissa (scaled by 1e18).
-      *  Zero means the price is unavailable.
+      * @notice Get the underlying _price of a "_cToken" asset
+      * @param _cToken The "_cToken" to get the underlying "_price" of
+      * @return The underlying asset "_price" mantissa (scaled by 1e18).
+      *  Zero means the "_price" is unavailable.
       */
-    function getUnderlyingPrice(address cToken) external override view returns (uint){
-        return priceMap[cToken];
+    function getUnderlyingPrice(address _cToken) external override view returns (uint){
+        return priceMap[_cToken];
     }
 }

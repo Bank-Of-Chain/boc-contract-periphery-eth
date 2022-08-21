@@ -24,6 +24,11 @@ yarn-error.log*
 .deps
 yarn.lock
 package-lock.json
+contracts/.DS_Store
+contracts/eth/.DS_Store
+contracts/eth/exchanges/.DS_Store
+contracts/eth/strategies/.DS_Store
+contracts/usd/.DS_Store
 
 
 # OVM artifacts

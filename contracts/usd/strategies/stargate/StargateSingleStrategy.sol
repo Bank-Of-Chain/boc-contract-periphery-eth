@@ -12,8 +12,8 @@ import "../../../external/stargate/IStargatePool.sol";
 
 contract StargateSingleStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    address public constant rewardsTokenSTG = address(0xAf5191B0De278C7286d6C7CC6ab6BB8A73bA2Cd6);
-    IStargateStakePool internal constant stargateStakePool =
+    address public constant REWARD_TOKEN_STG = address(0xAf5191B0De278C7286d6C7CC6ab6BB8A73bA2Cd6);
+    IStargateStakePool internal constant STARGATE_STAKE_POOL =
         IStargateStakePool(0xB0D502E938ed5f4df2E681fE6E419ff29631d62b);
     IStargateRouterPool internal stargateRouterPool;
     IStargatePool internal stargatePool;
@@ -60,12 +60,12 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -75,33 +75,33 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
-        IStargatePool stargatePoolTmp = stargatePool;
-        uint256 localDecimals = stargatePoolTmp.localDecimals();
-        uint256 decimals = stargatePoolTmp.decimals();
+        IStargatePool _stargatePoolTmp = stargatePool;
+        uint256 _localDecimals = _stargatePoolTmp.localDecimals();
+        uint256 _decimals = _stargatePoolTmp.decimals();
         _tokens = wants;
         _amounts = new uint256[](1);
         _amounts[0] =
             balanceOfLpToken() *
-            10**(localDecimals - decimals) +
+            10**(_localDecimals - _decimals) +
             balanceOfToken(_tokens[0]);
     }
 
-    function balanceOfLpToken() private view returns (uint256 lpAmount) {
-        (lpAmount, ) = stargateStakePool.userInfo(stakePoolId, address(this));
+    function balanceOfLpToken() private view returns (uint256 _lpAmount) {
+        (_lpAmount, ) = STARGATE_STAKE_POOL.userInfo(stakePoolId, address(this));
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
-        IStargatePool stargatePoolTmp = stargatePool;
-        uint256 localDecimals = stargatePoolTmp.localDecimals();
-        uint256 decimals = stargatePoolTmp.decimals();
-        uint256 totalLiquidity = stargatePoolTmp.totalLiquidity();
+        IStargatePool _stargatePoolTmp = stargatePool;
+        uint256 _localDecimals = _stargatePoolTmp.localDecimals();
+        uint256 _decimals = _stargatePoolTmp.decimals();
+        uint256 _totalLiquidity = _stargatePoolTmp.totalLiquidity();
         return
-            totalLiquidity != 0
-                ? queryTokenValue(wants[0], totalLiquidity * 10**(localDecimals - decimals))
+            _totalLiquidity != 0
+                ? queryTokenValue(wants[0], _totalLiquidity * 10**(_localDecimals - _decimals))
                 : 0;
     }
 
@@ -112,11 +112,11 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
     {
         uint256 _stakePoolId = stakePoolId;
         _rewardTokens = new address[](1);
-        _rewardTokens[0] = rewardsTokenSTG;
+        _rewardTokens[0] = REWARD_TOKEN_STG;
         _claimAmounts = new uint256[](1);
-        _claimAmounts[0] = stargateStakePool.pendingStargate(_stakePoolId, address(this));
+        _claimAmounts[0] = STARGATE_STAKE_POOL.pendingStargate(_stakePoolId, address(this));
         if (_claimAmounts[0] > 0) {
-            stargateStakePool.deposit(_stakePoolId, 0);
+            STARGATE_STAKE_POOL.deposit(_stakePoolId, 0);
         }
     }
 
@@ -126,16 +126,16 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
     {
         // addLiquidity
         if (_amounts[0] > 0) {
-            address lpTokenTmp = address(stargatePool);
-            address routerTmp = address(stargateRouterPool);
-            IERC20Upgradeable(_assets[0]).safeApprove(routerTmp, 0);
-            IERC20Upgradeable(_assets[0]).safeApprove(routerTmp, _amounts[0]);
-            IStargateRouterPool(routerTmp).addLiquidity(poolId, _amounts[0], address(this));
+            address _lpTokenTmp = address(stargatePool);
+            address _routerTmp = address(stargateRouterPool);
+            IERC20Upgradeable(_assets[0]).safeApprove(_routerTmp, 0);
+            IERC20Upgradeable(_assets[0]).safeApprove(_routerTmp, _amounts[0]);
+            IStargateRouterPool(_routerTmp).addLiquidity(poolId, _amounts[0], address(this));
             // stake liquidity
-            uint256 lpAmount = balanceOfToken(lpTokenTmp);
-            IERC20Upgradeable(lpTokenTmp).safeApprove(address(stargateStakePool), 0);
-            IERC20Upgradeable(lpTokenTmp).safeApprove(address(stargateStakePool), lpAmount);
-            stargateStakePool.deposit(stakePoolId, lpAmount);
+            uint256 _lpAmount = balanceOfToken(_lpTokenTmp);
+            IERC20Upgradeable(_lpTokenTmp).safeApprove(address(STARGATE_STAKE_POOL), 0);
+            IERC20Upgradeable(_lpTokenTmp).safeApprove(address(STARGATE_STAKE_POOL), _lpAmount);
+            STARGATE_STAKE_POOL.deposit(stakePoolId, _lpAmount);
         }
     }
 
@@ -147,7 +147,7 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
         if (_lpAmount > 0) {
             // unstake liquidity
-            stargateStakePool.withdraw(stakePoolId, _lpAmount);
+            STARGATE_STAKE_POOL.withdraw(stakePoolId, _lpAmount);
             // remove liquidity
             stargateRouterPool.instantRedeemLocal(uint16(poolId), _lpAmount, address(this));
         }

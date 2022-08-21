@@ -49,9 +49,9 @@ contract ConvexAaveStrategy is ConvexBaseStrategy {
     {
         _assets = wants;
         _ratios = new uint256[](_assets.length);
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _assets.length; i++) {
-            _ratios[i] = pool.balances(i);
+            _ratios[i] = _pool.balances(i);
         }
     }
 
@@ -60,28 +60,28 @@ contract ConvexAaveStrategy is ConvexBaseStrategy {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
         address[] memory _wants = wants;
-        outputsInfo = new OutputInfo[](4);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = _wants;
+        _outputsInfo = new OutputInfo[](4);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = _wants;
 
-        OutputInfo memory info1 = outputsInfo[1];
-        info1.outputCode = 1;
-        info1.outputTokens = new address[](1);
-        info1.outputTokens[0] = _wants[0];
+        OutputInfo memory _info1 = _outputsInfo[1];
+        _info1.outputCode = 1;
+        _info1.outputTokens = new address[](1);
+        _info1.outputTokens[0] = _wants[0];
 
-        OutputInfo memory info2 = outputsInfo[2];
-        info2.outputCode = 2;
-        info2.outputTokens = new address[](1);
-        info2.outputTokens[0] = _wants[1];
+        OutputInfo memory _info2 = _outputsInfo[2];
+        _info2.outputCode = 2;
+        _info2.outputTokens = new address[](1);
+        _info2.outputTokens[0] = _wants[1];
 
-        OutputInfo memory info3 = outputsInfo[3];
-        info3.outputCode = 3;
-        info3.outputTokens = new address[](1);
-        info3.outputTokens[0] = _wants[2];
+        OutputInfo memory _info3 = _outputsInfo[3];
+        _info3.outputCode = 3;
+        _info3.outputTokens = new address[](1);
+        _info3.outputTokens[0] = _wants[2];
     }
 
     function getPositionDetail()
@@ -91,32 +91,32 @@ contract ConvexAaveStrategy is ConvexBaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;
         _amounts = new uint256[](_tokens.length);
         // curve LP token amount = convex LP token amount
-        uint256 lpAmount = balanceOfLpToken();
+        uint256 _lpAmount = balanceOfLpToken();
         // curve LP total supply
-        uint256 totalSupply = IERC20Upgradeable(lpToken).totalSupply();
+        uint256 _totalSupply = IERC20Upgradeable(lpToken).totalSupply();
         // calc balances
         for (uint256 i = 0; i < _tokens.length; i++) {
-            uint256 depositedTokenAmount = (CURVE_POOL.balances(i) * lpAmount) / totalSupply;
-            _amounts[i] = balanceOfToken(_tokens[i]) + depositedTokenAmount;
+            uint256 _depositedTokenAmount = (CURVE_POOL.balances(i) * _lpAmount) / _totalSupply;
+            _amounts[i] = balanceOfToken(_tokens[i]) + _depositedTokenAmount;
         }
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _assets = wants;
-        uint256 thirdPoolAssets;
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
+        uint256 _thirdPoolAssets;
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _assets.length; i++) {
-            uint256 thirdPoolAssetBalance = pool.balances(i);
-            thirdPoolAssets += queryTokenValue(_assets[i], thirdPoolAssetBalance);
+            uint256 _thirdPoolAssetBalance = _pool.balances(i);
+            _thirdPoolAssets += queryTokenValue(_assets[i], _thirdPoolAssetBalance);
         }
-        return thirdPoolAssets;
+        return _thirdPoolAssets;
     }
 
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
@@ -139,20 +139,20 @@ contract ConvexAaveStrategy is ConvexBaseStrategy {
             );
     }
 
-    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
+    function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal override {
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         if (_outputCode > 0 && _outputCode < 4) {
-            int128 index;
+            int128 _index;
             if (_outputCode == 1) {
-                index = 0;
+                _index = 0;
             } else if (_outputCode == 2) {
-                index = 1;
+                _index = 1;
             } else if (_outputCode == 3) {
-                index = 2;
+                _index = 2;
             }
-            pool.remove_liquidity_one_coin(liquidity, index, 0, true);
+            _pool.remove_liquidity_one_coin(_liquidity, _index, 0, true);
         } else {
-            pool.remove_liquidity(liquidity, [uint256(0), uint256(0), uint256(0)], true);
+            _pool.remove_liquidity(_liquidity, [uint256(0), uint256(0), uint256(0)], true);
         }
     }
 }

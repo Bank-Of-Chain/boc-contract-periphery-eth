@@ -20,6 +20,11 @@ contract MockVault is AccessControlMixin {
         priceProvider = _valueInterpreter;
     }
 
+    receive() external payable {}
+    
+    fallback() external payable {}
+
+
     function treasury() view external returns(address){
         return address(this);
     }
@@ -32,14 +37,14 @@ contract MockVault is AccessControlMixin {
         uint256[] memory _amounts
     ) external {
         for (uint8 i = 0; i < _assets.length; i++) {
-            address token = _assets[i];
-            uint256 amount = _amounts[i];
-            if (token == ETH) {
-                payable(address(_strategy)).transfer(amount);
+            address _token = _assets[i];
+            uint256 _amount = _amounts[i];
+            if (_token == ETH) {
+                payable(address(_strategy)).transfer(_amount);
             } else {
-                IERC20Upgradeable item = IERC20Upgradeable(token);
-                console.log("balance:%d,amount:%d", item.balanceOf(address(this)), amount);
-                item.safeTransfer(_strategy, amount);
+                IERC20Upgradeable _item = IERC20Upgradeable(_token);
+                console.log("balance:%d,amount:%d", _item.balanceOf(address(this)), _amount);
+                _item.safeTransfer(_strategy, _amount);
             }
         }
         IETHStrategy(_strategy).borrow(_assets, _amounts);
@@ -47,18 +52,14 @@ contract MockVault is AccessControlMixin {
 
     /// @notice Withdraw the funds from specified strategy.
     function redeem(address _strategy, uint256 _usdValue,uint256 _outputCode) external payable {
-        uint256 totalValue = IETHStrategy(_strategy).estimatedTotalAssets();
-        if (_usdValue > totalValue) {
-            _usdValue = totalValue;
+        uint256 _totalValue = IETHStrategy(_strategy).estimatedTotalAssets();
+        if (_usdValue > _totalValue) {
+            _usdValue = _totalValue;
         }
         console.log('outputCode:',_outputCode);
-        IETHStrategy(_strategy).repay(_usdValue, totalValue,_outputCode);
+        IETHStrategy(_strategy).repay(_usdValue, _totalValue,_outputCode);
     }
 
     function report() external {}
 
-    // === fallback and receive === //
-    fallback() external payable {}
-
-    receive() external payable {}
 }

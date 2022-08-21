@@ -10,7 +10,7 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
         internal
         virtual
         returns (
-            bool claimIsWorth,
+            bool _claimIsWorth,
             address[] memory _rewardsTokens,
             uint256[] memory _claimAmounts
         );
@@ -20,11 +20,11 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
     /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
     function harvest() external virtual override returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts){
         // sell reward token
-        (bool claimIsWorth, address[] memory __rewardsTokens,uint256[] memory __claimAmounts ) = claimRewards();
+        (bool _claimIsWorth, address[] memory __rewardsTokens,uint256[] memory __claimAmounts ) = claimRewards();
         _rewardsTokens = __rewardsTokens;
         _claimAmounts = __claimAmounts;
-        console.log("claimIsWorth:", claimIsWorth);
-        if (claimIsWorth) {
+        console.log("_claimIsWorth:", _claimIsWorth);
+        if (_claimIsWorth) {
             swapRewardsToWants();
             reInvest();
         }
@@ -33,18 +33,18 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
     }
 
     function reInvest() internal {
-        address[] memory wantsCopy = wants;
-        address[] memory _assets = new address[](wantsCopy.length);
-        uint256[] memory _amounts = new uint256[](wantsCopy.length);
-        uint256 totalBalance = 0;
-        for (uint8 i = 0; i < wantsCopy.length; i++) {
-            address want = wantsCopy[i];
-            uint256 tokenBalance = balanceOfToken(want);
-            _assets[i] = want;
-            _amounts[i] = tokenBalance;
-            totalBalance += tokenBalance;
+        address[] memory _wantsCopy = wants;
+        address[] memory _assets = new address[](_wantsCopy.length);
+        uint256[] memory _amounts = new uint256[](_wantsCopy.length);
+        uint256 _totalBalance = 0;
+        for (uint8 i = 0; i < _wantsCopy.length; i++) {
+            address _want = _wantsCopy[i];
+            uint256 _tokenBalance = balanceOfToken(_want);
+            _assets[i] = _want;
+            _amounts[i] = _tokenBalance;
+            _totalBalance += _tokenBalance;
         }
-        if (totalBalance > 0) {
+        if (_totalBalance > 0) {
             depositTo3rdPool(_assets, _amounts);
         }
     }
@@ -66,13 +66,13 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
         // if withdraw all need claim rewards
         if (_repayShares == _totalShares) {
             (
-                bool claimIsWorth,
-                address[] memory assets,
-                uint256[] memory amounts
+                bool _claimIsWorth,
+                address[] memory __assets,
+                uint256[] memory __amounts
             ) = claimRewards();
-            if (claimIsWorth) {
+            if (_claimIsWorth) {
                 // transfer rewards to treasury
-                transferTokensToTarget(vault.treasury(), assets, amounts);
+                transferTokensToTarget(vault.treasury(), __assets, __amounts);
             }
         }
         return super.repay(_repayShares, _totalShares, _outputCode);

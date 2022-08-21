@@ -52,12 +52,12 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
 
         // not support remove_liquidity_one_coin
     }
@@ -67,23 +67,23 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
         override
         returns (uint256)
     {
-        uint256 amount = _amounts[2];
+        uint256 _amount = _amounts[2];
         IERC20Upgradeable(_assets[0]).safeApprove(cDAI, 0);
         IERC20Upgradeable(_assets[0]).safeApprove(cDAI, _amounts[0]);
         ICToken(cDAI).mint(_amounts[0]);
-        uint256 cDAIBalance = balanceOfToken(cDAI);
+        uint256 _cDAIBalance = balanceOfToken(cDAI);
         IERC20Upgradeable(_assets[1]).safeApprove(cUSDC, 0);
         IERC20Upgradeable(_assets[1]).safeApprove(cUSDC, _amounts[1]);
         ICToken(cUSDC).mint(_amounts[1]);
         uint256 cUSDCBalance = balanceOfToken(cUSDC);
 
         IERC20Upgradeable(cDAI).safeApprove(curvePool, 0);
-        IERC20Upgradeable(cDAI).safeApprove(curvePool, cDAIBalance);
+        IERC20Upgradeable(cDAI).safeApprove(curvePool, _cDAIBalance);
         IERC20Upgradeable(cUSDC).safeApprove(curvePool, 0);
         IERC20Upgradeable(cUSDC).safeApprove(curvePool, cUSDCBalance);
         IERC20Upgradeable(_assets[2]).safeApprove(curvePool, 0);
-        IERC20Upgradeable(_assets[2]).safeApprove(curvePool, amount);
-        ICurveLiquidityPool(curvePool).add_liquidity([cDAIBalance, cUSDCBalance, amount], 0);
+        IERC20Upgradeable(_assets[2]).safeApprove(curvePool, _amount);
+        ICurveLiquidityPool(curvePool).add_liquidity([_cDAIBalance, cUSDCBalance, _amount], 0);
         return balanceOfToken(lpToken);
     }
 
@@ -94,12 +94,12 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
-        isUsd = true;
-        usdValue =
+        _isUsd = true;
+        _usdValue =
             (ICurveLiquidityPool(curvePool).get_virtual_price() * balanceOfLpToken()) /
             decimalUnitOfToken(lpToken);
     }
@@ -110,20 +110,20 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
                 IERC20Upgradeable(lpToken).totalSupply()) / decimalUnitOfToken(lpToken);
     }
 
-    function curveRemoveLiquidity(uint256 removeLiquidity, uint256 _outputCode) internal override {
+    function curveRemoveLiquidity(uint256 _removeLiquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool(curvePool).remove_liquidity(
-            removeLiquidity,
+            _removeLiquidity,
             [uint256(0), uint256(0), uint256(0)]
         );
-        uint256 daiBalance = balanceOfToken(cDAI);
-        console.log("daiBalance:%d", daiBalance);
-        if (daiBalance > 0) {
-            ICToken(cDAI).redeem(daiBalance);
+        uint256 _daiBalance = balanceOfToken(cDAI);
+        console.log("_daiBalance:%d", _daiBalance);
+        if (_daiBalance > 0) {
+            ICToken(cDAI).redeem(_daiBalance);
         }
-        uint256 usdcBalance = balanceOfToken(cUSDC);
-        console.log("usdcBalance:%d", usdcBalance);
-        if (usdcBalance > 0) {
-            ICToken(cUSDC).redeem(usdcBalance);
+        uint256 _usdcBalance = balanceOfToken(cUSDC);
+        console.log("_usdcBalance:%d", _usdcBalance);
+        if (_usdcBalance > 0) {
+            ICToken(cUSDC).redeem(_usdcBalance);
         }
     }
 }

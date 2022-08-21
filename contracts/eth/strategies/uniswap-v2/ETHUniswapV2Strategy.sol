@@ -30,18 +30,18 @@ contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin
 
 
     function getWantsInfo() external view virtual override returns (address[] memory _assets, uint256[] memory _ratios) {
-        (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
+        (uint112 _reserve0, uint112 _reserve1, ) = uniswapV2Pair.getReserves();
         _assets = wants;
         _ratios = new uint256[](2);
-        _ratios[0] = reserve0;
-        _ratios[1] = reserve1;
+        _ratios[0] = _reserve0;
+        _ratios[1] = _reserve1;
     }
 
-    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info = outputsInfo[0];
-        info.outputCode = 0;
-        info.outputTokens = wants;
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo){
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info = _outputsInfo[0];
+        _info.outputCode = 0;
+        _info.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -52,26 +52,26 @@ contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isETH,
-            uint256 ethValue
+            bool _isETH,
+            uint256 _ethValue
         )
     {
-        (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
-        uint256 totalSupply = uniswapV2Pair.totalSupply();
-        uint256 lpAmount = balanceOfToken(address(uniswapV2Pair));
+        (uint112 _reserve0, uint112 _reserve1, ) = uniswapV2Pair.getReserves();
+        uint256 _totalSupply = uniswapV2Pair.totalSupply();
+        uint256 _lpAmount = balanceOfToken(address(uniswapV2Pair));
         _tokens = wants;
         _amounts = new uint256[](2);
-        _amounts[0] = (lpAmount * reserve0) / totalSupply + balanceOfToken(_tokens[0]);
-        _amounts[1] = (lpAmount * reserve1) / totalSupply + balanceOfToken(_tokens[1]);
+        _amounts[0] = (_lpAmount * _reserve0) / _totalSupply + balanceOfToken(_tokens[0]);
+        _amounts[1] = (_lpAmount * _reserve1) / _totalSupply + balanceOfToken(_tokens[1]);
     }
 
     function lpValueInEth() internal view returns (uint256 lpValue) {
-        uint256 totalSupply = uniswapV2Pair.totalSupply();
-        (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
-        console.log('reserve0:%d,reserve1:%d',reserve0,reserve1);
+        uint256 _totalSupply = uniswapV2Pair.totalSupply();
+        (uint112 _reserve0, uint112 _reserve1, ) = uniswapV2Pair.getReserves();
+        console.log("_reserve0:%d,_reserve1:%d",_reserve0,_reserve1);
         uint256 lpDecimalUnit = 1e18;
-        uint256 part0 = (uint256(reserve0) * (lpDecimalUnit)) / totalSupply;
-        uint256 part1 = (uint256(reserve1) * (lpDecimalUnit)) / totalSupply;
+        uint256 part0 = (uint256(_reserve0) * (lpDecimalUnit)) / _totalSupply;
+        uint256 part1 = (uint256(_reserve1) * (lpDecimalUnit)) / _totalSupply;
         uint256 partValue0 = priceOracle.valueInEth(wants[0], part0);
         uint256 partValue1 = priceOracle.valueInEth(wants[1], part1);
         lpValue = partValue0 + partValue1;
@@ -79,10 +79,10 @@ contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin
 
     function get3rdPoolAssets() external view virtual override returns (uint256) {
         
-        uint256 totalSupply = uniswapV2Pair.totalSupply();
+        uint256 _totalSupply = uniswapV2Pair.totalSupply();
         uint256 lpValue = lpValueInEth();
 
-        return (totalSupply * lpValue) / 1e18;
+        return (_totalSupply * lpValue) / 1e18;
     }
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal virtual override {
