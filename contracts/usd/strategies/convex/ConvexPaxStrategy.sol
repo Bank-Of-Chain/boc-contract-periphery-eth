@@ -9,13 +9,13 @@ import "../../../external/yearn/IYearnVault.sol";
 
 contract ConvexPaxStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    address private constant DAI = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-    address private constant USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-    address private constant USDT = address(0xdAC17F958D2ee523a2206206994597C13D831ec7);
-    address private constant PAX = address(0x8E870D67F660D95d5be530380D0eC0bd388289E1);
-    address private constant ycDAI = address(0x99d1Fa417f94dcD62BfE781a1213c092a47041Bc);
-    address private constant ycUSDC = address(0x9777d7E2b60bB01759D0E2f8be2095df444cb07E);
-    address private constant ycUSDT = address(0x1bE5d71F2dA660BFdee8012dDc58D024448A0A59);
+    address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address private constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address private constant PAX = 0x8E870D67F660D95d5be530380D0eC0bd388289E1;
+    address private constant YC_DAI = 0x99d1Fa417f94dcD62BfE781a1213c092a47041Bc;
+    address private constant YC_USDC = 0x9777d7E2b60bB01759D0E2f8be2095df444cb07E;
+    address private constant YC_USDT = 0x1bE5d71F2dA660BFdee8012dDc58D024448A0A59;
 
     function initialize(address _vault, address _harvester,string memory _name) public initializer {
         address[] memory _wants = new address[](4);
@@ -48,13 +48,13 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
         _ratios = new uint256[](_assets.length);
         ICurveLiquidityCustomPool curvePoolContract = ICurveLiquidityCustomPool(curvePool);
         _ratios[0] =
-            IYearnVault(ycDAI).getPricePerFullShare() *
+            IYearnVault(YC_DAI).getPricePerFullShare() *
             curvePoolContract.balances(int128(0));
         _ratios[1] =
-            IYearnVault(ycUSDC).getPricePerFullShare() *
+            IYearnVault(YC_USDC).getPricePerFullShare() *
             curvePoolContract.balances(int128(1));
         _ratios[2] =
-            IYearnVault(ycUSDT).getPricePerFullShare() *
+            IYearnVault(YC_USDT).getPricePerFullShare() *
             curvePoolContract.balances(int128(2));
         _ratios[3] = curvePoolContract.balances(int128(3)) * 1e18;
     }
@@ -104,9 +104,9 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
     {
         uint256[] memory _depositAmounts = new uint256[](4);
         address[] memory _yTokens = new address[](4);
-        _yTokens[0] = ycDAI;
-        _yTokens[1] = ycUSDC;
-        _yTokens[2] = ycUSDT;
+        _yTokens[0] = YC_DAI;
+        _yTokens[1] = YC_USDC;
+        _yTokens[2] = YC_USDT;
         _yTokens[3] = PAX;
         for (uint256 i = 0; i < _assets.length; i++) {
             if (_amounts[i] > 0) {
@@ -133,17 +133,17 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
             _removeLiquidity,
             [uint256(0), uint256(0), uint256(0), uint256(0)]
         );
-        uint256 _yDaiBalance = balanceOfToken(ycDAI);
+        uint256 _yDaiBalance = balanceOfToken(YC_DAI);
         if (_yDaiBalance > 0) {
-            IYearnVault(ycDAI).withdraw(_yDaiBalance);
+            IYearnVault(YC_DAI).withdraw(_yDaiBalance);
         }
-        uint256 _yUsdcBalance = balanceOfToken(ycUSDC);
+        uint256 _yUsdcBalance = balanceOfToken(YC_USDC);
         if (_yUsdcBalance > 0) {
-            IYearnVault(ycUSDC).withdraw(_yUsdcBalance);
+            IYearnVault(YC_USDC).withdraw(_yUsdcBalance);
         }
-        uint256 _yUsdtBalance = balanceOfToken(ycUSDT);
+        uint256 _yUsdtBalance = balanceOfToken(YC_USDT);
         if (_yUsdtBalance > 0) {
-            IYearnVault(ycUSDT).withdraw(_yUsdtBalance);
+            IYearnVault(YC_USDT).withdraw(_yUsdtBalance);
         }
         uint256 _yTusdBalance = balanceOfToken(PAX);
     }

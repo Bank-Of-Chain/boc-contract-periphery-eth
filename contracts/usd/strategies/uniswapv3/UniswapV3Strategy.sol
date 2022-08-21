@@ -315,8 +315,8 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
 
         // Mint new base and limit position
         (
-            int24 tickFloor,
-            int24 tickCeil,
+            int24 _tickFloor,
+            int24 _tickCeil,
             int24 _tickLower,
             int24 _tickUpper
         ) = getSpecifiedRangesOfTick(_tick);
@@ -337,12 +337,12 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
         if (_balance0 > 0 || _balance1 > 0) {
             // Place bid or ask order on Uniswap depending on which token is left
             if (
-                getLiquidityForAmounts(tickFloor - limitThreshold, tickFloor, _balance0, _balance1) >
-                getLiquidityForAmounts(tickCeil, tickCeil + limitThreshold, _balance0, _balance1)
+                getLiquidityForAmounts(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1) >
+                getLiquidityForAmounts(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1)
             ) {
-                mintNewPosition(tickFloor - limitThreshold, tickFloor, _balance0, _balance1, false);
+                mintNewPosition(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1, false);
             } else {
-                mintNewPosition(tickCeil, tickCeil + limitThreshold, _balance0, _balance1, false);
+                mintNewPosition(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1, false);
             }
         }
         lastTimestamp = block.timestamp;

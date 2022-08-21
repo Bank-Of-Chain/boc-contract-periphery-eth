@@ -75,15 +75,15 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
         IERC20Upgradeable(_assets[1]).safeApprove(cUSDC, 0);
         IERC20Upgradeable(_assets[1]).safeApprove(cUSDC, _amounts[1]);
         ICToken(cUSDC).mint(_amounts[1]);
-        uint256 cUSDCBalance = balanceOfToken(cUSDC);
+        uint256 _cUSDCBalance = balanceOfToken(cUSDC);
 
         IERC20Upgradeable(cDAI).safeApprove(curvePool, 0);
         IERC20Upgradeable(cDAI).safeApprove(curvePool, _cDAIBalance);
         IERC20Upgradeable(cUSDC).safeApprove(curvePool, 0);
-        IERC20Upgradeable(cUSDC).safeApprove(curvePool, cUSDCBalance);
+        IERC20Upgradeable(cUSDC).safeApprove(curvePool, _cUSDCBalance);
         IERC20Upgradeable(_assets[2]).safeApprove(curvePool, 0);
         IERC20Upgradeable(_assets[2]).safeApprove(curvePool, _amount);
-        ICurveLiquidityPool(curvePool).add_liquidity([_cDAIBalance, cUSDCBalance, _amount], 0);
+        ICurveLiquidityPool(curvePool).add_liquidity([_cDAIBalance, _cUSDCBalance, _amount], 0);
         return balanceOfToken(lpToken);
     }
 

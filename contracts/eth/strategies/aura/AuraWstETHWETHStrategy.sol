@@ -172,8 +172,8 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool _isUsd,
-            uint256 usdValue
+            bool _isETH,
+            uint256 _ethValue
         )
     {
         _tokens = wants;

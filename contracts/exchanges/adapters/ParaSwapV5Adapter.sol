@@ -386,8 +386,8 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         address _tokenIn,
         uint256 _amountIn,
         uint256 _amountOutMin,
-        address _weth_,
-        uint256[] memory _pools_
+        address _weth,
+        uint256[] memory _pools
     )
     {
         return

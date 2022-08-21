@@ -46,9 +46,9 @@ contract Convex3CrvStrategy is ConvexBaseStrategy {
     {
         _assets = wants;
         _ratios = new uint256[](_assets.length);
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _assets.length; i++) {
-            _ratios[i] = pool.balances(i);
+            _ratios[i] = _pool.balances(i);
         }
     }
 
@@ -99,9 +99,9 @@ contract Convex3CrvStrategy is ConvexBaseStrategy {
         // curve LP total supply
         uint256 _totalSupply = IERC20Upgradeable(lpToken).totalSupply();
         // calc balances
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _tokens.length; i++) {
-            uint256 _depositedTokenAmount = (pool.balances(i) * _lpAmount) / _totalSupply;
+            uint256 _depositedTokenAmount = (_pool.balances(i) * _lpAmount) / _totalSupply;
             _amounts[i] = balanceOfToken(_tokens[i]) + _depositedTokenAmount;
         }
     }
@@ -109,9 +109,9 @@ contract Convex3CrvStrategy is ConvexBaseStrategy {
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _assets = wants;
         uint256 _thirdPoolAssets;
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _assets.length; i++) {
-            uint256 _thirdPoolAssetBalance = pool.balances(i);
+            uint256 _thirdPoolAssetBalance = _pool.balances(i);
             _thirdPoolAssets += queryTokenValue(_assets[i], _thirdPoolAssetBalance);
         }
         return _thirdPoolAssets;

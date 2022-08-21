@@ -158,8 +158,8 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
         uint256 _withdrawAmount = (_lpAmount * _withdrawShares) / _totalShares;
         // 1. withdraw from MasterChef
         MASTERCHEF.withdraw(poolId, _withdrawAmount);
-        (, uint128 base) = _kashiPair.totalAsset();
-        uint256 _pairLeft = base - _withdrawAmount;
+        (, uint128 _base) = _kashiPair.totalAsset();
+        uint256 _pairLeft = _base - _withdrawAmount;
         if (_pairLeft < KASHI_MINIMUM) {
             _withdrawAmount = _withdrawAmount - (KASHI_MINIMUM - _pairLeft);
         }
