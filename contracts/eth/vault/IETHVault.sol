@@ -72,6 +72,8 @@ interface IETHVault {
         uint256 loss,
         uint256 lastStrategyTotalDebt,
         uint256 nowStrategyTotalDebt,
+        address[] rewardTokens,
+        uint256[] claimAmounts,
         uint256 _type
     );
 
