@@ -16,8 +16,6 @@ import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../ETHBaseClaimableStrategy.sol";
 import "../../enums/ProtocolEnum.sol";
 
-import "hardhat/console.sol";
-
 contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     enum JoinKind {
@@ -37,9 +35,9 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     IBalancerVault internal constant BALANCER_VAULT =
         IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
-    IUniswapV2Router2 public constant uniRouter2 =
+    IUniswapV2Router2 public constant UNIROUTER2 =
         IUniswapV2Router2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-    IUniswapV2Router2 public constant sushiRouter2 =
+    IUniswapV2Router2 public constant SUSHIROUTER2 =
         IUniswapV2Router2(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
 
     address public constant AURA_TOKEN = 0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF;
@@ -56,28 +54,28 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         _wants[0] = WSTETH; //wstETH
         _wants[1] = WETH; //wETH
 
-        address[] memory ldoSellPath = new address[](2);
-        ldoSellPath[0] = LDO;
-        ldoSellPath[1] = WETH;
-        swapRewardRoutes[LDO] = ldoSellPath;
+        address[] memory _ldoSellPath = new address[](2);
+        _ldoSellPath[0] = LDO;
+        _ldoSellPath[1] = WETH;
+        swapRewardRoutes[LDO] = _ldoSellPath;
 
-        uint256 uintMax = type(uint256).max;
+        uint256 _uintMax = type(uint256).max;
         for (uint256 i = 0; i < _wants.length; i++) {
             // for enter balancer vault
-            IERC20Upgradeable(_wants[i]).safeApprove(address(BALANCER_VAULT), uintMax);
+            IERC20Upgradeable(_wants[i]).safeApprove(address(BALANCER_VAULT), _uintMax);
         }
         //for Booster deposit
-        IERC20Upgradeable(getPoolLpToken()).safeApprove(address(AURA_BOOSTER), uintMax);
+        IERC20Upgradeable(getPoolLpToken()).safeApprove(address(AURA_BOOSTER), _uintMax);
 
         //set up sell reward path
-        address[] memory balSellPath = new address[](2);
-        balSellPath[0] = BAL;
-        balSellPath[1] = WETH;
-        swapRewardRoutes[BAL] = balSellPath;
-        address[] memory auraSellPath = new address[](2);
-        auraSellPath[0] = AURA_TOKEN;
-        auraSellPath[1] = WETH;
-        swapRewardRoutes[AURA_TOKEN] = auraSellPath;
+        address[] memory _balSellPath = new address[](2);
+        _balSellPath[0] = BAL;
+        _balSellPath[1] = WETH;
+        swapRewardRoutes[BAL] = _balSellPath;
+        address[] memory _auraSellPath = new address[](2);
+        _auraSellPath[0] = AURA_TOKEN;
+        _auraSellPath[1] = WETH;
+        swapRewardRoutes[AURA_TOKEN] = _auraSellPath;
         sellFloor[BAL] = 1e17;
 
         isWantRatioIgnorable = true;
@@ -88,16 +86,16 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     /**
      * Sets the minimum amount of token needed to trigger a sale.
      */
-    function setSellFloor(address token, uint256 floor) external isVaultManager {
-        sellFloor[token] = floor;
+    function setSellFloor(address _token, uint256 _floor) external isVaultManager {
+        sellFloor[_token] = _floor;
     }
 
-    function setRewardSwapPath(address token, address[] memory _uniswapRouteToToken)
+    function setRewardSwapPath(address _token, address[] memory _uniswapRouteToToken)
         external
         isVaultManager
     {
-        require(token == _uniswapRouteToToken[_uniswapRouteToToken.length - 1]);
-        swapRewardRoutes[token] = _uniswapRouteToToken;
+        require(_token == _uniswapRouteToToken[_uniswapRouteToToken.length - 1]);
+        swapRewardRoutes[_token] = _uniswapRouteToToken;
     }
 
     function getVersion() external pure override returns (string memory) {
@@ -136,34 +134,34 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](3);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](3);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
 
-        OutputInfo memory info1 = outputsInfo[1];
-        info1.outputCode = 1;
-        info1.outputTokens = new address[](1);
-        info1.outputTokens[0] = WSTETH; //wstETH
+        OutputInfo memory _info1 = _outputsInfo[1];
+        _info1.outputCode = 1;
+        _info1.outputTokens = new address[](1);
+        _info1.outputTokens[0] = WSTETH; //wstETH
 
-        OutputInfo memory info2 = outputsInfo[2];
-        info2.outputCode = 2;
-        info2.outputTokens = new address[](1);
-        info2.outputTokens[0] = WETH; //wETH
+        OutputInfo memory _info2 = _outputsInfo[2];
+        _info2.outputCode = 2;
+        _info2.outputTokens = new address[](1);
+        _info2.outputTokens[0] = WETH; //wETH
     }
 
     /// @notice 3rd prototcol's pool total assets in USD.
     function get3rdPoolAssets() external view override returns (uint256) {
-        uint256 totalAssets;
-        (address[] memory tokens, uint256[] memory balances, ) = BALANCER_VAULT.getPoolTokens(
+        uint256 _totalAssets;
+        (address[] memory _tokens, uint256[] memory _balances, ) = BALANCER_VAULT.getPoolTokens(
             getPoolKey()
         );
-        for (uint8 i = 0; i < tokens.length; i++) {
-            totalAssets += queryTokenValueInETH(tokens[i], balances[i]);
+        for (uint8 i = 0; i < _tokens.length; i++) {
+            _totalAssets += queryTokenValueInETH(_tokens[i], _balances[i]);
         }
-        return totalAssets;
+        return _totalAssets;
     }
 
     /// @notice Returns the position details of the strategy.
@@ -174,18 +172,18 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isETH,
+            uint256 _ethValue
         )
     {
         _tokens = wants;
         (, _amounts, ) = BALANCER_VAULT.getPoolTokens(getPoolKey());
-        uint256 stakingAmount = getStakingAmount();
-        uint256 lpTotalSupply = IERC20Upgradeable(getPoolLpToken()).totalSupply();
+        uint256 _stakingAmount = getStakingAmount();
+        uint256 _lpTotalSupply = IERC20Upgradeable(getPoolLpToken()).totalSupply();
         for (uint256 i = 0; i < _tokens.length; i++) {
             _amounts[i] =
-                (_amounts[i] * stakingAmount) /
-                lpTotalSupply +
+                (_amounts[i] * _stakingAmount) /
+                _lpTotalSupply +
                 balanceOfToken(_tokens[i]);
         }
     }
@@ -194,11 +192,11 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         return IRewardPool(getRewardPool()).balanceOf(address(this));
     }
 
-    function _getPoolAssets(bytes32 _poolKey) internal view returns (IAsset[] memory poolAssets) {
-        (address[] memory tokens, , ) = BALANCER_VAULT.getPoolTokens(_poolKey);
-        poolAssets = new IAsset[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            poolAssets[i] = IAsset(tokens[i]);
+    function _getPoolAssets(bytes32 _poolKey) internal view returns (IAsset[] memory _poolAssets) {
+        (address[] memory _tokens, , ) = BALANCER_VAULT.getPoolTokens(_poolKey);
+        _poolAssets = new IAsset[](_tokens.length);
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            _poolAssets[i] = IAsset(_tokens[i]);
         }
     }
 
@@ -209,26 +207,25 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         internal
         override
     {
-        uint256 receiveLpAmount = _depositToBalancer(_assets, _amounts);
-        console.log("receiveLpAmount:", receiveLpAmount);
-        AURA_BOOSTER.deposit(getPId(), receiveLpAmount, true);
+        uint256 _receiveLpAmount = _depositToBalancer(_assets, _amounts);
+        AURA_BOOSTER.deposit(getPId(), _receiveLpAmount, true);
     }
 
     function _depositToBalancer(address[] memory _assets, uint256[] memory _amounts)
         internal
         virtual
-        returns (uint256 receiveLpAmount)
+        returns (uint256 _receiveLpAmount)
     {
-        bytes32 poolKey = getPoolKey();
-        IBalancerVault.JoinPoolRequest memory joinRequest = IBalancerVault.JoinPoolRequest({
-            assets: _getPoolAssets(poolKey),
+        bytes32 _poolKey = getPoolKey();
+        IBalancerVault.JoinPoolRequest memory _joinRequest = IBalancerVault.JoinPoolRequest({
+            assets: _getPoolAssets(_poolKey),
             maxAmountsIn: _amounts,
             userData: abi.encode(JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, _amounts, 0),
             fromInternalBalance: false
         });
 
-        BALANCER_VAULT.joinPool(poolKey, address(this), address(this), joinRequest);
-        receiveLpAmount = balanceOfToken(getPoolLpToken());
+        BALANCER_VAULT.joinPool(_poolKey, address(this), address(this), _joinRequest);
+        _receiveLpAmount = balanceOfToken(getPoolLpToken());
     }
 
     /// @notice Strategy withdraw the funds from 3rd pool.
@@ -239,96 +236,87 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-        uint256 withdrawAmount = (getStakingAmount() * _withdrawShares) / _totalShares;
+        uint256 _withdrawAmount = (getStakingAmount() * _withdrawShares) / _totalShares;
         //unstaking
-        IRewardPool(getRewardPool()).redeem(withdrawAmount, address(this), address(this));
-        console.log("lpAmount:", balanceOfToken(getPoolLpToken()));
-        _withdrawFromBalancer(withdrawAmount, _outputCode);
+        IRewardPool(getRewardPool()).redeem(_withdrawAmount, address(this), address(this));
+        _withdrawFromBalancer(_withdrawAmount, _outputCode);
     }
 
     function _withdrawFromBalancer(uint256 _exitAmount, uint256 _outputCode) internal virtual {
-        address payable recipient = payable(address(this));
-        bytes32 poolKey = getPoolKey();
-        IAsset[] memory poolAssets = _getPoolAssets(poolKey);
-        uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
-        IBalancerVault.ExitPoolRequest memory exitRequest;
+        address payable _recipient = payable(address(this));
+        bytes32 _poolKey = getPoolKey();
+        IAsset[] memory _poolAssets = _getPoolAssets(_poolKey);
+        uint256[] memory _minAmountsOut = new uint256[](_poolAssets.length);
+        IBalancerVault.ExitPoolRequest memory _exitRequest;
         if (_outputCode == 1) {
             //WSTETH
-            exitRequest = IBalancerVault.ExitPoolRequest({
-                assets: poolAssets,
-                minAmountsOut: minAmountsOut,
+            _exitRequest = IBalancerVault.ExitPoolRequest({
+                assets: _poolAssets,
+                minAmountsOut: _minAmountsOut,
                 userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _exitAmount, 0),
                 toInternalBalance: false
             });
         } else if (_outputCode == 2) {
             //wETH
-            exitRequest = IBalancerVault.ExitPoolRequest({
-                assets: poolAssets,
-                minAmountsOut: minAmountsOut,
+            _exitRequest = IBalancerVault.ExitPoolRequest({
+                assets: _poolAssets,
+                minAmountsOut: _minAmountsOut,
                 userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _exitAmount, 1),
                 toInternalBalance: false
             });
         } else {
             //WSTETH + wETH
-            exitRequest = IBalancerVault.ExitPoolRequest({
-                assets: poolAssets,
-                minAmountsOut: minAmountsOut,
+            _exitRequest = IBalancerVault.ExitPoolRequest({
+                assets: _poolAssets,
+                minAmountsOut: _minAmountsOut,
                 userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _exitAmount),
                 toInternalBalance: false
             });
         }
-        BALANCER_VAULT.exitPool(poolKey, address(this), recipient, exitRequest);
+        BALANCER_VAULT.exitPool(_poolKey, address(this), _recipient, _exitRequest);
     }
 
     function claimRewards()
         internal
         override
         returns (
-            bool claimIsWorth,
+            bool _claimIsWorth,
             address[] memory _rewardsTokens,
             uint256[] memory _claimAmounts
         )
     {
-        address rewardPool = getRewardPool();
-        uint256 earn = IRewardPool(rewardPool).earned(address(this));
-        if (earn > sellFloor[BAL]) {
-            claimIsWorth = true;
-            console.log("earn:", earn);
-            IRewardPool(rewardPool).getReward();
-            uint256 extraRewardsLen = IRewardPool(rewardPool).extraRewardsLength();
-            // extraRewardsLen = 0;
-            _rewardsTokens = new address[](2 + extraRewardsLen);
+        address _rewardPool = getRewardPool();
+        uint256 _earn = IRewardPool(_rewardPool).earned(address(this));
+        if (_earn > sellFloor[BAL]) {
+            _claimIsWorth = true;
+            IRewardPool(_rewardPool).getReward();
+            uint256 _extraRewardsLen = IRewardPool(_rewardPool).extraRewardsLength();
+            // _extraRewardsLen = 0;
+            _rewardsTokens = new address[](2 + _extraRewardsLen);
             _rewardsTokens[0] = BAL;
             _rewardsTokens[1] = AURA_TOKEN;
-            _claimAmounts = new uint256[](2 + extraRewardsLen);
+            _claimAmounts = new uint256[](2 + _extraRewardsLen);
             _claimAmounts[0] = balanceOfToken(BAL);
             _claimAmounts[1] = balanceOfToken(AURA_TOKEN);
-            console.log("extraRewardsLen:%s,BAL:%s", extraRewardsLen, balanceOfToken(BAL));
-            if (extraRewardsLen > 0) {
-                for (uint256 i = 0; i < extraRewardsLen; i++) {
-                    address extraReward = IRewardPool(rewardPool).extraRewards(i);
-                    address rewardToken = IRewardPool(extraReward).rewardToken();
-                    // IRewardPool(extraReward).getReward();
-                    _rewardsTokens[2 + i] = rewardToken;
-                    _claimAmounts[2 + i] = balanceOfToken(rewardToken);
-                    console.log(
-                        "extraReward:%s,rewardToken:%s,balance:%d",
-                        extraReward,
-                        rewardToken,
-                        balanceOfToken(rewardToken)
-                    );
+            if (_extraRewardsLen > 0) {
+                for (uint256 i = 0; i < _extraRewardsLen; i++) {
+                    address _extraReward = IRewardPool(_rewardPool).extraRewards(i);
+                    address _rewardToken = IRewardPool(_extraReward).rewardToken();
+                    // IRewardPool(_extraReward).getReward();
+                    _rewardsTokens[2 + i] = _rewardToken;
+                    _claimAmounts[2 + i] = balanceOfToken(_rewardToken);
                 }
             }
         }
     }
 
     function swapRewardsToWants() internal override {
-        uint256 balanceOfBal = balanceOfToken(BAL);
-        if (balanceOfBal > 0) {
-            IERC20Upgradeable(BAL).safeApprove(address(uniRouter2), 0);
-            IERC20Upgradeable(BAL).safeApprove(address(uniRouter2), balanceOfBal);
-            uniRouter2.swapExactTokensForTokens(
-                balanceOfBal,
+        uint256 _balanceOfBal = balanceOfToken(BAL);
+        if (_balanceOfBal > 0) {
+            IERC20Upgradeable(BAL).safeApprove(address(UNIROUTER2), 0);
+            IERC20Upgradeable(BAL).safeApprove(address(UNIROUTER2), _balanceOfBal);
+            UNIROUTER2.swapExactTokensForTokens(
+                _balanceOfBal,
                 0,
                 swapRewardRoutes[BAL],
                 address(this),
@@ -336,12 +324,12 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
             );
         }
 
-        uint256 balanceOfAura = balanceOfToken(AURA_TOKEN);
-        if (balanceOfAura > 0) {
-            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(uniRouter2), 0);
-            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(uniRouter2), balanceOfAura);
-            uniRouter2.swapExactTokensForTokens(
-                balanceOfAura,
+        uint256 _balanceOfAura = balanceOfToken(AURA_TOKEN);
+        if (_balanceOfAura > 0) {
+            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(UNIROUTER2), 0);
+            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(UNIROUTER2), _balanceOfAura);
+            UNIROUTER2.swapExactTokensForTokens(
+                _balanceOfAura,
                 0,
                 swapRewardRoutes[AURA_TOKEN],
                 address(this),
@@ -349,12 +337,12 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
             );
         }
 
-        uint256 balanceOfLdo = balanceOfToken(LDO);
-        if (balanceOfLdo > 0) {
-            IERC20Upgradeable(LDO).safeApprove(address(sushiRouter2), 0);
-            IERC20Upgradeable(LDO).safeApprove(address(sushiRouter2), balanceOfAura);
-            sushiRouter2.swapExactTokensForTokens(
-                balanceOfLdo,
+        uint256 _balanceOfLdo = balanceOfToken(LDO);
+        if (_balanceOfLdo > 0) {
+            IERC20Upgradeable(LDO).safeApprove(address(SUSHIROUTER2), 0);
+            IERC20Upgradeable(LDO).safeApprove(address(SUSHIROUTER2), _balanceOfAura);
+            SUSHIROUTER2.swapExactTokensForTokens(
+                _balanceOfLdo,
                 0,
                 swapRewardRoutes[LDO],
                 address(this),

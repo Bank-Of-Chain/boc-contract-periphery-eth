@@ -4,8 +4,6 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
 import "./../../../enums/ProtocolEnum.sol";
 import "../../../../external/yearn/IYearnVault.sol";
@@ -59,12 +57,12 @@ contract YearnEarnStrategy is BaseStrategy {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -74,16 +72,14 @@ contract YearnEarnStrategy is BaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;
         _amounts = new uint256[](1);
 
         _amounts[0] = _estimatedDepositedAssets() + balanceOfToken(underlyingToken);
-
-        console.log("[%s] getPositionDetail: %s", this.name(), _amounts[0]);
     }
 
     /**
@@ -91,7 +87,6 @@ contract YearnEarnStrategy is BaseStrategy {
      */
     function estimatedDepositedAssets() public view returns (uint256 depositedAssets) {
         depositedAssets = queryTokenValue(wants[0], _estimatedDepositedAssets());
-        console.log("[%s] estimatedDepositedAssets:%s", this.name(), depositedAssets);
     }
 
     /**
@@ -102,7 +97,6 @@ contract YearnEarnStrategy is BaseStrategy {
         depositedAssets =
             (_yVault.calcPoolValueInToken() * balanceOfToken(address(_yVault))) /
             _yVault.totalSupply();
-        console.log("[%s] _estimatedDepositedAssets:%s", this.name(), depositedAssets);
     }
 
     // ==== Internal ==== //

@@ -5,19 +5,16 @@ pragma solidity ^0.8.0;
 import "../strategies/ETHBaseStrategy.sol";
 import "./Mock3rdEthPool.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
-
-import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 contract MockEthStrategy is ETHBaseStrategy {
-    Mock3rdEthPool mock3rdPool;
-    address private constant stETH = address(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+    Mock3rdEthPool private mock3rdPool;
+    address private constant stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
     function initialize(
         address _vault,
         address _mock3rdPool
     ) public initializer {
-        console.log("MockEthStrategy--initialize");
         mock3rdPool = Mock3rdEthPool(payable(_mock3rdPool));
 
         address[] memory _wants = new address[](2);
@@ -66,8 +63,8 @@ contract MockEthStrategy is ETHBaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isETH,
-            uint256 ethValue
+            bool _isETH,
+            uint256 _ethValue
         )
     {
         _tokens = wants;

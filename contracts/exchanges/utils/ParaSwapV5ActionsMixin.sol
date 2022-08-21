@@ -3,8 +3,6 @@ pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 import '../../external/paraswap/IParaswapV5.sol';
-
-import 'hardhat/console.sol';
 import './ExchangeHelpers.sol';
 
 abstract contract ParaSwapV5ActionsMixin is ExchangeHelpers {
@@ -153,14 +151,14 @@ abstract contract ParaSwapV5ActionsMixin is ExchangeHelpers {
     }
 
     /// @notice Gets the `PARA_SWAP_V5_AUGUSTUS_SWAPPER` variable
-    /// @return augustusSwapper_ The `PARA_SWAP_V5_AUGUSTUS_SWAPPER` variable value
-    function getParaSwapV5AugustusSwapper() public pure returns (address augustusSwapper_) {
+    /// @return _augustusSwapper The `PARA_SWAP_V5_AUGUSTUS_SWAPPER` variable value
+    function getParaSwapV5AugustusSwapper() public pure returns (address _augustusSwapper) {
         return PARA_SWAP_V5_AUGUSTUS_SWAPPER;
     }
 
     /// @notice Gets the `PARA_SWAP_V5_TOKEN_TRANSFER_PROXY` variable
-    /// @return tokenTransferProxy_ The `PARA_SWAP_V5_TOKEN_TRANSFER_PROXY` variable value
-    function getParaSwapV5TokenTransferProxy() public pure returns (address tokenTransferProxy_) {
+    /// @return _tokenTransferProxy The `PARA_SWAP_V5_TOKEN_TRANSFER_PROXY` variable value
+    function getParaSwapV5TokenTransferProxy() public pure returns (address _tokenTransferProxy) {
         return PARA_SWAP_V5_TOKEN_TRANSFER_PROXY;
     }
 }

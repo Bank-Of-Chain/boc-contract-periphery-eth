@@ -5,8 +5,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/strategy/BaseClaimableStrategy.sol";
 
 import "../../../../enums/ProtocolEnum.sol";
@@ -17,7 +15,7 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IBentoBoxMinimal public bentoBox;
-    IMasterChef public constant masterChef =
+    IMasterChef public constant MASTERCHEF =
         IMasterChef(0xc2EdaD668740f1aA35E4D8f227fB8E17dcA888Cd);
     address public constant SUSHI = 0x6B3595068778DD592e39A122f4f5a5cF09C90fE2;
     uint256 public constant KASHI_MINIMUM = 1000;
@@ -57,9 +55,9 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
     {
         _assets = wants;
 
-        uint256[] memory ratioArray = new uint256[](1);
-        ratioArray[0] = decimalUnitOfToken(_assets[0]);
-        _ratios = ratioArray;
+        uint256[] memory _ratioArray = new uint256[](1);
+        _ratioArray[0] = decimalUnitOfToken(_assets[0]);
+        _ratios = _ratioArray;
     }
 
     function getOutputsInfo()
@@ -67,12 +65,12 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
     }
 
     function getPositionDetail()
@@ -82,8 +80,8 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;
@@ -95,11 +93,11 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
         IKashiPair _kashiPair = kashiPari;
         IBentoBoxMinimal _bentoBox = bentoBox;
         address _want = wants[0];
-        (uint128 totalAssetElastic, ) = _kashiPair.totalAsset();
-        (uint128 totalBorrowElastic, ) = _kashiPair.totalBorrow();
-        uint256 allShare = totalAssetElastic + _bentoBox.toShare(_want, totalBorrowElastic, true);
-        uint256 allAmount = _bentoBox.toAmount(_want, allShare, false);
-        return queryTokenValue(_want, allAmount);
+        (uint128 _totalAssetElastic, ) = _kashiPair.totalAsset();
+        (uint128 _totalBorrowElastic, ) = _kashiPair.totalBorrow();
+        uint256 _allShare = _totalAssetElastic + _bentoBox.toShare(_want, _totalBorrowElastic, true);
+        uint256 _allAmount = _bentoBox.toAmount(_want, _allShare, false);
+        return queryTokenValue(_want, _allAmount);
     }
 
     function claimRewards()
@@ -108,12 +106,11 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
         returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
         kashiPari.accrue();
-        masterChef.deposit(poolId, 0);
+        MASTERCHEF.deposit(poolId, 0);
         _rewardsTokens = new address[](1);
         _rewardsTokens[0] = SUSHI;
         _claimAmounts = new uint256[](1);
         _claimAmounts[0] = balanceOfToken(SUSHI);
-        console.log("[%s] claim rewards sushi balance is %d", this.name(), _claimAmounts[0]);
     }
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
@@ -135,22 +132,16 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
             bytes32(0),
             bytes32(0)
         );
-        console.log("[%s] set master contract approval successfully", this.name());
         // 2. ACTION_BENTO_DEPOSIT
         IERC20Upgradeable(_asset).safeApprove(address(_bentoBox), 0);
         IERC20Upgradeable(_asset).safeApprove(address(_bentoBox), _amount);
         (, uint256 shareOut) = _bentoBox.deposit(_asset, address(this), address(this), _amount, 0);
-        console.log("[%s] deposit bento successfully", this.name());
-        console.log("[%s] share out is %d", this.name(), shareOut);
         // 3. ACTION_ADD_ASSET
-        uint256 lpAmount = _kashiPair.addAsset(address(this), false, shareOut);
-        console.log("[%s] add asset successfully", this.name());
-        console.log("[%s] lp amount is %d", this.name(), lpAmount);
+        uint256 _lpAmount = _kashiPair.addAsset(address(this), false, shareOut);
         // 4. deposit into MasterChef
-        IERC20Upgradeable(address(_kashiPair)).safeApprove(address(masterChef), 0);
-        IERC20Upgradeable(address(_kashiPair)).safeApprove(address(masterChef), lpAmount);
-        masterChef.deposit(poolId, lpAmount);
-        console.log("[%s] deposit successfully", this.name());
+        IERC20Upgradeable(address(_kashiPair)).safeApprove(address(MASTERCHEF), 0);
+        IERC20Upgradeable(address(_kashiPair)).safeApprove(address(MASTERCHEF), _lpAmount);
+        MASTERCHEF.deposit(poolId, _lpAmount);
     }
 
     function withdrawFrom3rdPool(
@@ -165,63 +156,45 @@ contract SushiKashiStakeStrategy is BaseClaimableStrategy {
         IKashiPair _kashiPair = kashiPari;
         address _want = wants[0];
         uint256 _withdrawAmount = (_lpAmount * _withdrawShares) / _totalShares;
-        console.log(
-            "[%s] lp amount wanted is %d, lp amount is %d",
-            this.name(),
-            _withdrawAmount,
-            balanceOfLpToken()
-        );
         // 1. withdraw from MasterChef
-        masterChef.withdraw(poolId, _withdrawAmount);
-        console.log("[%s] withdraw successfully", this.name());
-        (, uint128 base) = _kashiPair.totalAsset();
-        console.log("[%s] kashiPair totalAsset base is %d", this.name(), base);
-        uint256 pairLeft = base - _withdrawAmount;
-        if (pairLeft < KASHI_MINIMUM) {
-            _withdrawAmount = _withdrawAmount - (KASHI_MINIMUM - pairLeft);
-            console.log(
-                "[%s] kashi totalSupply will be less than minimum, so cut the withdrawn lp amount"
-            );
+        MASTERCHEF.withdraw(poolId, _withdrawAmount);
+        (, uint128 _base) = _kashiPair.totalAsset();
+        uint256 _pairLeft = _base - _withdrawAmount;
+        if (_pairLeft < KASHI_MINIMUM) {
+            _withdrawAmount = _withdrawAmount - (KASHI_MINIMUM - _pairLeft);
         }
         // 2. ACTION_REMOVE_ASSET
-        uint256 share = _kashiPair.removeAsset(address(this), _withdrawAmount);
-        console.log("[%s] remove asset successfully", this.name());
-        console.log("[%s] share is %d", this.name(), share);
+        uint256 _share = _kashiPair.removeAsset(address(this), _withdrawAmount);
         // 3. ACTION_BENTO_WITHDRAW
-        bentoBox.withdraw(_want, address(this), address(this), 0, share);
-        console.log(
-            "[%s] real amount out is %d",
-            this.name(),
-            IERC20Upgradeable(_want).balanceOf(address(this))
-        );
+        bentoBox.withdraw(_want, address(this), address(this), 0, _share);
     }
 
     function balanceOfLpToken() public view returns (uint256) {
-        return masterChef.userInfo(poolId, address(this)).amount;
+        return MASTERCHEF.userInfo(poolId, address(this)).amount;
     }
 
     function estimatedDepositedAmounts() private view returns (uint256) {
         IKashiPair _kashiPair = kashiPari;
         IBentoBoxMinimal _bentoBox = bentoBox;
         address _want = wants[0];
-        (uint128 totalAssetElastic, uint128 totalAssetBase) = _kashiPair.totalAsset();
-        // totalAssetBase == 0 => totalSupply == 0
-        if (totalAssetBase == 0) {
+        (uint128 _totalAssetElastic, uint128 _totalAssetBase) = _kashiPair.totalAsset();
+        // _totalAssetBase == 0 => totalSupply == 0
+        if (_totalAssetBase == 0) {
             return 0;
         }
-        (uint128 totalBorrowElastic, ) = _kashiPair.totalBorrow();
-        uint256 allShare = totalAssetElastic + _bentoBox.toShare(_want, totalBorrowElastic, true);
-        uint256 share = (balanceOfLpToken() * allShare) / totalAssetBase;
-        uint256 amount = _bentoBox.toAmount(_want, share, false);
-        return amount;
+        (uint128 _totalBorrowElastic, ) = _kashiPair.totalBorrow();
+        uint256 _allShare = _totalAssetElastic + _bentoBox.toShare(_want, _totalBorrowElastic, true);
+        uint256 _share = (balanceOfLpToken() * _allShare) / _totalAssetBase;
+        uint256 _amount = _bentoBox.toAmount(_want, _share, false);
+        return _amount;
     }
 
     function estimatedTotalAmounts() private view returns (uint256) {
-        uint256 totalAmounts = estimatedDepositedAmounts();
-        uint256 wantsBalance = balanceOfToken(wants[0]);
-        if (wantsBalance > 0) {
-            totalAmounts += wantsBalance;
+        uint256 _totalAmounts = estimatedDepositedAmounts();
+        uint256 _wantsBalance = balanceOfToken(wants[0]);
+        if (_wantsBalance > 0) {
+            _totalAmounts += _wantsBalance;
         }
-        return totalAmounts;
+        return _totalAmounts;
     }
 }

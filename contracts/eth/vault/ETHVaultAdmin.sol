@@ -14,10 +14,13 @@ contract ETHVaultAdmin is ETHVaultStorage {
     using EnumerableSet for EnumerableSet.AddressSet;
     using IterableIntMap for IterableIntMap.AddressToIntMap;
 
+    receive() external payable {}
+    fallback() external payable {}
+
     /// @notice Shutdown the vault when an emergency occurs, cannot mint/burn.
-    function setEmergencyShutdown(bool active) external isVaultManager {
-        emergencyShutdown = active;
-        emit SetEmergencyShutdown(active);
+    function setEmergencyShutdown(bool _active) external isVaultManager {
+        emergencyShutdown = _active;
+        emit SetEmergencyShutdown(_active);
     }
 
     /// @notice set adjustPositionPeriod true when adjust position occurs, cannot remove add asset/strategy and cannot mint/burn.
@@ -82,13 +85,6 @@ contract ETHVaultAdmin is ETHVaultStorage {
         exchangeManager = _exchangeManagerAddress;
         emit ExchangeManagerAddressChanged(_exchangeManagerAddress);
     }
-
-    //
-    //    function setETHiAddress(address _address) external onlyRole(BocRoles.GOV_ROLE) {
-    //        require(address(ethi) == ZERO_ADDRESS, "ETHi has been set");
-    //        require(_address != ZERO_ADDRESS, "ETHi ad is 0");
-    //        ethi = ETHi(_address);
-    //    }
 
     function setVaultBufferAddress(address _address) external onlyRole(BocRoles.GOV_ROLE) {
         require(_address != address(0), "vaultBuffer ad is 0");
@@ -184,10 +180,10 @@ contract ETHVaultAdmin is ETHVaultStorage {
     /// @dev The strategy added to the strategy list,
     ///      Vault may invest funds into the strategy,
     ///      and the strategy will invest the funds in the 3rd protocol
-    function addStrategy(StrategyAdd[] memory _strategyAdds) external isVaultManager {
-        address[] memory _strategies = new address[](_strategyAdds.length);
-        for (uint256 i = 0; i < _strategyAdds.length; i++) {
-            StrategyAdd memory _strategyAdd = _strategyAdds[i];
+    function addStrategy(StrategyAdd[] memory strategyAdds) external isVaultManager {
+        address[] memory _strategies = new address[](strategyAdds.length);
+        for (uint256 i = 0; i < strategyAdds.length; i++) {
+            StrategyAdd memory _strategyAdd = strategyAdds[i];
             address _strategy = _strategyAdd.strategy;
             require(
                 (_strategy != ZERO_ADDRESS) &&
@@ -256,17 +252,17 @@ contract ETHVaultAdmin is ETHVaultStorage {
 
         address[] memory _wants = IETHStrategy(_addr).getWants();
         for (uint256 i = 0; i < _wants.length; i++) {
-            address wantToken = _wants[i];
-            trackedAssetsMap.minus(wantToken, 1);
-            if (trackedAssetsMap.get(wantToken) <= 0) {
+            address _wantToken = _wants[i];
+            trackedAssetsMap.minus(_wantToken, 1);
+            if (trackedAssetsMap.get(_wantToken) <= 0) {
                 uint256 _balance;
-                if (wantToken == NativeToken.NATIVE_TOKEN) {
+                if (_wantToken == NativeToken.NATIVE_TOKEN) {
                     _balance = address(this).balance;
                 } else {
-                    _balance = IERC20Upgradeable(wantToken).balanceOf(address(this));
+                    _balance = IERC20Upgradeable(_wantToken).balanceOf(address(this));
                 }
                 if (_balance == 0) {
-                    trackedAssetsMap.remove(wantToken);
+                    trackedAssetsMap.remove(_wantToken);
                 }
             }
         }
@@ -312,29 +308,28 @@ contract ETHVaultAdmin is ETHVaultStorage {
 
     function _removeStrategyFromQueue(address _strategy) internal {
         for (uint256 i = 0; i < withdrawQueue.length; i++) {
-            address curStrategy = withdrawQueue[i];
-            if (curStrategy == ZERO_ADDRESS) break;
-            if (curStrategy == _strategy) {
+            address _curStrategy = withdrawQueue[i];
+            if (_curStrategy == ZERO_ADDRESS) break;
+            if (_curStrategy == _strategy) {
                 withdrawQueue[i] = ZERO_ADDRESS;
                 _organizeWithdrawalQueue();
-                //                emit RemoveStrategyFromQueue(_strategy);
+                
                 return;
             }
         }
     }
 
     function _organizeWithdrawalQueue() internal {
-        uint256 offset = 0;
+        uint256 _offset = 0;
         for (uint256 i = 0; i < withdrawQueue.length; i++) {
-            address strategy = withdrawQueue[i];
-            if (strategy == ZERO_ADDRESS) {
-                offset += 1;
-            } else if (offset > 0) {
-                withdrawQueue[i - offset] = strategy;
+            address _strategy = withdrawQueue[i];
+            if (_strategy == ZERO_ADDRESS) {
+                _offset += 1;
+            } else if (_offset > 0) {
+                withdrawQueue[i - _offset] = _strategy;
                 withdrawQueue[i] = ZERO_ADDRESS;
             }
         }
     }
 
-    fallback() external payable {}
 }

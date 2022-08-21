@@ -5,8 +5,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/strategy/BaseClaimableStrategy.sol";
 import "./../../enums/ProtocolEnum.sol";
 
@@ -51,10 +49,10 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         returns (address[] memory _assets, uint256[] memory _ratios)
     {
         _assets = wants;
-        (uint256 baseReserve, uint256 quoteReserve) = DodoVault(lpTokenPool).getVaultReserve();
+        (uint256 _baseReserve, uint256 _quoteReserve) = DodoVault(lpTokenPool).getVaultReserve();
         _ratios = new uint256[](_assets.length);
-        _ratios[0] = baseReserve;
-        _ratios[1] = quoteReserve;
+        _ratios[0] = _baseReserve;
+        _ratios[1] = _quoteReserve;
     }
 
     function getOutputsInfo()
@@ -62,12 +60,12 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants; 
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants; 
 
         // not support remove_liquidity_one_coin
     }
@@ -79,37 +77,37 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         address _lpTokenPool = lpTokenPool;
         _tokens = wants;
         _amounts = new uint256[](_tokens.length);
-        uint256 lpAmount = balanceOfLpToken(address(this));
-        (uint256 reserve0, uint256 reserve1) = DodoVault(_lpTokenPool).getVaultReserve();
-        uint256 totalSupply = DodoVault(_lpTokenPool).totalSupply();
+        uint256 _lpAmount = balanceOfLpToken(address(this));
+        (uint256 _reserve0, uint256 _reserve1) = DodoVault(_lpTokenPool).getVaultReserve();
+        uint256 _totalSupply = DodoVault(_lpTokenPool).totalSupply();
 
-        _amounts[0] = (reserve0 * lpAmount) / totalSupply + balanceOfToken(_tokens[0]);
-        _amounts[1] = (reserve1 * lpAmount) / totalSupply + balanceOfToken(_tokens[1]);
+        _amounts[0] = (_reserve0 * _lpAmount) / _totalSupply + balanceOfToken(_tokens[0]);
+        _amounts[1] = (_reserve1 * _lpAmount) / _totalSupply + balanceOfToken(_tokens[1]);
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _wants = wants;
         address _lpTokenPool = lpTokenPool;
-        uint256 targetPoolTotalAssets;
+        uint256 _targetPoolTotalAssets;
 
-        uint256 baseTokenAmount = DodoVault(_lpTokenPool)._BASE_RESERVE_();
-        if (baseTokenAmount > 0) {
-            targetPoolTotalAssets += queryTokenValue(_wants[0], baseTokenAmount);
+        uint256 _baseTokenAmount = DodoVault(_lpTokenPool)._BASE_RESERVE_();
+        if (_baseTokenAmount > 0) {
+            _targetPoolTotalAssets += queryTokenValue(_wants[0], _baseTokenAmount);
         }
 
-        uint256 quoteTokenAmount = DodoVault(_lpTokenPool)._QUOTE_RESERVE_();
-        if (quoteTokenAmount > 0) {
-            targetPoolTotalAssets += queryTokenValue(_wants[1], quoteTokenAmount);
+        uint256 _quoteTokenAmount = DodoVault(_lpTokenPool)._QUOTE_RESERVE_();
+        if (_quoteTokenAmount > 0) {
+            _targetPoolTotalAssets += queryTokenValue(_wants[1], _quoteTokenAmount);
         }
 
-        return targetPoolTotalAssets;
+        return _targetPoolTotalAssets;
     }
 
     function getPendingRewards()
@@ -141,19 +139,11 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         address _lpTokenPool = lpTokenPool;
         IERC20Upgradeable(_assets[0]).safeTransfer(_lpTokenPool, _amounts[0]);
         IERC20Upgradeable(_assets[1]).safeTransfer(_lpTokenPool, _amounts[1]);
-        (uint256 shares, uint256 baseInput, uint256 quoteInput) = DodoVault(_lpTokenPool)
+        (uint256 _shares, uint256 _baseInput, uint256 _quoteInput) = DodoVault(_lpTokenPool)
             .buyShares(address(this));
-        console.log("[%s] buyShares success, shares=%s,", address(this), shares);
-        console.log(
-            "[%s] buyShares success, baseInput=%s, quoteInput=%s",
-            address(this),
-            baseInput,
-            quoteInput
-        );
-        uint256 lpAmount = IERC20Upgradeable(_lpTokenPool).balanceOf(address(this));
-        console.log("[%s] lpAmount=", address(this), lpAmount);
+        uint256 _lpAmount = IERC20Upgradeable(_lpTokenPool).balanceOf(address(this));
         // Pledge lptoken for mining
-        __deposit(lpAmount);
+        __deposit(_lpAmount);
     }
 
     function withdrawFrom3rdPool(
@@ -161,7 +151,6 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-        console.log("[%s] _withdrawSomeLpToken=", address(this), _withdrawShares, _totalShares);
         uint256 _lpAmount = balanceOfLpToken(address(this));
 
         if (_lpAmount > 0 && _withdrawShares > 0) {

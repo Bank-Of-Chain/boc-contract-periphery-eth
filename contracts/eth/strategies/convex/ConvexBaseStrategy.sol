@@ -17,7 +17,7 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
     address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     IConvex internal constant BOOSTER = IConvex(address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31));
-    IUniswapV2Router2 public constant router2 = IUniswapV2Router2(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
+    IUniswapV2Router2 public constant ROUTER2 = IUniswapV2Router2(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
 
     function _initialize(address _vault,string memory _name) internal {
         super._initialize(_vault, uint16(ProtocolEnum.Convex), _name,getConvexWants());
@@ -25,13 +25,13 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
         sellFloor[CRV] = 1e16;
     }
 
-    function setSellFloor(address token, uint256 floor) public isVaultManager {
-        sellFloor[token] = floor;
+    function setSellFloor(address _token, uint256 _floor) public isVaultManager {
+        sellFloor[_token] = _floor;
     }
 
-    function setRewardSwapPath(address token, address[] memory _uniswapRouteToToken) public isVaultManager {
-        require(token == _uniswapRouteToToken[_uniswapRouteToToken.length - 1]);
-        uniswapRewardRoutes[token] = _uniswapRouteToToken;
+    function setRewardSwapPath(address _token, address[] memory _uniswapRouteToToken) public isVaultManager {
+        require(_token == _uniswapRouteToToken[_uniswapRouteToToken.length - 1]);
+        uniswapRewardRoutes[_token] = _uniswapRouteToToken;
     }
 
     function getRewardPool() internal pure virtual returns (IConvexReward);
@@ -67,34 +67,32 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
         virtual
         override
         returns (
-            bool isWorth,
-            address[] memory assets,
-            uint256[] memory amounts
+            bool _isWorth,
+            address[] memory _assets,
+            uint256[] memory _amounts
         )
     {
-        uint256 rewardCRVAmount = getRewardPool().earned(address(this));
-        console.log("rewardCRVAmount:%d", rewardCRVAmount);
-        if (rewardCRVAmount > sellFloor[CRV]) {
+        uint256 _rewardCRVAmount = getRewardPool().earned(address(this));
+        if (_rewardCRVAmount > sellFloor[CRV]) {
             getRewardPool().getReward();
-            assets = getConvexRewards();
-            amounts = new uint256[](assets.length);
-            for (uint256 i = 0; i < assets.length; i++) {
-                amounts[i] = balanceOfToken(assets[i]);
+            _assets = getConvexRewards();
+            _amounts = new uint256[](_assets.length);
+            for (uint256 i = 0; i < _assets.length; i++) {
+                _amounts[i] = balanceOfToken(_assets[i]);
             }
-            isWorth = true;
+            _isWorth = true;
         }
     }
 
     function swapRewardsToWants() internal virtual override {
-        console.log('Convext::swapRewardsToWants');
         address[] memory _rewardTokens = getConvexRewards();
         for (uint256 i = 0; i < _rewardTokens.length; i++) {
-            uint256 rewardAmount = balanceOfToken(_rewardTokens[i]);
-            if (rewardAmount > 0) {
-                IERC20Upgradeable(_rewardTokens[i]).safeApprove(address(router2), 0);
-                IERC20Upgradeable(_rewardTokens[i]).safeApprove(address(router2), rewardAmount);
+            uint256 _rewardAmount = balanceOfToken(_rewardTokens[i]);
+            if (_rewardAmount > 0) {
+                IERC20Upgradeable(_rewardTokens[i]).safeApprove(address(ROUTER2), 0);
+                IERC20Upgradeable(_rewardTokens[i]).safeApprove(address(ROUTER2), _rewardAmount);
                 // sell to one coin then reinvest
-                router2.swapExactTokensForTokens(rewardAmount, 0, uniswapRewardRoutes[_rewardTokens[i]], address(this), block.timestamp);
+                ROUTER2.swapExactTokensForTokens(_rewardAmount, 0, uniswapRewardRoutes[_rewardTokens[i]], address(this), block.timestamp);
             }
         }
         sellWETH2Want();
@@ -105,10 +103,10 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
-        uint256 thirdPoolAssets = 0;
+        uint256 _thirdPoolAssets = 0;
         for (uint256 i = 0; i < wants.length; i++) {
-            thirdPoolAssets = thirdPoolAssets + queryTokenValueInETH(wants[i], getCurvePool().balances(i));
+            _thirdPoolAssets = _thirdPoolAssets + queryTokenValueInETH(wants[i], getCurvePool().balances(i));
         }
-        return thirdPoolAssets;
+        return _thirdPoolAssets;
     }
 }

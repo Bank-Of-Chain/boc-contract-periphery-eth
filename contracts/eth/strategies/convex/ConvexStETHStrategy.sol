@@ -14,18 +14,18 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
     function initialize(address _vault, string memory _name) external initializer {
         super._initialize(_vault, _name);
         //set up sell reward path
-        address[] memory rewardCRVPath = new address[](2);
-        rewardCRVPath[0] = CRV;
-        rewardCRVPath[1] = wETH;
-        uniswapRewardRoutes[CRV] = rewardCRVPath;
-        address[] memory rewardCVXPath = new address[](2);
-        rewardCVXPath[0] = CVX;
-        rewardCVXPath[1] = wETH;
-        uniswapRewardRoutes[CVX] = rewardCVXPath;
-        address[] memory rewardLDOPath = new address[](2);
-        rewardLDOPath[0] = LDO;
-        rewardLDOPath[1] = wETH;
-        uniswapRewardRoutes[LDO] = rewardLDOPath;
+        address[] memory _rewardCRVPath = new address[](2);
+        _rewardCRVPath[0] = CRV;
+        _rewardCRVPath[1] = wETH;
+        uniswapRewardRoutes[CRV] = _rewardCRVPath;
+        address[] memory _rewardCVXPath = new address[](2);
+        _rewardCVXPath[0] = CVX;
+        _rewardCVXPath[1] = wETH;
+        uniswapRewardRoutes[CVX] = _rewardCVXPath;
+        address[] memory _rewardLDOPath = new address[](2);
+        _rewardLDOPath[0] = LDO;
+        _rewardLDOPath[1] = wETH;
+        uniswapRewardRoutes[LDO] = _rewardLDOPath;
     }
 
     function getCurvePool() internal pure override returns (ICurveLiquidityPoolPayable) {
@@ -34,7 +34,7 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
 
     function getConvexWants() internal pure override returns (address[] memory) {
         address[] memory _wants = new address[](2);
-        _wants[0] = ETHToken.NATIVE_TOKEN;
+        _wants[0] = NativeToken.NATIVE_TOKEN;
         _wants[1] = stETH;
         return _wants;
     }
@@ -81,22 +81,22 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](3);
-        OutputInfo memory info = outputsInfo[0];
-        info.outputCode = 0;
-        info.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](3);
+        OutputInfo memory _info = _outputsInfo[0];
+        _info.outputCode = 0;
+        _info.outputTokens = wants;
 
-        OutputInfo memory info1 = outputsInfo[1];
-        info1.outputCode = 1;
-        info1.outputTokens = new address[](1);
-        info1.outputTokens[0] = ETHToken.NATIVE_TOKEN;
+        OutputInfo memory _info1 = _outputsInfo[1];
+        _info1.outputCode = 1;
+        _info1.outputTokens = new address[](1);
+        _info1.outputTokens[0] = NativeToken.NATIVE_TOKEN;
 
-        OutputInfo memory info2 = outputsInfo[2];
-        info2.outputCode = 2;
-        info2.outputTokens = new address[](1);
-        info2.outputTokens[0] = stETH;
+        OutputInfo memory _info2 = _outputsInfo[2];
+        _info2.outputCode = 2;
+        _info2.outputTokens = new address[](1);
+        _info2.outputTokens[0] = stETH;
     }
 
     function getPositionDetail()
@@ -106,21 +106,21 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isETH,
+            uint256 _ethValue
         )
     {
         _tokens = wants;
         _amounts = new uint256[](_tokens.length);
         // curve LP token amount = convex LP token amount
-        uint256 lpAmount = balanceOfLpToken();
+        uint256 _lpAmount = balanceOfLpToken();
         // curve LP total supply
-        uint256 totalSupply = IERC20Upgradeable(getLpToken()).totalSupply();
+        uint256 _totalSupply = IERC20Upgradeable(getLpToken()).totalSupply();
         for (uint256 i = 0; i < wants.length; i++) {
             _amounts[i] =
                 balanceOfToken(_tokens[i]) +
-                (getCurvePool().balances(i) * lpAmount) /
-                totalSupply;
+                (getCurvePool().balances(i) * _lpAmount) /
+                _totalSupply;
         }
     }
 
@@ -133,22 +133,22 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         internal
         override
     {
-        bool isDeposit = false;
+        bool _isDeposit = false;
         for (uint256 i = 0; i < _amounts.length; i++) {
             if (_amounts[i] > 0) {
-                isDeposit = true;
+                _isDeposit = true;
                 break;
             }
         }
-        if (isDeposit) {
+        if (_isDeposit) {
             // https://etherscan.io/tx/0x05ccc4242d3d5192a5ff30195cd1aa0ddb434b50fa88ffc55281ccc0bdb94c13
-            uint256 liquidity = curveAddLiquidity(_assets, _amounts);
-            address lpToken = getLpToken();
-            IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), 0);
-            IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), liquidity);
+            uint256 _liquidity = curveAddLiquidity(_assets, _amounts);
+            address _lpToken = getLpToken();
+            IERC20Upgradeable(_lpToken).safeApprove(address(BOOSTER), 0);
+            IERC20Upgradeable(_lpToken).safeApprove(address(BOOSTER), _liquidity);
             // deposit into convex booster and stake at reward pool automatically
             // https://etherscan.io/tx/0xfdc8f347440dc9adeaa0b59201c653fd09c2cfffb97b35df08de7af5691b02ec
-            BOOSTER.deposit(getPid(), liquidity, true);
+            BOOSTER.deposit(getPid(), _liquidity, true);
         }
     }
 
@@ -157,26 +157,26 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         override
         returns (uint256)
     {
-        uint256[2] memory depositArray;
-        depositArray[0] = _amounts[0];
-        depositArray[1] = _amounts[1];
+        uint256[2] memory _depositArray;
+        _depositArray[0] = _amounts[0];
+        _depositArray[1] = _amounts[1];
         // only need to safeApprove stETH
         IERC20Upgradeable(_assets[1]).safeApprove(address(getCurvePool()), 0);
         IERC20Upgradeable(_assets[1]).safeApprove(address(getCurvePool()), _amounts[1]);
         if (_amounts[0] > 0) {
-            return getCurvePool().add_liquidity{value: _amounts[0]}(depositArray, 0);
+            return getCurvePool().add_liquidity{value: _amounts[0]}(_depositArray, 0);
         }
-        return getCurvePool().add_liquidity(depositArray, 0);
+        return getCurvePool().add_liquidity(_depositArray, 0);
     }
 
-    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
+    function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPoolPayable pool = getCurvePool();
         if (_outputCode == 1) {
-            pool.remove_liquidity_one_coin(liquidity, 0, 0);
+            pool.remove_liquidity_one_coin(_liquidity, 0, 0);
         } else if (_outputCode == 2) {
-            pool.remove_liquidity_one_coin(liquidity, 1, 0);
+            pool.remove_liquidity_one_coin(_liquidity, 1, 0);
         } else {
-            pool.remove_liquidity(liquidity, [uint256(0), uint256(0)]);
+            pool.remove_liquidity(_liquidity, [uint256(0), uint256(0)]);
         }
     }
 }

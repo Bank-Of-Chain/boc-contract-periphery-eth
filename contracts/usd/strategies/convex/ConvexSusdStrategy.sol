@@ -50,11 +50,11 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
     {
         _assets = wants;
         _ratios = new uint256[](_assets.length);
-        int128 index = 0;
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
+        int128 _index = 0;
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _assets.length; i++) {
-            _ratios[i] = pool.balances(index);
-            index++;
+            _ratios[i] = _pool.balances(_index);
+            _index++;
         }
     }
 
@@ -63,12 +63,12 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
 
         // not support remove_liquidity_one_coin
     }
@@ -80,37 +80,37 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;
         _amounts = new uint256[](_tokens.length);
         // curve LP token amount = convex LP token amount
-        uint256 lpAmount = balanceOfLpToken();
+        uint256 _lpAmount = balanceOfLpToken();
         // curve LP total supply
-        uint256 totalSupply = IERC20Upgradeable(lpToken).totalSupply();
+        uint256 _totalSupply = IERC20Upgradeable(lpToken).totalSupply();
         // calc balances
-        int128 index = 0;
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
+        int128 _index = 0;
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _tokens.length; i++) {
-            uint256 depositedTokenAmount = (pool.balances(index) * lpAmount) / totalSupply;
-            _amounts[i] = balanceOfToken(_tokens[i]) + depositedTokenAmount;
-            index++;
+            uint256 _depositedTokenAmount = (_pool.balances(_index) * _lpAmount) / _totalSupply;
+            _amounts[i] = balanceOfToken(_tokens[i]) + _depositedTokenAmount;
+            _index++;
         }
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _assets = wants;
-        uint256 thirdPoolAssets;
-        int128 index = 0;
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
+        uint256 _thirdPoolAssets;
+        int128 _index = 0;
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _assets.length; i++) {
-            uint256 thirdPoolAssetBalance = pool.balances(index);
-            thirdPoolAssets += queryTokenValue(_assets[i], thirdPoolAssetBalance);
-            index++;
+            uint256 _thirdPoolAssetBalance = _pool.balances(_index);
+            _thirdPoolAssets += queryTokenValue(_assets[i], _thirdPoolAssetBalance);
+            _index++;
         }
-        return thirdPoolAssets;
+        return _thirdPoolAssets;
     }
 
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
@@ -126,8 +126,8 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
             }
         }
         ICurveLiquidityPool(_curvePool).add_liquidity([_amounts[0], _amounts[1], _amounts[2], _amounts[3]], 0);
-        uint256 lpAmount = balanceOfToken(lpToken);
-        return lpAmount;
+        uint256 _lpAmount = balanceOfToken(lpToken);
+        return _lpAmount;
     }
 
     function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {

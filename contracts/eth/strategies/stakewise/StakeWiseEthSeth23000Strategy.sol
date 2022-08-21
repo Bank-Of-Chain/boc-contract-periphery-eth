@@ -13,7 +13,6 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
     // https://info.uniswap.org/#/pools/0x7379e81228514a1d2a6cf7559203998e20598346
     address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address internal constant STAKE_WISE_MERKLE_DISTRIBUTOR_ADDRESS = 0xA3F21010e8b9a3930996C8849Df38f9Ca3647c20;
-
     address internal constant SETH2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;
     address internal constant RETH2 = 0x20BC832ca081b91433ff6c17f85701B6e92486c5;
     address internal constant SWISE = 0x48C3399719B582dD63eB5AADf12A40B4C3f52FA2;
@@ -26,15 +25,15 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
         super._initialize(_vault, uint16(ProtocolEnum.StakeWise), _name, _wants);
     }
 
-    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info = outputsInfo[0];
-        info.outputCode = 0;
-        info.outputTokens = wants;
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo){
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info = _outputsInfo[0];
+        _info.outputCode = 0;
+        _info.outputTokens = wants;
     }
 
-    function claimRewards() internal override returns (bool isWorth, address[] memory assets, uint256[] memory amounts) {
-        (isWorth, assets, amounts) = super.claimRewards();
+    function claimRewards() internal override returns (bool _isWorth, address[] memory _assets, uint256[] memory _amounts) {
+        (_isWorth, _assets, _amounts) = super.claimRewards();
         swapRewardsToWants();
     }
 
@@ -45,7 +44,6 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
         uint256[] memory _claimAmounts = new uint256[](2);
         _claimAmounts[0] = balanceOfToken(RETH2);
         _claimAmounts[1] = balanceOfToken(SWISE);
-
         IMerkleDistributor(STAKE_WISE_MERKLE_DISTRIBUTOR_ADDRESS).claim(_index, _account, _tokens, _amounts, _merkleProof);
 
         _claimAmounts[0] = balanceOfToken(RETH2) - _claimAmounts[0];
@@ -55,20 +53,20 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
     }
 
     function swapRewardsToWants() internal override {
-        uint256 balanceOfSwise = balanceOfToken(SWISE);
-        if (balanceOfSwise > 0) {
+        uint256 _balanceOfSwise = balanceOfToken(SWISE);
+        if (_balanceOfSwise > 0) {
             IERC20(SWISE).approve(UNISWAP_V3_ROUTER, 0);
-            IERC20(SWISE).approve(UNISWAP_V3_ROUTER, balanceOfSwise);
-            IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(SWISE, SETH2, 3000, address(this), block.timestamp, balanceOfSwise, 0, 0);
-            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(params);
+            IERC20(SWISE).approve(UNISWAP_V3_ROUTER, _balanceOfSwise);
+            IUniswapV3.ExactInputSingleParams memory _params = IUniswapV3.ExactInputSingleParams(SWISE, SETH2, 3000, address(this), block.timestamp, _balanceOfSwise, 0, 0);
+            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(_params);
         }
 
-        uint256 balanceOfRETH2 = balanceOfToken(RETH2);
-        if (balanceOfRETH2 > 0) {
+        uint256 _balanceOfRETH2 = balanceOfToken(RETH2);
+        if (_balanceOfRETH2 > 0) {
             IERC20(RETH2).approve(UNISWAP_V3_ROUTER, 0);
-            IERC20(RETH2).approve(UNISWAP_V3_ROUTER, balanceOfRETH2);
-            IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(RETH2, SETH2, 500, address(this), block.timestamp, balanceOfRETH2, 0, 0);
-            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(params);
+            IERC20(RETH2).approve(UNISWAP_V3_ROUTER, _balanceOfRETH2);
+            IUniswapV3.ExactInputSingleParams memory _params = IUniswapV3.ExactInputSingleParams(RETH2, SETH2, 500, address(this), block.timestamp, _balanceOfRETH2, 0, 0);
+            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(_params);
         }
     }
 }

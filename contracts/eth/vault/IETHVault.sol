@@ -67,13 +67,13 @@ interface IETHVault {
     event SetWithdrawalQueue(address[] _queues);
     event Rebase(uint256 _totalShares, uint256 _totalValue, uint256 _newUnderlyingUnitsPerShare);
     event StrategyReported(
-        address indexed strategy,
-        uint256 gain,
-        uint256 loss,
-        uint256 lastStrategyTotalDebt,
-        uint256 nowStrategyTotalDebt,
-        address[] rewardTokens,
-        uint256[] claimAmounts,
+        address indexed _strategy,
+        uint256 _gain,
+        uint256 _loss,
+        uint256 _lastStrategyTotalDebt,
+        uint256 _nowStrategyTotalDebt,
+        address[] _rewardTokens,
+        uint256[] _claimAmounts,
         uint256 _type
     );
 
@@ -96,13 +96,13 @@ interface IETHVault {
     function getVersion() external pure returns (string memory);
 
     /// @notice Minting USDi supported assets
-    function getSupportAssets() external view returns (address[] memory assets);
+    function getSupportAssets() external view returns (address[] memory _assets);
 
     /// @notice Check '_asset' is supported or not
-    function checkIsSupportAsset(address asset) external view;
+    function checkIsSupportAsset(address _asset) external view;
 
     /// @notice Assets held by Vault
-    function getTrackedAssets() external view returns (address[] memory assets);
+    function getTrackedAssets() external view returns (address[] memory _assets);
 
     /// @notice Vault holds asset value directly in ETH (1e18)
     function valueOfTrackedTokens() external view returns (uint256 _totalValue);
@@ -272,7 +272,7 @@ interface IETHVault {
     /// @dev The strategy added to the strategy list,
     ///      Vault may invest funds into the strategy,
     ///      and the strategy will invest the funds in the 3rd protocol
-    function addStrategy(StrategyAdd[] memory strategyAdds) external;
+    function addStrategy(StrategyAdd[] memory _strategyAdds) external;
 
     /// @notice Remove strategy from strategy list
     /// @dev The removed policy withdraws funds from the 3rd protocol and returns to the Vault

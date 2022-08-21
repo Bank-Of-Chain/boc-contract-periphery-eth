@@ -8,8 +8,6 @@ import "../../../external/convex/IConvex.sol";
 
 import "../../enums/ProtocolEnum.sol";
 
-import "hardhat/console.sol";
-
 abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -50,21 +48,18 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
         internal
         override
     {
-        console.log("start to depositTo3rdPool");
         // add liquidity on curve
-        uint256 liquidity = curveAddLiquidity(_assets, _amounts);
-        console.log("curveLpAmount:%d", liquidity);
-        if (liquidity > 0) {
-            console.log("deposit into Convex, pid:%d, lp amount:%d", pid, balanceOfToken(lpToken));
+        uint256 _liquidity = curveAddLiquidity(_assets, _amounts);
+        if (_liquidity > 0) {
             IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), 0);
-            IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), liquidity);
+            IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), _liquidity);
             // deposit into convex booster and stake at reward pool automically
-            BOOSTER.deposit(pid, liquidity, true);
+            BOOSTER.deposit(pid, _liquidity, true);
         }
     }
 
     /// @dev do not remove with one coin, and return underlying
-    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal virtual;
+    function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal virtual;
 
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
@@ -72,12 +67,10 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
         uint256 _outputCode
     ) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
-        console.log("_withdrawSomeLpToken:%d", _lpAmount);
         if (_lpAmount > 0) {
             // unstaking
             IConvexReward(rewardPool).withdraw(_lpAmount, false);
             BOOSTER.withdraw(pid, _lpAmount);
-            console.log("lpBalance:%d", balanceOfToken(lpToken));
             // remove liquidity on curve
             curveRemoveLiquidity(_lpAmount, _outputCode);
         }

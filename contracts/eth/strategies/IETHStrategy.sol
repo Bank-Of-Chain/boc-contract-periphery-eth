@@ -10,7 +10,7 @@ interface IETHStrategy {
         address[] _assets,
         uint256[] _amounts
     );
-    event SetIsWantRatioIgnorable(bool oldValue, bool newValue);
+    event SetIsWantRatioIgnorable(bool _oldValue, bool _newValue);
 
     /// @notice Version of strategy
     function getVersion() external pure returns (string memory);
@@ -40,8 +40,8 @@ interface IETHStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isETH,
-            uint256 ethValue
+            bool _isETH,
+            uint256 _ethValue
         );
 
     /// @notice Total assets of strategy in ETH.
