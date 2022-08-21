@@ -282,8 +282,8 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         )
     {
         address _rewardPool = getRewardPool();
-        uint256 earn = IRewardPool(_rewardPool).earned(address(this));
-        if (earn > sellFloor[BAL]) {
+        uint256 _earn = IRewardPool(_rewardPool).earned(address(this));
+        if (_earn > sellFloor[BAL]) {
             _claimIsWorth = true;
             IRewardPool(_rewardPool).getReward();
             _rewardsTokens = new address[](2);

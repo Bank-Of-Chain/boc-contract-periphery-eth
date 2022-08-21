@@ -7,13 +7,12 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "../oracle/PriceOracle.sol";
 import "../strategies/IETHStrategy.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
 
 contract MockVault is AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public priceProvider;
     
-    address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-
     constructor(address _accessControlProxy, address _valueInterpreter) {
         _initAccessControl(_accessControlProxy);
         priceProvider = _valueInterpreter;
@@ -38,7 +37,7 @@ contract MockVault is AccessControlMixin {
         for (uint8 i = 0; i < _assets.length; i++) {
             address _token = _assets[i];
             uint256 _amount = _amounts[i];
-            if (_token == ETH) {
+            if (_token == NativeToken.NATIVE_TOKEN) {
                 payable(address(_strategy)).transfer(_amount);
             } else {
                 IERC20Upgradeable _item = IERC20Upgradeable(_token);

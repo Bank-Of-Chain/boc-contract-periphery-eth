@@ -64,23 +64,23 @@ contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin
         _amounts[1] = (_lpAmount * _reserve1) / _totalSupply + balanceOfToken(_tokens[1]);
     }
 
-    function lpValueInEth() internal view returns (uint256 lpValue) {
+    function lpValueInEth() internal view returns (uint256 _lpValue) {
         uint256 _totalSupply = uniswapV2Pair.totalSupply();
         (uint112 _reserve0, uint112 _reserve1, ) = uniswapV2Pair.getReserves();
-        uint256 lpDecimalUnit = 1e18;
-        uint256 part0 = (uint256(_reserve0) * (lpDecimalUnit)) / _totalSupply;
-        uint256 part1 = (uint256(_reserve1) * (lpDecimalUnit)) / _totalSupply;
-        uint256 partValue0 = priceOracle.valueInEth(wants[0], part0);
-        uint256 partValue1 = priceOracle.valueInEth(wants[1], part1);
-        lpValue = partValue0 + partValue1;
+        uint256 _lpDecimalUnit = 1e18;
+        uint256 _part0 = (uint256(_reserve0) * (_lpDecimalUnit)) / _totalSupply;
+        uint256 _part1 = (uint256(_reserve1) * (_lpDecimalUnit)) / _totalSupply;
+        uint256 _partValue0 = priceOracle.valueInEth(wants[0], _part0);
+        uint256 _partValue1 = priceOracle.valueInEth(wants[1], _part1);
+        _lpValue = _partValue0 + _partValue1;
     }
 
     function get3rdPoolAssets() external view virtual override returns (uint256) {
         
         uint256 _totalSupply = uniswapV2Pair.totalSupply();
-        uint256 lpValue = lpValueInEth();
+        uint256 _lpValue = lpValueInEth();
 
-        return (_totalSupply * lpValue) / 1e18;
+        return (_totalSupply * _lpValue) / 1e18;
     }
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal virtual override {
@@ -88,9 +88,9 @@ contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin
     }
 
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal virtual override {
-        uint256 withdrawAmount = (balanceOfToken(address(uniswapV2Pair)) * _withdrawShares) / _totalShares;
-        if (withdrawAmount > 0) {
-            __uniswapV2Redeem(address(this), address(uniswapV2Pair), withdrawAmount, wants[0], wants[1], 0, 0);
+        uint256 _withdrawAmount = (balanceOfToken(address(uniswapV2Pair)) * _withdrawShares) / _totalShares;
+        if (_withdrawAmount > 0) {
+            __uniswapV2Redeem(address(this), address(uniswapV2Pair), _withdrawAmount, wants[0], wants[1], 0, 0);
         }
     }
 

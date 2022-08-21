@@ -30,7 +30,7 @@ contract ConvexSETHStrategy is ConvexBaseStrategy {
 
     function getConvexWants() internal pure override returns (address[] memory) {
         address[] memory _wants = new address[](2);
-        _wants[0] = ETHToken.NATIVE_TOKEN;
+        _wants[0] = NativeToken.NATIVE_TOKEN;
         _wants[1] = sETH;
         return _wants;
     }
@@ -87,7 +87,7 @@ contract ConvexSETHStrategy is ConvexBaseStrategy {
         OutputInfo memory _info1 = _outputsInfo[1];
         _info1.outputCode = 1;
         _info1.outputTokens = new address[](1);
-        _info1.outputTokens[0] = ETHToken.NATIVE_TOKEN;
+        _info1.outputTokens[0] = NativeToken.NATIVE_TOKEN;
 
         OutputInfo memory _info2 = _outputsInfo[2];
         _info2.outputCode = 2;
@@ -147,9 +147,9 @@ contract ConvexSETHStrategy is ConvexBaseStrategy {
         _depositArray[1] = _amounts[1];
         // only need to safeApprove sETH
         ICurveLiquidityPoolPayable _curvePool = getCurvePool();
-        address curvePoolAddress = address(_curvePool);
-        IERC20Upgradeable(_assets[1]).safeApprove(curvePoolAddress, 0);
-        IERC20Upgradeable(_assets[1]).safeApprove(curvePoolAddress, _amounts[1]);
+        address _curvePoolAddress = address(_curvePool);
+        IERC20Upgradeable(_assets[1]).safeApprove(_curvePoolAddress, 0);
+        IERC20Upgradeable(_assets[1]).safeApprove(_curvePoolAddress, _amounts[1]);
         if (_amounts[0] > 0) {
             return _curvePool.add_liquidity{value: _amounts[0]}(_depositArray, 0);
         }

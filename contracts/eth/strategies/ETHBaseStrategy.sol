@@ -11,7 +11,7 @@ import "boc-contract-core/contracts/library/BocRoles.sol";
 import "boc-contract-core/contracts/library/StableMath.sol";
 import "../oracle/IPriceOracle.sol";
 import "../vault/IETHVault.sol";
-import "../../library/ETHToken.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
 
 abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -194,7 +194,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     ) internal virtual;
 
     function balanceOfToken(address _tokenAddress) internal view returns (uint256) {
-        if (_tokenAddress == ETHToken.NATIVE_TOKEN) {
+        if (_tokenAddress == NativeToken.NATIVE_TOKEN) {
             return address(this).balance;
         }
         return IERC20Upgradeable(_tokenAddress).balanceOf(address(this));
@@ -211,7 +211,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
         view
         returns (uint256 _valueInETH)
     {
-        if (_token == ETHToken.NATIVE_TOKEN) {
+        if (_token == NativeToken.NATIVE_TOKEN) {
             _valueInETH = _amount;
         } else {
             _valueInETH = priceOracle.valueInEth(_token, _amount);
@@ -219,7 +219,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     }
 
     function decimalUnitOfToken(address _token) internal view returns (uint256) {
-        if (_token == ETHToken.NATIVE_TOKEN) {
+        if (_token == NativeToken.NATIVE_TOKEN) {
             return 1e18;
         }
         return 10**IERC20MetadataUpgradeable(_token).decimals();
@@ -233,7 +233,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
         for (uint256 i = 0; i < _assets.length; i++) {
             uint256 _amount = _amounts[i];
             if (_amount > 0) {
-                if (_assets[i] == ETHToken.NATIVE_TOKEN) {
+                if (_assets[i] == NativeToken.NATIVE_TOKEN) {
                     payable(_target).transfer(_amount);
                 } else {
                     IERC20Upgradeable(_assets[i]).safeTransfer(address(_target), _amount);
