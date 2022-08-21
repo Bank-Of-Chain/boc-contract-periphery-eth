@@ -226,6 +226,9 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal virtual override {
+        if (_withdrawShares == _totalShares) {
+            harvest();
+        }
         withdraw(baseMintInfo.tokenId, _withdrawShares, _totalShares);
         withdraw(limitMintInfo.tokenId, _withdrawShares, _totalShares);
         if (_withdrawShares == _totalShares) {
@@ -273,6 +276,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     function rebalance(int24 tick) internal {
+        harvest();
         // Withdraw all current liquidity
         uint128 baseLiquidity = balanceOfLpToken(baseMintInfo.tokenId);
         if (baseLiquidity > 0) {

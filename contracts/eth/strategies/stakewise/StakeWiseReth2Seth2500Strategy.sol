@@ -5,16 +5,18 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 import "../../../external/uniswap/IQuoter.sol";
 import "../uniswapv3/ETHUniswapV3BaseStrategy.sol";
-import "../../../external/stakewise/IPool.sol";
+import "../../../external/stakewise/IMerkleDistributor.sol";
 
 contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // https://info.uniswap.org/#/pools/0xa9ffb27d36901f87f1d0f20773f7072e38c5bfba
-    address internal constant uniswapV3Router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    address internal constant STAKE_WISE_MERKLE_DISTRIBUTOR_ADDRESS = 0xA3F21010e8b9a3930996C8849Df38f9Ca3647c20;
 
-    address internal constant sETH2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;
-    address internal constant swise = 0x48C3399719B582dD63eB5AADf12A40B4C3f52FA2;
+    address internal constant SETH2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;
+    address internal constant RETH2 = 0x20BC832ca081b91433ff6c17f85701B6e92486c5;
+    address internal constant SWISE = 0x48C3399719B582dD63eB5AADf12A40B4C3f52FA2;
 
     function initialize(address _vault, string memory _name) public initializer {
         uniswapV3Initialize(0xa9ffb27d36901F87f1D0F20773f7072e38C5bfbA, 10, 10, 41400, 0, 100, 60, 10);
@@ -32,17 +34,33 @@ contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
     }
 
     function claimRewards() internal override returns (bool isWorth, address[] memory assets, uint256[] memory amounts) {
-        super.claimRewards();
+        (isWorth, assets, amounts) = super.claimRewards();
         swapRewardsToWants();
     }
 
+    function merkleDistributorClaim(uint256 _index, address _account, address[] calldata _tokens, uint256[] calldata _amounts, bytes32[] calldata _merkleProof) public {
+        address[] memory _rewardsTokens = new address[](2);
+        _rewardsTokens[0] = RETH2;
+        _rewardsTokens[1] = SWISE;
+        uint256[] memory _claimAmounts = new uint256[](2);
+        _claimAmounts[0] = balanceOfToken(RETH2);
+        _claimAmounts[1] = balanceOfToken(SWISE);
+
+        IMerkleDistributor(STAKE_WISE_MERKLE_DISTRIBUTOR_ADDRESS).claim(_index, _account, _tokens, _amounts, _merkleProof);
+
+        _claimAmounts[0] = balanceOfToken(RETH2) - _claimAmounts[0];
+        _claimAmounts[1] = balanceOfToken(SWISE) - _claimAmounts[1];
+
+        vault.report(_rewardsTokens,_claimAmounts);
+    }
+
     function swapRewardsToWants() internal override {
-        uint256 balanceOfSwise = balanceOfToken(swise);
+        uint256 balanceOfSwise = balanceOfToken(SWISE);
         if (balanceOfSwise > 0) {
-            IERC20(swise).approve(uniswapV3Router, 0);
-            IERC20(swise).approve(uniswapV3Router, balanceOfSwise);
-            IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(swise, sETH2, 3000, address(this), block.timestamp, balanceOfSwise, 0, 0);
-            IUniswapV3(uniswapV3Router).exactInputSingle(params);
+            IERC20(SWISE).approve(UNISWAP_V3_ROUTER, 0);
+            IERC20(SWISE).approve(UNISWAP_V3_ROUTER, balanceOfSwise);
+            IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(SWISE, SETH2, 3000, address(this), block.timestamp, balanceOfSwise, 0, 0);
+            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(params);
         }
     }
 }
