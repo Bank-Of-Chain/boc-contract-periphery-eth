@@ -53,7 +53,7 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
     }
 
     function swapRewardsToWants() internal override {
-        uint256 _balanceOfSwise = balanceOfToken(swise);
+        uint256 _balanceOfSwise = balanceOfToken(SWISE);
         if (_balanceOfSwise > 0) {
             IERC20(SWISE).approve(UNISWAP_V3_ROUTER, 0);
             IERC20(SWISE).approve(UNISWAP_V3_ROUTER, _balanceOfSwise);
