@@ -294,14 +294,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         return _curveForexPool.coins(0);
     }
 
-    event SwapRewardsToWants(
-        address _strategy,
-        address[] _rewards,
-        uint256[] _rewardAmounts,
-        address[] _wants,
-        uint256[] _wantAmounts
-    );
-
     /**
      *   Sell reward and reinvestment logic
      */
@@ -336,6 +328,13 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         vault.report(_rewardsTokens, _claimAmounts);
     }
 
+    event SwapRewardsToWants(
+        address _strategy,
+        address[] _rewards,
+        uint256[] _rewardAmounts,
+        address[] _wants,
+        uint256[] _wantAmounts
+    );
     /**
      *  sell crv and cvx
      */
@@ -352,6 +351,18 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         }
         uint256 _ethBalanceAfterSellTotal = address(this).balance;
 
+        // fulfill 'SwapRewardsToWants' event data
+        address[] memory _rewardTokens = new address[](2);
+        uint256[] memory _rewardAmounts = new uint256[](2);
+        address[] memory _wantTokens = new address[](2);
+        uint256[] memory _wantAmounts = new uint256[](2);
+        _rewardTokens[0] = REWARD_CRV;
+        _rewardTokens[1] = REWARD_CVX;
+        _rewardAmounts[0] = _crvAmount;
+        _rewardAmounts[1] = _convexAmount;
+        _wantTokens[0] = USDC;
+        _wantTokens[1] = USDC;
+
         if (address(this).balance > 0) {
             //ETH wrap to WETH
             IWeth(WETH).deposit{value: address(this).balance}();
@@ -366,17 +377,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
             );
             uint256 _usdcBalance = balanceOfToken(USDC);
 
-            // calculate 'SwapRewardsToWants' event data
-            address[] memory _rewardTokens = new address[](2);
-            uint256[] memory _rewardAmounts = new uint256[](2);
-            address[] memory _wantTokens = new address[](2);
-            uint256[] memory _wantAmounts = new uint256[](2);
-            _rewardTokens[0] = REWARD_CRV;
-            _rewardTokens[1] = REWARD_CVX;
-            _rewardAmounts[0] = _crvAmount;
-            _rewardAmounts[1] = _convexAmount;
-            _wantTokens[0] = USDC;
-            _wantTokens[1] = USDC;
+            // fulfill 'SwapRewardsToWants' event data
             if(_ethBalanceAfterSellTotal - _ethBalanceInit > 0) {
                 _wantAmounts[0] = _usdcBalance *(_ethBalanceAfterSellCrv - _ethBalanceInit) 
                     / (_ethBalanceAfterSellTotal - _ethBalanceInit);
@@ -386,10 +387,10 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
             IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, 0);
             IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, _usdcBalance);
             ICurveMini(curve_usdc_ibforex_pool).exchange(1, 0, _usdcBalance, 0);
-
-            emit SwapRewardsToWants(address(this),_rewardTokens,_rewardAmounts,_wantTokens,_wantAmounts);
             
         }
+
+        emit SwapRewardsToWants(address(this),_rewardTokens,_rewardAmounts,_wantTokens,_wantAmounts);
     }
 
     // Collateral Token Price In USD ,decimals 1e30
