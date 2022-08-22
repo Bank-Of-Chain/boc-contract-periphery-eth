@@ -334,13 +334,14 @@ const addStrategiesToUSDVault = async (vault, allArray, increaseArray) => {
     }
     let type = process.env.USDI_STRATEGY_TYPE_VALUE;
     if (!type) {
-        type = inquirer.prompt(questionOfAddStrategy).then((answers) => {
+        type = await inquirer.prompt(questionOfAddStrategy).then((answers) => {
             const {
                 type
             } = answers;
             return type;
         });
     }
+
     if (!type) {
         return
     }
@@ -403,7 +404,7 @@ const addStrategiesToETHVault = async (vault, allArray, increaseArray) => {
     }
     let type = process.env.ETHI_STRATEGY_TYPE_VALUE;
     if(!type){
-        type = inquirer.prompt(questionOfAddStrategy).then((answers) => {
+        type = await inquirer.prompt(questionOfAddStrategy).then((answers) => {
             const {
                 type
             } = answers;
@@ -427,7 +428,6 @@ const addStrategiesToETHVault = async (vault, allArray, increaseArray) => {
 
 const main = async () => {
     let type = process.env.VAULT_TYPE_VALUE;
-    console.log('type=',type);
     if(!type){
         console.log('start select');
         type = await inquirer.prompt(questionOfWhichVault).then((answers) => {
