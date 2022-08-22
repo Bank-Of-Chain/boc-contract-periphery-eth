@@ -168,7 +168,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         }
     }
 
-    function swapRewardsToWants() internal virtual override {}
+    function swapRewardsToWants() internal virtual override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){}
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal virtual override {
         (, int24 _tick,,,,,) = pool.slot0();

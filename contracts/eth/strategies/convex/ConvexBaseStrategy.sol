@@ -84,16 +84,26 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
         }
     }
 
-    function swapRewardsToWants() internal virtual override {
+    function swapRewardsToWants() internal virtual override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){
+        uint256 _wethBalanceInit = balanceOfToken(wETH);
+        uint256 _wethBalanceLast = _wethBalanceInit;
+        uint256 _wethBalanceCur;
+
         address[] memory _rewardTokens = getConvexRewards();
+        _wantTokens = new address[](_rewardTokens.length);
+        _wantAmounts = new uint256[](_rewardTokens.length);
         for (uint256 i = 0; i < _rewardTokens.length; i++) {
             uint256 _rewardAmount = balanceOfToken(_rewardTokens[i]);
+            _wantTokens[i] = wETH;
             if (_rewardAmount > 0) {
                 IERC20Upgradeable(_rewardTokens[i]).safeApprove(address(ROUTER2), 0);
                 IERC20Upgradeable(_rewardTokens[i]).safeApprove(address(ROUTER2), _rewardAmount);
                 // sell to one coin then reinvest
                 ROUTER2.swapExactTokensForTokens(_rewardAmount, 0, uniswapRewardRoutes[_rewardTokens[i]], address(this), block.timestamp);
             }
+            _wethBalanceCur = balanceOfToken(wETH);
+            _wantAmounts[i] = _wethBalanceCur - _wethBalanceLast;
+            _wethBalanceLast = _wethBalanceCur;
         }
         sellWETH2Want();
     }

@@ -33,6 +33,14 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
 
     event SetIsWantRatioIgnorable(bool _oldValue, bool _newValue);
 
+    event SwapRewardsToWants(
+        address _strategy,
+        address[] _rewards,
+        uint256[] _rewardAmounts,
+        address[] _wants,
+        uint256[] _wantAmounts
+    );
+
     IETHVault public vault;
     IPriceOracle public priceOracle;
     uint16 public protocol;
