@@ -483,8 +483,8 @@ contract ETHVault is ETHVaultStorage {
             if (_vaultValueOfNow + _transferValue < _vaultValueOfBefore) {
                 _old2LendAssets = _vaultValueOfBefore - _vaultValueOfNow - _transferValue;
             }
-            if (_vaultValueOfBefore <= _transferValue) {
-                _redeemValue = 0;
+            if (_redeemValue + _old2LendAssets > _totalValueOfBefore - _transferValue) {
+                _redeemValue = _totalValueOfBefore - _transferValue - _old2LendAssets;
             }
             if (_totalValueOfNow > _totalValueOfBefore) {
                 uint256 _gain = _totalValueOfNow - _totalValueOfBefore;

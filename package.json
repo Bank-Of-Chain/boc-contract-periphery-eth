@@ -47,7 +47,7 @@
     "@openzeppelin/contracts~v3": "npm:@openzeppelin/contracts@^3.4.2",
     "@openzeppelin/upgrades": "^2.8.0",
     "bignumber.js": "^9.0.1",
-    "boc-contract-core": "1.6.0-alpha2",
+    "boc-contract-core": "1.6.0-alpha3",
     "eslint-plugin-mocha": "^9.0.0",
     "piggy-finance-utils": "^1.0.55"
   },
