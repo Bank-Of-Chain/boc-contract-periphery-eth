@@ -4,6 +4,8 @@ require('@nomiclabs/hardhat-truffle5');
 require('hardhat-gas-reporter');
 require('hardhat-contract-sizer');
 require('@openzeppelin/hardhat-upgrades');
+require('hardhat-log-remover');
+
 const {
     removeConsoleLog
 } = require('hardhat-preprocessor');
@@ -45,16 +47,24 @@ const config = {
     defaultNetwork: 'hardhat',
     networks: {
         hardhat: {
+            chains: {
+                1: {
+                    hardforkHistory: {
+                        berlin: 10000000,
+                        london: 20000000,
+                    }
+                }
+            },
             forking: {
                 url: 'https://eth-mainnet.alchemyapi.io/v2/' + keys.alchemyKey.dev,
-                blockNumber: 15138124, // <-- edit here
+                blockNumber: 15218114, // <-- edit here
             },
             blockGasLimit: DEFAULT_BLOCK_GAS_LIMIT,
             timeout: 1800000,
             allowUnlimitedContractSize: true,
         },
         localhost: {
-            url: 'http://localhost:8545',
+            url: 'http://127.0.0.1:8545',
             allowUnlimitedContractSize: true,
             // GasPrice used when performing blocking, in wei
             // gasPrice: 100 * 10 ** 9,
@@ -88,9 +98,9 @@ const config = {
         rinkeby: {
             url: 'https://arb-mainnet.g.alchemy.com/v2/QyRoYoT8DwdeaCQC9PYwPtPKbworxRyf',
             // accounts : accounts(), //must mnemonic
-            //看源码，这里我们输入 HardhatNetworkHDAccountsUserConfig 对象，即为通过助记词查找钱包地址。
+            // Looking at the source code, here we enter the HardhatNetworkHDAccountsUserConfig object, which is to find the wallet address through the mnemonic.
             accounts: {
-                mnemonic: 'crystal cat chest increase abuse interest mesh alley negative frost agent anchor',
+                mnemonic: 'XXXXX',
             },
         },
     },

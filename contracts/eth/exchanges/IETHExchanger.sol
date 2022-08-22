@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import './IETHExchangeAdapter.sol';
+import 'boc-contract-core/contracts/exchanges/IExchangeAdapter.sol';
 
 interface IETHExchanger {
     function eth2stEth(address receiver) external payable returns (uint256 stEthAmount);
@@ -25,6 +25,6 @@ interface IETHExchanger {
         address platform,
         uint8 _method,
         bytes calldata _data,
-        IETHExchangeAdapter.SwapDescription calldata _sd
+        IExchangeAdapter.SwapDescription calldata _sd
     ) external payable returns (uint256);
 }

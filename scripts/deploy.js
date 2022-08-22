@@ -17,10 +17,10 @@ const MFC_TEST = require('../config/mainnet-fork-test-config');
 const MFC_PRODUCTION = require('../config/mainnet-fork-config');
 const {
     strategiesList: strategiesListUsd
-} = require('../config/strategy-config-usd.js');
+} = require('../config/strategy-usd/strategy-config-usd');
 const {
     strategiesList: strategiesListEth
-} = require('../config/strategy-config-eth.js');
+} = require('../config/strategy-eth/strategy-config-eth');
 
 const {
     deploy,
@@ -37,8 +37,8 @@ const USDPegToken = 'USDPegToken';
 const USDVaultAdmin = 'VaultAdmin';
 const Treasury = 'Treasury';
 const ValueInterpreter = 'ValueInterpreter';
-const USDParaSwapV5Adapter = 'ParaSwapV5Adapter';
-const USDOneInchV4Adapter = 'OneInchV4Adapter';
+const ParaSwapV5Adapter = 'ParaSwapV5Adapter';
+const OneInchV4Adapter = 'OneInchV4Adapter';
 const ChainlinkPriceFeed = 'ChainlinkPriceFeed';
 const ExchangeAggregator = 'ExchangeAggregator';
 const AccessControlProxy = 'AccessControlProxy';
@@ -62,9 +62,6 @@ const ETHVaultAdmin = 'ETHVaultAdmin';
 const ETHVaultBuffer = 'ETHVaultBuffer';
 const ETHPegToken = 'ETHPegToken';
 const PriceOracle = 'PriceOracle';
-const ETHParaSwapV5Adapter = 'EthParaSwapV5Adapter';
-const ETHOneInchV4Adapter = 'EthOneInchV4Adapter';
-const ETHExchangeAggregator = 'ETHExchangeAggregator';
 const HarvestHelper = 'HarvestHelper';
 const ETH_INITIAL_ASSET_LIST = [
     MFC_PRODUCTION.ETH_ADDRESS,
@@ -84,8 +81,8 @@ const addressMap = {
     [ChainlinkPriceFeed]: '',
     [AggregatedDerivativePriceFeed]: '',
     [ValueInterpreter]: '',
-    [USDOneInchV4Adapter]: '',
-    [USDParaSwapV5Adapter]: '',
+    [OneInchV4Adapter]: '',
+    [ParaSwapV5Adapter]: '',
     [ExchangeAggregator]: '',
     [Treasury]: '',
     [USDVault]: '',
@@ -98,9 +95,6 @@ const addressMap = {
         rs[i.name] = '';
         return rs
     }, {}),
-    [ETHOneInchV4Adapter]: '',
-    [ETHParaSwapV5Adapter]: '',
-    [ETHExchangeAggregator]: '',
     [PriceOracle]: '',
     [ETHVault]: '',
     [ETHVaultAdmin]: '',
@@ -110,21 +104,22 @@ const questionOfWhichVault = [{
     type: 'list',
     name: 'type',
     message: 'Please select the product to be deployed？\n',
-    choices: [{
-        key: 'USD Vault',
-        name: 'USD Vault',
-        value: 1,
-    },
-    {
-        key: 'ETH Vault',
-        name: 'ETH Vault',
-        value: 2,
-    },
-    {
-        key: 'USD&ETH Vault',
-        name: 'USD&ETH Vault',
-        value: 3,
-    },
+    choices: [
+        {
+            key: 'USD&ETH Vault',
+            name: 'USD&ETH Vault',
+            value: 3,
+        },
+        {
+            key: 'USD Vault',
+            name: 'USD Vault',
+            value: 1,
+        },
+        {
+            key: 'ETH Vault',
+            name: 'ETH Vault',
+            value: 2,
+        }
     ]
 }];
 
@@ -229,25 +224,30 @@ const deployBase = async (contractName, depends = []) => {
  * @param {string} contractName Contract Name
  * @param {string[]} depends Contract Fronting Dependency
  */
-const deployProxyBase = async (contractName, depends = []) => {
+const deployProxyBase = async (contractName, depends = [], customParams = [], name = null) => {
     console.log(` 🛰  Deploying[Proxy]: ${contractName}`);
     const keyArray = keys(addressMap);
-    const nextParams = [];
+    const dependParams = [];
     for (const depend of depends) {
         if (includes(keyArray, depend)) {
             if (isEmpty(get(addressMap, depend))) {
                 await addDependAddress(depend);
             }
-            nextParams.push(addressMap[depend]);
+            dependParams.push(addressMap[depend]);
             continue;
         }
-        nextParams.push(depend);
+        dependParams.push(depend);
     }
 
     try {
-        const constract = await deployProxy(contractName, nextParams, { timeout: 0 });
+        const allParams = [
+            ...dependParams,
+            ...customParams
+        ];
+
+        const constract = await deployProxy(contractName, allParams, { timeout: 0 });
         await constract.deployed();
-        addressMap[contractName] = constract.address;
+        addressMap[name == null ? contractName : name] = constract.address;
         return constract;
     } catch (error) {
         console.log('Contract Deployment Exceptions：', error);
@@ -332,24 +332,29 @@ const addStrategiesToUSDVault = async (vault, allArray, increaseArray) => {
     if (isEmpty(vault)) {
         vault = await USDVaultContract.at(addressMap[USDVault]);
     }
-    return inquirer.prompt(questionOfAddStrategy).then((answers) => {
-        const {
-            type
-        } = answers;
-        if (!type) {
-            return
+    let type = process.env.USDI_STRATEGY_TYPE_VALUE;
+    if (!type) {
+        type = await inquirer.prompt(questionOfAddStrategy).then((answers) => {
+            const {
+                type
+            } = answers;
+            return type;
+        });
+    }
+
+    if (!type) {
+        return
+    }
+
+    const nextArray = type === 1 ? allArray : increaseArray
+
+    return vault.addStrategy(nextArray.map(item => {
+        return {
+            strategy: item.strategy,
+            profitLimitRatio: item.profitLimitRatio,
+            lossLimitRatio: item.lossLimitRatio
         }
-
-        const nextArray = type === 1 ? allArray : increaseArray
-
-        return vault.addStrategy(nextArray.map(item => {
-            return {
-                strategy: item.strategy,
-                profitLimitRatio: item.profitLimitRatio,
-                lossLimitRatio: item.lossLimitRatio
-            }
-        }));
-    })
+    }));
 }
 
 /**
@@ -397,37 +402,48 @@ const addStrategiesToETHVault = async (vault, allArray, increaseArray) => {
     if (isEmpty(vault)) {
         vault = await ETHVaultContract.at(addressMap[ETHVault]);
     }
-    return inquirer.prompt(questionOfAddStrategy).then((answers) => {
-        const {
-            type
-        } = answers;
-        if (!type) {
-            return
+    let type = process.env.ETHI_STRATEGY_TYPE_VALUE;
+    if(!type){
+        type = await inquirer.prompt(questionOfAddStrategy).then((answers) => {
+            const {
+                type
+            } = answers;
+            return type ;
+        });
+    }
+    if (!type) {
+        return
+    }
+
+    const nextArray = type === 1 ? allArray : increaseArray
+
+    return vault.addStrategy(nextArray.map(item => {
+        return {
+            strategy: item.strategy,
+            profitLimitRatio: item.profitLimitRatio,
+            lossLimitRatio: item.lossLimitRatio
         }
-
-        const nextArray = type === 1 ? allArray : increaseArray
-
-        return vault.addStrategy(nextArray.map(item => {
-            return {
-                strategy: item.strategy,
-                profitLimitRatio: item.profitLimitRatio,
-                lossLimitRatio: item.lossLimitRatio
-            }
-        }));
-    })
+    }));
 }
 
 const main = async () => {
-    const type = await inquirer.prompt(questionOfWhichVault).then((answers) => {
-        const {
-            type
-        } = answers;
-        if (!type) {
-            return
-        }
+    let type = process.env.VAULT_TYPE_VALUE;
+    if(!type){
+        console.log('start select');
+        type = await inquirer.prompt(questionOfWhichVault).then((answers) => {
+            const {
+                type
+            } = answers;
 
-        return type;
-    })
+            return type;
+        })
+    }
+    if (!type) {
+        return
+    }
+
+    const accounts = await ethers.getSigners();
+    const balanceBeforeDeploy = await ethers.provider.getBalance(accounts[0].address);
 
     await deploy_common();
     if (type == 1) {
@@ -440,6 +456,9 @@ const main = async () => {
     }
 
     console.table(addressMap);
+    const balanceAfterDeploy = await ethers.provider.getBalance(accounts[0].address);
+    console.log('balanceBeforeDeploy:%d,balanceAfterDeploy:%d', ethers.utils.formatEther(balanceBeforeDeploy), ethers.utils.formatEther(balanceAfterDeploy));
+
 }
 
 const deploy_common = async () => {
@@ -511,23 +530,21 @@ const deploy_usd = async () => {
     if (isEmpty(addressMap[ValueInterpreter])) {
         valueInterpreter = await deployBase(ValueInterpreter, [ChainlinkPriceFeed, AggregatedDerivativePriceFeed, AccessControlProxy]);
     }
-    if (isEmpty(addressMap[USDOneInchV4Adapter])) {
-        oneInchV4Adapter = await deployBase(USDOneInchV4Adapter);
+    if (isEmpty(addressMap[OneInchV4Adapter])) {
+        oneInchV4Adapter = await deployBase(OneInchV4Adapter);
     }
-    if (isEmpty(addressMap[USDParaSwapV5Adapter])) {
-        paraSwapV5Adapter = await deployBase(USDParaSwapV5Adapter);
+    if (isEmpty(addressMap[ParaSwapV5Adapter])) {
+        paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
     }
 
     if (isEmpty(addressMap[ExchangeAggregator])) {
-        const adapterArray = [addressMap[USDOneInchV4Adapter], addressMap[USDParaSwapV5Adapter]];
+        const adapterArray = [addressMap[OneInchV4Adapter], addressMap[ParaSwapV5Adapter]];
         exchangeAggregator = await deployBase(ExchangeAggregator, [adapterArray, AccessControlProxy]);
     }
 
     if (isEmpty(addressMap[USDVaultAdmin])) {
         vaultAdmin = await deployBase(USDVaultAdmin);
     }
-
-
 
     let cVault;
     if (isEmpty(addressMap[USDVault])) {
@@ -549,9 +566,9 @@ const deploy_usd = async () => {
         await pegToken.deployed();
         addressMap[USDPegToken] = pegToken.address;
         await cVault.setPegTokenAddress(addressMap[USDPegToken]);
-        await cVault.setRebaseThreshold(1);
-        await cVault.setMaxTimestampBetweenTwoReported(604800);
-        await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+        // await cVault.setRebaseThreshold(1);
+        // await cVault.setMaxTimestampBetweenTwoReported(604800);
+        // await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
     }
 
     if (isEmpty(addressMap[USDVaultBuffer])) {
@@ -577,13 +594,15 @@ const deploy_usd = async () => {
     for (const strategyItem of strategiesListUsd) {
         const {
             name,
+            contract,
             addToVault,
             profitLimitRatio,
             lossLimitRatio,
+            customParams
         } = strategyItem
         let strategyAddress = addressMap[name];
         if (isEmpty(strategyAddress)) {
-            const deployStrategy = await deployProxyBase(name, [USDVault, Harvester]);
+            const deployStrategy = await deployProxyBase(contract, [USDVault, Harvester], [name, ...customParams], name);
             if (addToVault) {
                 strategyAddress = deployStrategy.address;
                 increaseArray.push({
@@ -603,7 +622,7 @@ const deploy_usd = async () => {
     }
 
     await addStrategiesToUSDVault(cVault, allArray, increaseArray);
-    console.log('getStrategies=', await cVault.getStrategies());
+    // console.log('getStrategies=', await cVault.getStrategies());
 };
 
 const deploy_eth = async () => {
@@ -620,19 +639,16 @@ const deploy_eth = async () => {
         priceOracle = await deployProxyBase(PriceOracle, []);
     }
 
-    if (isEmpty(addressMap[ETHOneInchV4Adapter])) {
-        oneInchV4Adapter = await deployBase(ETHOneInchV4Adapter);
+    if (isEmpty(addressMap[OneInchV4Adapter])) {
+        oneInchV4Adapter = await deployBase(OneInchV4Adapter);
     }
-    if (isEmpty(addressMap[ETHParaSwapV5Adapter])) {
-        paraSwapV5Adapter = await deployBase(ETHParaSwapV5Adapter);
+    if (isEmpty(addressMap[ParaSwapV5Adapter])) {
+        paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
     }
 
-    const adapterArray = [addressMap[ETHOneInchV4Adapter], addressMap[ETHParaSwapV5Adapter]];
-    if (isEmpty(addressMap[ETHExchangeAggregator])) {
-        ethExchangeAggregator = await deployBase(ETHExchangeAggregator, [adapterArray, AccessControlProxy]);
-    } else {
-        ethExchangeAggregator = await ETHExchangeAggregator.at(addressMap[ETHExchangeAggregator]);
-        await ethExchangeAggregator.addExchangeAdapters(adapterArray);
+    const adapterArray = [addressMap[OneInchV4Adapter], addressMap[ParaSwapV5Adapter]];
+    if (isEmpty(addressMap[ExchangeAggregator])) {
+        await deployBase(ExchangeAggregator, [adapterArray, AccessControlProxy]);
     }
 
     if (isEmpty(addressMap[ETHVaultAdmin])) {
@@ -641,7 +657,7 @@ const deploy_eth = async () => {
 
     let cVault;
     if (isEmpty(addressMap[ETHVault])) {
-        vault = await deployProxyBase(ETHVault, [AccessControlProxy, Treasury, ETHExchangeAggregator, PriceOracle]);
+        vault = await deployProxyBase(ETHVault, [AccessControlProxy, Treasury, ExchangeAggregator, PriceOracle]);
         cVault = await VaultContract.at(addressMap[ETHVault]);
         await vault.setAdminImpl(vaultAdmin.address);
         for (let i = 0; i < ETH_INITIAL_ASSET_LIST.length; i++) {
@@ -660,7 +676,7 @@ const deploy_eth = async () => {
         addressMap[ETHPegToken] = pegToken.address;
         await cVault.setPegTokenAddress(addressMap[ETHPegToken]);
         await cVault.setRebaseThreshold(1);
-        await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+        // await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
         await cVault.setMaxTimestampBetweenTwoReported(604800);
         console.log("maxTimestampBetweenTwoReported:", new BigNumber(await cVault.maxTimestampBetweenTwoReported()).toFixed());
     }
@@ -683,13 +699,15 @@ const deploy_eth = async () => {
     for (const strategyItem of strategiesListEth) {
         const {
             name,
+            contract,
             addToVault,
             profitLimitRatio,
             lossLimitRatio,
+            customParams
         } = strategyItem
         let strategyAddress = addressMap[name];
         if (isEmpty(strategyAddress)) {
-            const deployStrategy = await deployProxyBase(name, [ETHVault]);
+            const deployStrategy = await deployProxyBase(contract, [ETHVault], [name, ...customParams], name);
             if (addToVault) {
                 strategyAddress = deployStrategy.address;
                 increaseArray.push({
@@ -709,7 +727,7 @@ const deploy_eth = async () => {
     }
 
     await addStrategiesToETHVault(cVault, allArray, increaseArray);
-    console.log('getStrategies=', await cVault.getStrategies());
+    // console.log('getStrategies=', await cVault.getStrategies());
 };
 
 main().then(() => process.exit(0))

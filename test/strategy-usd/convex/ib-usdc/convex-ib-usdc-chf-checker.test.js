@@ -1,12 +1,8 @@
 const checker = require('../../strategy-checker');
 
-const {
-    advanceBlockOfHours
-} = require('../../../../utils/block-utils');
-
 describe('【ConvexIBUSDCChfStrategy Strategy Checker】', function () {
     // eslint-disable-next-line mocha/no-setup-in-describe
-    checker.check('ConvexIBUSDCChfStrategy', async function () {
+    checker.check('ConvexIBUsdcChfStrategy', async function () {
         // await modifier();
     }, {
         // investWithSynthForex: async function (strategy, keeper) {

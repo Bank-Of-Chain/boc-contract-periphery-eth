@@ -15,7 +15,7 @@ abstract contract UniswapV2LiquidityActionsMixin is AssetHelpers {
         UniswapV2Router2 = _UniswapV2Router2;
     }
 
-    /// @dev Helper to add liquidity
+    /// @dev Helper to add _liquidity
     function __uniswapV2Lend(
         address _recipient,
         address _tokenA,
@@ -24,12 +24,12 @@ abstract contract UniswapV2LiquidityActionsMixin is AssetHelpers {
         uint256 _amountBDesired,
         uint256 _amountAMin,
         uint256 _amountBMin
-    ) internal returns (uint liquidity){
+    ) internal returns (uint _liquidity){
         __approveAssetMaxAsNeeded(_tokenA, UniswapV2Router2, _amountADesired);
         __approveAssetMaxAsNeeded(_tokenB, UniswapV2Router2, _amountBDesired);
 
         // Execute lend on Uniswap
-        (, ,  liquidity) = IUniswapV2Router2(UniswapV2Router2).addLiquidity(
+        (, ,  _liquidity) = IUniswapV2Router2(UniswapV2Router2).addLiquidity(
             _tokenA,
             _tokenB,
             _amountADesired,
@@ -41,7 +41,7 @@ abstract contract UniswapV2LiquidityActionsMixin is AssetHelpers {
         );
     }
 
-    /// @dev Helper to remove liquidity
+    /// @dev Helper to remove _liquidity
     function __uniswapV2Redeem(
         address _recipient,
         address _poolToken,
@@ -66,7 +66,7 @@ abstract contract UniswapV2LiquidityActionsMixin is AssetHelpers {
     }
 
     /// @dev Helper to get the deadline for a Uniswap V2 action in a standardized way
-    function __uniswapV2GetActionDeadline() private view returns (uint256 deadline_) {
+    function __uniswapV2GetActionDeadline() private view returns (uint256 _deadline) {
         return block.timestamp + 1;
     }
 

@@ -8,160 +8,145 @@ import "../../external/uniswap/IUniswapV3.sol";
 import "../../external/lido/IWstETH.sol";
 import "../../external/weth/IWeth.sol";
 import "./IETHExchanger.sol";
-import "hardhat/console.sol";
-import "../../library/ETHToken.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
 
 contract ETHExchanger is IETHExchanger {
-    address constant stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
-    address constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address constant rETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
-    address constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address private constant stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+    address private constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+    address private constant rETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
+    address private constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
    
-    address constant curve_eth_steth_pool = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
-    address constant uniswap_v3_router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    address private constant CURVE_ETH_STETH_POOL = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
+    address private constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
 
     constructor() {}
 
-    fallback() external payable {}
-
     receive() external payable {}
 
-    function eth2stEth(address receiver) public payable override returns (uint256 stEthAmount) {
-        uint256 ethAmount = msg.value;
-        assert(ethAmount > 0);
-        uint256 stETHBalanceBefore = IERC20(stETH).balanceOf(address(this));
-        ICurveFi(curve_eth_steth_pool).exchange{value: ethAmount}(0, 1, ethAmount, 0);
-        uint256 stETHBalanceAfter = IERC20(stETH).balanceOf(address(this));
-        stEthAmount = stETHBalanceAfter - stETHBalanceBefore;
-        IERC20(stETH).transfer(receiver, stEthAmount);
-        console.log("use %d eth swap to %d stEth", ethAmount, stEthAmount);
+    fallback() external payable {}
+
+    function eth2stEth(address _receiver) public payable override returns (uint256 _stEthAmount) {
+        uint256 _ethAmount = msg.value;
+        assert(_ethAmount > 0);
+        uint256 _stETHBalanceBefore = IERC20(stETH).balanceOf(address(this));
+        ICurveFi(CURVE_ETH_STETH_POOL).exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
+        uint256 _stETHBalanceAfter = IERC20(stETH).balanceOf(address(this));
+        _stEthAmount = _stETHBalanceAfter - _stETHBalanceBefore;
+        IERC20(stETH).transfer(_receiver, _stEthAmount);
     }
 
-    function stEth2Eth(address receiver, uint256 stEthAmount) public override returns (uint256 ethAmount) {
-        IERC20(stETH).transferFrom(receiver, address(this), stEthAmount);
-        IERC20(stETH).approve(curve_eth_steth_pool, 0);
-        IERC20(stETH).approve(curve_eth_steth_pool, stEthAmount);
-        uint256 balanceBefore = address(this).balance;
-        ICurveFi(curve_eth_steth_pool).exchange(1, 0, stEthAmount, 0);
-        uint256 balanceAfter = address(this).balance;
-        ethAmount = balanceAfter - balanceBefore;
-        payable(receiver).transfer(ethAmount);
-        console.log("use %d steth swap to %d eth", stEthAmount, ethAmount);
+    function stEth2Eth(address _receiver, uint256 _stEthAmount) public override returns (uint256 _ethAmount) {
+        IERC20(stETH).transferFrom(_receiver, address(this), _stEthAmount);
+        IERC20(stETH).approve(CURVE_ETH_STETH_POOL, 0);
+        IERC20(stETH).approve(CURVE_ETH_STETH_POOL, _stEthAmount);
+        uint256 _balanceBefore = address(this).balance;
+        ICurveFi(CURVE_ETH_STETH_POOL).exchange(1, 0, _stEthAmount, 0);
+        uint256 _balanceAfter = address(this).balance;
+        _ethAmount = _balanceAfter - _balanceBefore;
+        payable(_receiver).transfer(_ethAmount);
     }
 
-    function eth2wstEth(address receiver) public payable override returns (uint256 wstEthAmount) {
-        // (bool success, bytes memory result) = address(this).delegatecall(abi.encodeWithSignature("eth2stEth()"));
-        // assert(success);
-        // uint256 stEthAmount = abi.decode(result, (uint256));
-        uint256 ethAmount = msg.value;
-        assert(ethAmount > 0);
-        uint256 stETHBalanceBefore = IERC20(stETH).balanceOf(address(this));
-        ICurveFi(curve_eth_steth_pool).exchange{value: ethAmount}(0, 1, ethAmount, 0);
-        uint256 stETHBalanceAfter = IERC20(stETH).balanceOf(address(this));
-        uint256 stEthAmount = stETHBalanceAfter - stETHBalanceBefore;
-        console.log("stEthAmount2:", stEthAmount);
+    function eth2wstEth(address _receiver) public payable override returns (uint256 _wstEthAmount) {
+        uint256 _ethAmount = msg.value;
+        assert(_ethAmount > 0);
+        uint256 _stETHBalanceBefore = IERC20(stETH).balanceOf(address(this));
+        ICurveFi(CURVE_ETH_STETH_POOL).exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
+        uint256 _stETHBalanceAfter = IERC20(stETH).balanceOf(address(this));
+        uint256 _stEthAmount = _stETHBalanceAfter - _stETHBalanceBefore;
 
         IERC20(stETH).approve(wstETH, 0);
-        IERC20(stETH).approve(wstETH, stEthAmount);
-        wstEthAmount = IWstETH(wstETH).wrap(stEthAmount);
+        IERC20(stETH).approve(wstETH, _stEthAmount);
+        _wstEthAmount = IWstETH(wstETH).wrap(_stEthAmount);
 
-        IERC20(wstETH).transfer(receiver, wstEthAmount);
+        IERC20(wstETH).transfer(_receiver, _wstEthAmount);
     }
 
-    function wstEth2Eth(address receiver, uint256 wstEthAmount) public override returns (uint256 ethAmount) {
-        IERC20(wstETH).transferFrom(receiver, address(this), wstEthAmount);
-        uint256 wstETHBalance = IERC20(wstETH).balanceOf(address(this));
-        assert(wstETHBalance >= wstEthAmount);
-        uint256 stEthAmount = IWstETH(wstETH).unwrap(wstEthAmount);
+    function wstEth2Eth(address _receiver, uint256 _wstEthAmount) public override returns (uint256 _ethAmount) {
+        IERC20(wstETH).transferFrom(_receiver, address(this), _wstEthAmount);
+        uint256 _wstETHBalance = IERC20(wstETH).balanceOf(address(this));
+        assert(_wstETHBalance >= _wstEthAmount);
+        uint256 _stEthAmount = IWstETH(wstETH).unwrap(_wstEthAmount);
 
-        IERC20(stETH).approve(curve_eth_steth_pool, 0);
-        IERC20(stETH).approve(curve_eth_steth_pool, stEthAmount);
-        uint256 balanceBefore = address(this).balance;
-        ICurveFi(curve_eth_steth_pool).exchange(1, 0, stEthAmount, 0);
-        uint256 balanceAfter = address(this).balance;
-        ethAmount = balanceAfter - balanceBefore;
-        payable(receiver).transfer(ethAmount);
+        IERC20(stETH).approve(CURVE_ETH_STETH_POOL, 0);
+        IERC20(stETH).approve(CURVE_ETH_STETH_POOL, _stEthAmount);
+        uint256 _balanceBefore = address(this).balance;
+        ICurveFi(CURVE_ETH_STETH_POOL).exchange(1, 0, _stEthAmount, 0);
+        uint256 _balanceAfter = address(this).balance;
+        _ethAmount = _balanceAfter - _balanceBefore;
+        payable(_receiver).transfer(_ethAmount);
     }
 
-    function eth2rEth(address receiver) public payable override returns (uint256 rEthAmount) {
-        uint256 ethAmount = msg.value;
-        assert(ethAmount > 0);
-        IWeth(wETH).deposit{value: ethAmount}();
-        uint256 wethAmount = IERC20(wETH).balanceOf(address(this));
-        // address tokenIn;
-        // address tokenOut;
-        // uint24 fee;
-        // address recipient;
-        // uint256 deadline;
-        // uint256 amountIn;
-        // uint256 amountOutMinimum;
-        // uint160 sqrtPriceLimitX96;
-        IERC20(wETH).approve(uniswap_v3_router, 0);
-        IERC20(wETH).approve(uniswap_v3_router, wethAmount);
-        IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(wETH, rETH, 500, receiver, block.timestamp, wethAmount, 0, 0);
-        rEthAmount = IUniswapV3(uniswap_v3_router).exactInputSingle(params);
-        console.log("rEthAmount:", rEthAmount);
+    function eth2rEth(address _receiver) public payable override returns (uint256 _rEthAmount) {
+        uint256 _ethAmount = msg.value;
+        assert(_ethAmount > 0);
+        IWeth(wETH).deposit{value: _ethAmount}();
+        uint256 _wethAmount = IERC20(wETH).balanceOf(address(this));
+        IERC20(wETH).approve(UNISWAP_V3_ROUTER, 0);
+        IERC20(wETH).approve(UNISWAP_V3_ROUTER, _wethAmount);
+        IUniswapV3.ExactInputSingleParams memory _params = IUniswapV3.ExactInputSingleParams(wETH, rETH, 500, _receiver, block.timestamp, _wethAmount, 0, 0);
+        _rEthAmount = IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(_params);
     }
 
-    function rEth2Eth(address receiver, uint256 rEthAmount) public override returns (uint256 ethAmount) {
-        IERC20(rETH).transferFrom(receiver, address(this), rEthAmount);
-        uint256 rETHBalance = IERC20(rETH).balanceOf(address(this));
-        assert(rETHBalance >= rEthAmount);
+    function rEth2Eth(address _receiver, uint256 _rEthAmount) public override returns (uint256 _ethAmount) {
+        IERC20(rETH).transferFrom(_receiver, address(this), _rEthAmount);
+        uint256 _rETHBalance = IERC20(rETH).balanceOf(address(this));
+        assert(_rETHBalance >= _rEthAmount);
 
-        IERC20(rETH).approve(uniswap_v3_router, 0);
-        IERC20(rETH).approve(uniswap_v3_router, rEthAmount);
-        IUniswapV3.ExactInputSingleParams memory params = IUniswapV3.ExactInputSingleParams(rETH, wETH, 500, address(this), block.timestamp, rEthAmount, 0, 0);
-        uint256 wEthAmount = IUniswapV3(uniswap_v3_router).exactInputSingle(params);
+        IERC20(rETH).approve(UNISWAP_V3_ROUTER, 0);
+        IERC20(rETH).approve(UNISWAP_V3_ROUTER, _rEthAmount);
+        IUniswapV3.ExactInputSingleParams memory _params = IUniswapV3.ExactInputSingleParams(rETH, wETH, 500, address(this), block.timestamp, _rEthAmount, 0, 0);
+        uint256 _wEthAmount = IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(_params);
 
-        uint256 ethBalanceBefore = address(this).balance;
-        IWeth(wETH).withdraw(wEthAmount);
-        uint256 ethBalanceAfter = address(this).balance;
-        ethAmount = ethBalanceAfter - ethBalanceBefore;
-        payable(receiver).transfer(ethAmount);
+        uint256 _ethBalanceBefore = address(this).balance;
+        IWeth(wETH).withdraw(_wEthAmount);
+        uint256 _ethBalanceAfter = address(this).balance;
+        _ethAmount = _ethBalanceAfter - _ethBalanceBefore;
+        payable(_receiver).transfer(_ethAmount);
     }
 
-    function eth2wEth(address receiver) public payable override returns (uint256 wEthAmount) {
-        uint256 ethAmount = msg.value;
-        assert(ethAmount > 0);
-        IWeth(wETH).deposit{value: ethAmount}();
-        wEthAmount = IERC20(wETH).balanceOf(address(this));
-        IERC20(wETH).transfer(receiver, wEthAmount);
+    function eth2wEth(address _receiver) public payable override returns (uint256 _wEthAmount) {
+        uint256 _ethAmount = msg.value;
+        assert(_ethAmount > 0);
+        IWeth(wETH).deposit{value: _ethAmount}();
+        _wEthAmount = IERC20(wETH).balanceOf(address(this));
+        IERC20(wETH).transfer(_receiver, _wEthAmount);
     }
 
-    function wEth2Eth(address receiver, uint256 wEthAmount) public override returns (uint256 ethAmount) {
-        IERC20(wETH).transferFrom(receiver, address(this), wEthAmount);
-        uint256 wETHBalance = IERC20(wETH).balanceOf(address(this));
-        assert(wETHBalance >= wEthAmount);
+    function wEth2Eth(address _receiver, uint256 _wEthAmount) public override returns (uint256 _ethAmount) {
+        IERC20(wETH).transferFrom(_receiver, address(this), _wEthAmount);
+        uint256 _wETHBalance = IERC20(wETH).balanceOf(address(this));
+        assert(_wETHBalance >= _wEthAmount);
 
-        uint256 ethBalanceBefore = address(this).balance;
-        IWeth(wETH).withdraw(wEthAmount);
-        uint256 ethBalanceAfter = address(this).balance;
-        ethAmount = ethBalanceAfter - ethBalanceBefore;
-        payable(receiver).transfer(ethAmount);
+        uint256 _ethBalanceBefore = address(this).balance;
+        IWeth(wETH).withdraw(_wEthAmount);
+        uint256 _ethBalanceAfter = address(this).balance;
+        _ethAmount = _ethBalanceAfter - _ethBalanceBefore;
+        payable(_receiver).transfer(_ethAmount);
     }
 
     function swap(
-        address platform,
+        address _platform,
         uint8 _method,
         bytes calldata _data,
-        IETHExchangeAdapter.SwapDescription calldata _sd
-    ) external payable override returns (uint256 toAmount) {
-        if (_sd.srcToken == ETHToken.NATIVE_TOKEN && _sd.dstToken == stETH) {
-            toAmount = eth2stEth(_sd.receiver);
-        } else if (_sd.srcToken == ETHToken.NATIVE_TOKEN && _sd.dstToken == wETH) {
-            toAmount = eth2wEth(_sd.receiver);
-        } else if (_sd.srcToken == ETHToken.NATIVE_TOKEN && _sd.dstToken == wstETH) {
-            toAmount = eth2wstEth(_sd.receiver);
-        } else if (_sd.srcToken == ETHToken.NATIVE_TOKEN && _sd.dstToken == rETH) {
-            toAmount = eth2rEth(_sd.receiver);
-        } else if (_sd.dstToken == ETHToken.NATIVE_TOKEN && _sd.srcToken == stETH) {
-            toAmount = stEth2Eth(_sd.receiver, _sd.amount);
-        } else if (_sd.dstToken == ETHToken.NATIVE_TOKEN && _sd.srcToken == wETH) {
-            toAmount = wEth2Eth(_sd.receiver, _sd.amount);
-        } else if (_sd.dstToken == ETHToken.NATIVE_TOKEN && _sd.srcToken == wstETH) {
-            toAmount = wstEth2Eth(_sd.receiver, _sd.amount);
-        } else if (_sd.dstToken == ETHToken.NATIVE_TOKEN && _sd.srcToken == rETH) {
-            toAmount = rEth2Eth(_sd.receiver, _sd.amount);
+        IExchangeAdapter.SwapDescription calldata _sd
+    ) external payable override returns (uint256 _toAmount) {
+        address _nativeToken = NativeToken.NATIVE_TOKEN;
+        if (_sd.srcToken == _nativeToken && _sd.dstToken == stETH) {
+            _toAmount = eth2stEth(_sd.receiver);
+        } else if (_sd.srcToken == _nativeToken && _sd.dstToken == wETH) {
+            _toAmount = eth2wEth(_sd.receiver);
+        } else if (_sd.srcToken == _nativeToken && _sd.dstToken == wstETH) {
+            _toAmount = eth2wstEth(_sd.receiver);
+        } else if (_sd.srcToken == _nativeToken && _sd.dstToken == rETH) {
+            _toAmount = eth2rEth(_sd.receiver);
+        } else if (_sd.dstToken == _nativeToken && _sd.srcToken == stETH) {
+            _toAmount = stEth2Eth(_sd.receiver, _sd.amount);
+        } else if (_sd.dstToken == _nativeToken && _sd.srcToken == wETH) {
+            _toAmount = wEth2Eth(_sd.receiver, _sd.amount);
+        } else if (_sd.dstToken == _nativeToken && _sd.srcToken == wstETH) {
+            _toAmount = wstEth2Eth(_sd.receiver, _sd.amount);
+        } else if (_sd.dstToken == _nativeToken && _sd.srcToken == rETH) {
+            _toAmount = rEth2Eth(_sd.receiver, _sd.amount);
         } else {
             revert("Asset not available");
         }

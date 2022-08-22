@@ -7,7 +7,7 @@ const BigNumber = require("bignumber.js")
 const { map } = require("lodash")
 
 const MFC = require("../config/mainnet-fork-test-config")
-const { strategiesList } = require("../config/strategy-config-usd")
+const { strategiesList } = require("../config/strategy-usd/strategy-config-usd")
 
 const { getStrategiesWants } = require("./strategy-utils")
 const {
@@ -25,6 +25,7 @@ const {
     topUpUsdpByAddress,
     // topUpUsdpByAddress
 } = require("./top-up-utils")
+const hre = require("hardhat");
 
 // === Core Contracts === //
 // Access Control Proxy
@@ -46,9 +47,11 @@ const ValueInterpreter = hre.artifacts.require("ValueInterpreter")
 const MockValueInterpreter = hre.artifacts.require(
     "contracts/usd/mock/MockValueInterpreter.sol:MockValueInterpreter",
 )
-const TestAdapter = hre.artifacts.require("contracts/usd/exchanges/adapters/TestAdapter.sol:TestAdapter");
+const TestAdapter = hre.artifacts.require("contracts/exchanges/adapters/TestAdapter.sol:TestAdapter");
 const ExchangeAggregator = hre.artifacts.require("ExchangeAggregator")
 const IExchangeAdapter = hre.artifacts.require("IExchangeAdapter")
+const OneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
+const ParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
 
 /**
  * Initializing vault contracts
@@ -121,25 +124,37 @@ async function setupCoreProtocolWithMockValueInterpreter (
         accessControlProxy.address,
     )
     let valueInterpreter
+    let exchangeAggregator
+    let testAdapter;
+
     if (mock) {
         valueInterpreter = await MockValueInterpreter.new(
             chainlinkPriceFeed.address,
             aggregatedDerivativePriceFeed.address,
             accessControlProxy.address,
         )
+        console.log('deploy TestAdapter');
+        testAdapter = await TestAdapter.new(valueInterpreter.address);
+        console.log('deploy ExchangeAggregator');
+        exchangeAggregator = await ExchangeAggregator.new([testAdapter.address], accessControlProxy.address);
     } else {
         valueInterpreter = await ValueInterpreter.new(
             chainlinkPriceFeed.address,
             aggregatedDerivativePriceFeed.address,
             accessControlProxy.address,
         )
-    }
-    const testAdapter = await TestAdapter.new(valueInterpreter.address)
+        console.log('deploy TestAdapter');
+        testAdapter = await TestAdapter.new(valueInterpreter.address);
 
-    const exchangeAggregator = await ExchangeAggregator.new(
-        [testAdapter.address],
-        accessControlProxy.address,
-    )
+        console.log('deploy OneInchV4Adapter');
+        const oneInchV4Adapter = await OneInchV4Adapter.new();
+
+        console.log('deploy ParaSwapV5Adapter');
+        const paraSwapV5Adapter = await ParaSwapV5Adapter.new();
+        console.log('deploy ExchangeAggregator');
+        exchangeAggregator = await ExchangeAggregator.new([oneInchV4Adapter.address,paraSwapV5Adapter.address], accessControlProxy.address);
+    }
+
     const exchangePlatformAdapters = await getExchangePlatformAdapters(exchangeAggregator)
 
     // const usdi = await USDi.new()
@@ -163,9 +178,9 @@ async function setupCoreProtocolWithMockValueInterpreter (
     vault = await IVault.at(vault.address);
     await vault.setPegTokenAddress(pegToken.address);
     await vault.setVaultBufferAddress(vaultBuffer.address);
-    await vault.setRebaseThreshold(1);
-    await vault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
-    await vault.setMaxTimestampBetweenTwoReported(604800);
+    // await vault.setRebaseThreshold(1);
+    // await vault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+    // await vault.setMaxTimestampBetweenTwoReported(604800);
 
     //20%
     await vault.setTrusteeFeeBps(2000)
@@ -192,9 +207,10 @@ async function setupCoreProtocolWithMockValueInterpreter (
     let withdrawQueque = new Array()
     for (let i = 0; i < strategiesList.length; i++) {
         let strategyItem = strategiesList[i]
-        let contractArtifact = hre.artifacts.require(strategyItem.name)
+        let contractArtifact = hre.artifacts.require(strategyItem.contract)
         let strategy = await contractArtifact.new()
-        await strategy.initialize(vault.address, harvester.address)
+        let params = [vault.address, harvester.address,strategyItem.name,...strategyItem.customParams]
+        await strategy.initialize(...params)
         withdrawQueque.push(strategy.address)
         addToVaultStrategies.push({
             strategy: strategy.address,
@@ -291,8 +307,8 @@ const getTokenBalance = async (contractAddress, tokenArray) => {
 const getExchangePlatformAdapters = async exchangeAggregator => {
     const adapters = await exchangeAggregator.getExchangeAdapters()
     const exchangePlatformAdapters = {}
-    for (let i = 0; i < adapters.identifiers_.length; i++) {
-        exchangePlatformAdapters[adapters.identifiers_[i]] = adapters.exchangeAdapters_[i]
+    for (let i = 0; i < adapters._identifiers.length; i++) {
+        exchangePlatformAdapters[adapters._identifiers[i]] = adapters._exchangeAdapters[i]
     }
     return exchangePlatformAdapters
 }

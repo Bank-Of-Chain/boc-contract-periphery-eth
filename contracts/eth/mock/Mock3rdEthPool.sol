@@ -5,17 +5,15 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 
-import "hardhat/console.sol";
-
 contract Mock3rdEthPool {
-    address private constant stETH = address(0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84);
+    address private constant stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+
+    receive() external payable {}
 
     function deposit(address[] memory _assets, uint256[] memory _amounts)
         payable
         external {
             IERC20Upgradeable(stETH).transferFrom(msg.sender, address(this), _amounts[1]);
-            console.log('ETH balance=%d', address(this).balance);
-            console.log('stETH balance=%d', IERC20Upgradeable(stETH).balanceOf(address(this)));
         }
 
     function withdraw()
@@ -46,5 +44,4 @@ contract Mock3rdEthPool {
     function claim() external returns (uint256[] memory _claimAmounts) {
     }
 
-    receive() external payable {}
 }

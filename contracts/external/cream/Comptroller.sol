@@ -34,4 +34,5 @@ interface Comptroller {
         );
         
     function oracle() external view returns(address);
+    function _setPriceOracle(address _newPriceOracle) external;
 }

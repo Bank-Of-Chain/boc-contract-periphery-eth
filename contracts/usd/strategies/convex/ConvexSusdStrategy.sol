@@ -11,14 +11,12 @@ import "./ConvexBaseStrategy.sol";
 contract ConvexSusdStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    ICurveLiquidityPool private constant CURVE_POOL =
-        ICurveLiquidityPool(address(0xA5407eAE9Ba41422680e2e00537571bcC53efBfD));
 
     address private constant CRV = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
     address private constant CVX = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
     address private constant SNX = address(0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F);
 
-    function initialize(address _vault, address _harvester) public {
+    function initialize(address _vault, address _harvester,string memory _name) public {
         address[] memory _wants = new address[](4);
         // the oder is same with underlying coins
         // DAI
@@ -32,7 +30,10 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         super._initialize(
             _vault,
             _harvester,
-            _wants
+            _name,
+            _wants,
+            0xA5407eAE9Ba41422680e2e00537571bcC53efBfD,
+            0x22eE18aca7F3Ee920D01F25dA85840D12d98E8Ca
         );
     }
 
@@ -40,13 +41,6 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         return "1.0.0";
     }
 
-    function name() external pure override returns (string memory) {
-        return "ConvexSusdStrategy";
-    }
-
-    function getRewardPool() internal pure override returns(IConvexReward) {
-        return IConvexReward(address(0x22eE18aca7F3Ee920D01F25dA85840D12d98E8Ca));
-    }
 
     function getWantsInfo()
         public
@@ -56,11 +50,27 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
     {
         _assets = wants;
         _ratios = new uint256[](_assets.length);
-        int128 index = 0;
+        int128 _index = 0;
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _assets.length; i++) {
-            _ratios[i] = CURVE_POOL.balances(index);
-            index++;
+            _ratios[i] = _pool.balances(_index);
+            _index++;
         }
+    }
+
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory _outputsInfo)
+    {
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
+
+        // not support remove_liquidity_one_coin
     }
 
     function getPositionDetail()
@@ -70,35 +80,37 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;
         _amounts = new uint256[](_tokens.length);
         // curve LP token amount = convex LP token amount
-        uint256 lpAmount = balanceOfLpToken();
+        uint256 _lpAmount = balanceOfLpToken();
         // curve LP total supply
-        uint256 totalSupply = IERC20Upgradeable(lpToken).totalSupply();
+        uint256 _totalSupply = IERC20Upgradeable(lpToken).totalSupply();
         // calc balances
-        int128 index = 0;
+        int128 _index = 0;
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _tokens.length; i++) {
-            uint256 depositedTokenAmount = (CURVE_POOL.balances(index) * lpAmount) / totalSupply;
-            _amounts[i] = balanceOfToken(_tokens[i]) + depositedTokenAmount;
-            index++;
+            uint256 _depositedTokenAmount = (_pool.balances(_index) * _lpAmount) / _totalSupply;
+            _amounts[i] = balanceOfToken(_tokens[i]) + _depositedTokenAmount;
+            _index++;
         }
     }
 
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _assets = wants;
-        uint256 thirdPoolAssets;
-        int128 index = 0;
+        uint256 _thirdPoolAssets;
+        int128 _index = 0;
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         for (uint256 i = 0; i < _assets.length; i++) {
-            uint256 thirdPoolAssetBalance = CURVE_POOL.balances(index);
-            thirdPoolAssets += queryTokenValue(_assets[i], thirdPoolAssetBalance);
-            index++;
+            uint256 _thirdPoolAssetBalance = _pool.balances(_index);
+            _thirdPoolAssets += queryTokenValue(_assets[i], _thirdPoolAssetBalance);
+            _index++;
         }
-        return thirdPoolAssets;
+        return _thirdPoolAssets;
     }
 
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
@@ -106,19 +118,20 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         override
         returns (uint256)
     {
+        address _curvePool = curvePool;
         for (uint256 i = 0; i < _assets.length; i++) {
             if (_amounts[i] > 0) {
-                IERC20Upgradeable(_assets[i]).safeApprove(address(CURVE_POOL), 0);
-                IERC20Upgradeable(_assets[i]).safeApprove(address(CURVE_POOL), _amounts[i]);
+                IERC20Upgradeable(_assets[i]).safeApprove(_curvePool, 0);
+                IERC20Upgradeable(_assets[i]).safeApprove(_curvePool, _amounts[i]);
             }
         }
-        CURVE_POOL.add_liquidity([_amounts[0], _amounts[1], _amounts[2], _amounts[3]], 0);
-        uint256 lpAmount = balanceOfToken(lpToken);
-        return lpAmount;
+        ICurveLiquidityPool(_curvePool).add_liquidity([_amounts[0], _amounts[1], _amounts[2], _amounts[3]], 0);
+        uint256 _lpAmount = balanceOfToken(lpToken);
+        return _lpAmount;
     }
 
-    function curveRemoveLiquidity(uint256 liquidity) internal override {
-        CURVE_POOL.remove_liquidity(liquidity, [uint256(0), uint256(0), uint256(0), uint256(0)]);
+    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
+        ICurveLiquidityPool(curvePool).remove_liquidity(liquidity, [uint256(0), uint256(0), uint256(0), uint256(0)]);
     }
 
     function claimRewards()
@@ -126,7 +139,7 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         override
         returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
     {
-        getRewardPool().getReward();
+        IConvexReward(rewardPool).getReward();
         _rewardTokens = new address[](3);
         _rewardTokens[0] = CRV;
         _rewardTokens[1] = CVX;

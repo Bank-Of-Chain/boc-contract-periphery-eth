@@ -34,10 +34,10 @@ const PegToken = 'PegToken';
 const Treasury = 'Treasury';
 const HarvestHelper = 'HarvestHelper';
 const PriceOracle = 'PriceOracle';
-const ParaSwapV5Adapter = 'EthParaSwapV5Adapter';
-const ETHExchangeAggregator = 'ETHExchangeAggregator';
+const ParaSwapV5Adapter = 'ParaSwapV5Adapter';
+const ExchangeAggregator = 'ExchangeAggregator';
 const AccessControlProxy = 'AccessControlProxy';
-const OneInchV4Adapter = 'EthOneInchV4Adapter';
+const OneInchV4Adapter = 'OneInchV4Adapter';
 const Verification = 'Verification';
 const INITIAL_ASSET_LIST = [
     MFC_PRODUCTION.ETH_ADDRESS,
@@ -54,7 +54,7 @@ const addressMap = {
 	[AccessControlProxy]: '',	//0xf2Dc068255a4dD00dA73a5a668e8BB1e0cfd347f
 	[OneInchV4Adapter]: '',
 	[ParaSwapV5Adapter]: '',
-	[ETHExchangeAggregator]: '',
+	[ExchangeAggregator]: '',
 	[Treasury]: '0xAc06625A3ed3D37E3e8864aF6baC82469624d24A',
 	[HarvestHelper]: '',
 	[PriceOracle]: '',
@@ -295,7 +295,7 @@ const main = async () => {
     let oneInchV4Adapter;
     let paraSwapV5Adapter;
     let treasury;
-    let ethExchangeAggregator;
+    let exchangeAggregator;
 	let pegToken;
 	let harvestHelper;
 
@@ -323,11 +323,11 @@ const main = async () => {
 	}
 
 	const adapterArray = [addressMap[OneInchV4Adapter], addressMap[ParaSwapV5Adapter]];
-	if (isEmpty(addressMap[ETHExchangeAggregator])) {
-		ethExchangeAggregator = await deployBase(ETHExchangeAggregator, [adapterArray,AccessControlProxy]);
+	if (isEmpty(addressMap[ExchangeAggregator])) {
+		exchangeAggregator = await deployBase(ExchangeAggregator, [adapterArray,AccessControlProxy]);
 	} else {
-		ethExchangeAggregator = await ETHExchangeAggregator.at(addressMap[ETHExchangeAggregator]);
-		await ethExchangeAggregator.addExchangeAdapters(adapterArray);
+		exchangeAggregator = await ExchangeAggregator.at(addressMap[ExchangeAggregator]);
+		await exchangeAggregator.addExchangeAdapters(adapterArray);
 	}
 
     if (isEmpty(addressMap[VaultAdmin])) {
@@ -340,7 +340,7 @@ const main = async () => {
 
 	let cVault;
 	if (isEmpty(addressMap[Vault])) {
-		vault = await deployProxyBase(Vault, [AccessControlProxy, Treasury, ETHExchangeAggregator, PriceOracle]);
+		vault = await deployProxyBase(Vault, [AccessControlProxy, Treasury, ExchangeAggregator, PriceOracle]);
 	    cVault = await VaultContract.at(addressMap[Vault]);
 		await vault.setAdminImpl(vaultAdmin.address);
         for (let i = 0; i < INITIAL_ASSET_LIST.length; i++) {
@@ -358,9 +358,9 @@ const main = async () => {
 		await pegToken.deployed();
 		addressMap[PegToken] = pegToken.address;
 		await cVault.setPegTokenAddress(addressMap[PegToken]);
-		await cVault.setRebaseThreshold(1);
-		await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
-		await cVault.setMaxTimestampBetweenTwoReported(604800);
+		// await cVault.setRebaseThreshold(1);
+		// await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+		// await cVault.setMaxTimestampBetweenTwoReported(604800);
 		console.log("maxTimestampBetweenTwoReported:",new BigNumber(await cVault.maxTimestampBetweenTwoReported()).toFixed());
 	}
 

@@ -48,7 +48,7 @@ abstract contract UniswapV2ActionsMixin is AssetHelpers {
         address _incomingAsset,
         address _intermediaryAsset
     ) internal {
-        bool noIntermediary = _intermediaryAsset == address(0) ||
+        bool _noIntermediary = _intermediaryAsset == address(0) ||
         _intermediaryAsset == _incomingAsset;
         for (uint256 i=0; i < _outgoingAssets.length; i++) {
             // Skip cases where outgoing and incoming assets are the same, or
@@ -61,24 +61,24 @@ abstract contract UniswapV2ActionsMixin is AssetHelpers {
                 continue;
             }
 
-            address[] memory uniswapPath;
-            if (noIntermediary || _outgoingAssets[i] == _intermediaryAsset) {
-                uniswapPath = new address[](2);
-                uniswapPath[0] = _outgoingAssets[i];
-                uniswapPath[1] = _incomingAsset;
+            address[] memory _uniswapPath;
+            if (_noIntermediary || _outgoingAssets[i] == _intermediaryAsset) {
+                _uniswapPath = new address[](2);
+                _uniswapPath[0] = _outgoingAssets[i];
+                _uniswapPath[1] = _incomingAsset;
             } else {
-                uniswapPath = new address[](3);
-                uniswapPath[0] = _outgoingAssets[i];
-                uniswapPath[1] = _intermediaryAsset;
-                uniswapPath[2] = _incomingAsset;
+                _uniswapPath = new address[](3);
+                _uniswapPath[0] = _outgoingAssets[i];
+                _uniswapPath[1] = _intermediaryAsset;
+                _uniswapPath[2] = _incomingAsset;
             }
 
-            __uniswapV2Swap(_recipient, _outgoingAssetAmounts[i], 1, uniswapPath);
+            __uniswapV2Swap(_recipient, _outgoingAssetAmounts[i], 1, _uniswapPath);
         }
     }
 
     /// @dev Helper to get the deadline for a Uniswap V2 action in a standardized way
-    function __uniswapV2GetActionDeadline() private view returns (uint256 deadline_) {
+    function __uniswapV2GetActionDeadline() private view returns (uint256 _deadline) {
         return block.timestamp + 1;
     }
 
@@ -87,8 +87,8 @@ abstract contract UniswapV2ActionsMixin is AssetHelpers {
     ///////////////////
 
     /// @notice Gets the `UNISWAP_V2_ROUTER2` variable
-    /// @return router_ The `UNISWAP_V2_ROUTER2` variable value
-    function getUniswapV2Router2() public pure returns (address router_) {
+    /// @return _router The `UNISWAP_V2_ROUTER2` variable value
+    function getUniswapV2Router2() public pure returns (address _router) {
         return UNISWAP_V2_ROUTER2;
     }
 }
