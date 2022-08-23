@@ -526,24 +526,33 @@ async function topUpRocketPoolEthByAddress(amount = new BigNumber(10 ** 18), to)
  * Top up a certain amount of sETH for a certain address(default 10 ** 18)
  */
 async function topUpSEthByAddress(amount = new BigNumber(10 ** 18), to) {
-    //TODO:
-    return 0
+    if (isEmpty(to)) return 0
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(addresses.sETH_WHALE_ADDRESS, 10 ** 18)
+    await impersonates([addresses.sETH_WHALE_ADDRESS])
+    return topUpMain(addresses.sETH_ADDRESS, addresses.sETH_WHALE_ADDRESS, to, amount)
 }
 
 /**
  * Top up a certain amount of sETH2 for a certain address(default 10 ** 18)
  */
 async function topUpSEth2ByAddress(amount = new BigNumber(10 ** 18), to) {
-    //TODO:
-    return 0
+    if (isEmpty(to)) return 0
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(addresses.sETH2_WHALE_ADDRESS, 10 ** 18)
+    await impersonates([addresses.sETH2_WHALE_ADDRESS])
+    return topUpMain(addresses.sETH2_ADDRESS, addresses.sETH2_WHALE_ADDRESS, to, amount)
 }
 
 /**
  * Top up a certain amount of rETH2 for a certain address(default 10 ** 18)
  */
 async function topUpREth2ByAddress(amount = new BigNumber(10 ** 18), to) {
-    //TODO:
-    return 0
+    if (isEmpty(to)) return 0
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(addresses.rETH2_WHALE_ADDRESS, 10 ** 18)
+    await impersonates([addresses.rETH2_WHALE_ADDRESS])
+    return topUpMain(addresses.rETH2_ADDRESS, addresses.rETH2_WHALE_ADDRESS, to, amount)
 }
 
 /**
@@ -558,13 +567,19 @@ async function topUpSwiseByAddress(amount = new BigNumber(10 ** 18), to) {
 }
 
 async function topUpGusdByAddress(amount = new BigNumber(10 ** 2), to) {
-    //TODO:
-    return 0;
+    if (isEmpty(to)) return 0
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(addresses.GUSD_WHALE_ADDRESS, 10 ** 18)
+    await impersonates([addresses.GUSD_WHALE_ADDRESS])
+    return topUpMain(addresses.GUSD_ADDRESS, addresses.GUSD_WHALE_ADDRESS, to, amount)
 }
 
-async function topUpSusdByAddress(amount = new BigNumber(10 ** 18), toAddress) {
-     //TODO:
-     return 0;
+async function topUpSusdByAddress(amount = new BigNumber(10 ** 18), to) {
+    if (isEmpty(to)) return 0
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(addresses.SUSD_WHALE_ADDRESS, 10 ** 18)
+    await impersonates([addresses.SUSD_WHALE_ADDRESS])
+    return topUpMain(addresses.SUSD_ADDRESS, addresses.SUSD_WHALE_ADDRESS, to, amount)
 }
 
 /**
