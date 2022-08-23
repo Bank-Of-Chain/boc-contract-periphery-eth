@@ -85,8 +85,7 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
     }
 
     function swapRewardsToWants() internal virtual override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){
-        uint256 _wethBalanceInit = balanceOfToken(W_ETH);
-        uint256 _wethBalanceLast = _wethBalanceInit;
+        uint256 _wethBalanceLast = balanceOfToken(W_ETH);
         uint256 _wethBalanceCur;
 
         address[] memory _rewardTokens = getConvexRewards();
