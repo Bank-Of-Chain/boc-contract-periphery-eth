@@ -1,0 +1,20 @@
+name: CICD
+on:
+  pull_request:
+    branches:
+      - '**'
+jobs:
+  test:
+    name: testcases runner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install
+        uses: borales/actions-yarn@master
+        with:
+          cmd: install
+      - name: CICD
+        uses: borales/actions-yarn@master
+        with:
+          cmd: test
+      

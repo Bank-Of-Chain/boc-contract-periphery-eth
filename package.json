@@ -70,6 +70,7 @@
     "release_v1.5.3:mainnet": "hardhat run scripts/deploy_v1.5.3-add-strategies.js --network mainnet",
     "upgrade:mainnet": "hardhat run scripts/upgrade.js --network mainnet",
     "grow": "hardhat run scripts/mainnet-grow.js --network localhost",
-    "eslint": "eslint ./test"
+    "eslint": "eslint ./test",
+    "test": "hardhat compile"
   }
 }
