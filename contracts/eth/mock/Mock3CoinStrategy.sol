@@ -10,7 +10,7 @@ import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "boc-contract-core/contracts/library/BocRoles.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 import "boc-contract-core/contracts/library/StableMath.sol";
-import "../oracle/IPriceOracle.sol";
+import "../oracle/IPriceOracleConsumer.sol";
 import "../vault/IETHVault.sol";
 
 contract MockS3CoinStrategy is Initializable, AccessControlMixin {
@@ -18,7 +18,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IETHVault public vault;
-    IPriceOracle public valueInterpreter;
+    IPriceOracleConsumer public valueInterpreter;
     uint16 public protocol;
     address[] public wants;
     bool public isWantRatioIgnorable;
@@ -36,7 +36,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         _wants[1] = NativeToken.NATIVE_TOKEN;
         protocol = 32;
         vault = IETHVault(_vault);
-        valueInterpreter = IPriceOracle(vault.priceProvider());
+        valueInterpreter = IPriceOracleConsumer(vault.priceProvider());
 
         _initAccessControl(vault.accessControlProxy());
 

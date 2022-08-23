@@ -10,7 +10,7 @@ import "boc-contract-core/contracts/library/BocRoles.sol";
 import "../strategies/IETHStrategy.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 import "boc-contract-core/contracts/exchanges/IExchangeAggregator.sol";
-import "../oracle/IPriceOracle.sol";
+import "../oracle/IPriceOracleConsumer.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
