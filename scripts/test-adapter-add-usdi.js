@@ -12,13 +12,18 @@ const {
     topUpTusdByAddress,
     topUpUsdcByAddress,
     topUpUsdtByAddress,
+    topUpBusdByAddress,
+    topUpLusdByAddress,
+    topUpUsdpByAddress,
+    topUpGusdByAddress,
+    topUpSusdByAddress,
 } = require("../utils/top-up-utils");
 
 // === Constants === //
 const MFC = require("../config/mainnet-fork-test-config");
 
 // Set the vault_address in chain-1 which should add testAdapter
-const VAULT_ADDRESS = "0x5e6CB7E728E1C320855587E1D9C6F7972ebdD6D5";
+const VAULT_ADDRESS = "0xCa1D199b6F53Af7387ac543Af8e8a34455BBe5E0";
 
 const main = async () => {
     const vault = await Vault.at(VAULT_ADDRESS);
@@ -64,6 +69,21 @@ const main = async () => {
                 break;
             case MFC.USDC_ADDRESS:
                 await topUpUsdcByAddress(amount, testAdapter.address);
+                break;
+            case MFC.BUSD_ADDRESS:
+                await topUpBusdByAddress(amount, testAdapter.address);
+                break;
+            case MFC.GUSD_ADDRESS:
+                await topUpGusdByAddress(amount, testAdapter.address);
+                break;
+            case MFC.LUSD_ADDRESS:
+                await topUpLusdByAddress(amount, testAdapter.address);
+                break;
+            case MFC.USDP_ADDRESS:
+                await topUpUsdpByAddress(amount, testAdapter.address);
+                break;
+            case MFC.SUSD_ADDRESS:
+                await topUpSusdByAddress(amount, testAdapter.address);
                 break;
             default:
                 console.log(`WARN: missing mint for ${want}`);

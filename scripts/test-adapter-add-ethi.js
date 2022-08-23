@@ -13,13 +13,16 @@ const {
     topUpWETHByAddress,
     topUpSTETHByAddress,
     topUpRocketPoolEthByAddress,
+    topUpSEth2ByAddress,
+    topUpREth2ByAddress,
+    topUpSEthByAddress,
 } = require("../utils/top-up-utils");
 
 // === Constants === //
 const MFC = require("../config/mainnet-fork-test-config");
 
 // Set the vault_address in chain-1 which should add testAdapter
-const VAULT_ADDRESS = "0x3a622DB2db50f463dF562Dc5F341545A64C580fc";
+const VAULT_ADDRESS = "0xFC4EE541377F3b6641c23CBE82F6f04388290421";
 
 const main = async () => {
     const vault = await Vault.at(VAULT_ADDRESS);
@@ -70,6 +73,15 @@ const main = async () => {
                 break;
             case MFC.rocketPoolETH_ADDRESS:
                 await topUpRocketPoolEthByAddress(amount, testAdapter.address);
+                break;
+            case MFC.sETH2_ADDRESS:
+                await topUpSEth2ByAddress(amount, testAdapter.address);
+                break;
+            case MFC.rETH2_ADDRESS:
+                await topUpREth2ByAddress(amount, testAdapter.address);
+                break;
+            case MFC.sETH_ADDRESS:
+                await topUpSEthByAddress(amount, testAdapter.address);
                 break;
             default:
                 console.log(`WARN: missing mint for ${want}`);
