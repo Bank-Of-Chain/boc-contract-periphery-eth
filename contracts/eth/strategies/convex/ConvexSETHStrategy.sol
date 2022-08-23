@@ -16,11 +16,11 @@ contract ConvexSETHStrategy is ConvexBaseStrategy {
         //set up sell reward path
         address[] memory _rewardCRVPath = new address[](2);
         _rewardCRVPath[0] = CRV;
-        _rewardCRVPath[1] = wETH;
+        _rewardCRVPath[1] = W_ETH;
         uniswapRewardRoutes[CRV] = _rewardCRVPath;
         address[] memory _rewardCVXPath = new address[](2);
         _rewardCVXPath[0] = CVX;
-        _rewardCVXPath[1] = wETH;
+        _rewardCVXPath[1] = W_ETH;
         uniswapRewardRoutes[CVX] = _rewardCVXPath;
     }
 
@@ -123,7 +123,7 @@ contract ConvexSETHStrategy is ConvexBaseStrategy {
 
     function sellWETH2Want() internal override {
         // Unwrap wEth to Eth
-        IWeth(wETH).withdraw(balanceOfToken(wETH));
+        IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
     }
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)

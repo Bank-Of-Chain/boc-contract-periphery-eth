@@ -310,7 +310,9 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         }
     }
 
-    function swapRewardsToWants() internal override {
+    function swapRewardsToWants() internal override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){
+        uint256 _wethBalanceInit = balanceOfToken(WETH);
+
         uint256 _balanceOfBal = balanceOfToken(BAL);
         if (_balanceOfBal > 0) {
             IERC20Upgradeable(BAL).safeApprove(address(UNIROUTER2), 0);
@@ -323,6 +325,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
                 block.timestamp
             );
         }
+        uint256 _wethBalanceAfterSellBAL = balanceOfToken(WETH);
 
         uint256 _balanceOfAura = balanceOfToken(AURA_TOKEN);
         if (_balanceOfAura > 0) {
@@ -336,6 +339,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
                 block.timestamp
             );
         }
+        uint256 _wethBalanceAfterSellBalAndAura = balanceOfToken(WETH);
 
         uint256 _balanceOfLdo = balanceOfToken(LDO);
         if (_balanceOfLdo > 0) {
@@ -349,5 +353,17 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
                 block.timestamp
             );
         }
+        uint256 _wethBalanceAfterSellTotal = balanceOfToken(WETH);
+
+        _wantTokens = new address[](3);
+        _wantAmounts = new uint256[](3);
+        _wantTokens[0] = WETH;
+        _wantTokens[1] = WETH;
+        _wantTokens[2] = WETH;
+
+        _wantAmounts[0] = _wethBalanceAfterSellBAL - _wethBalanceInit;
+        _wantAmounts[1] = _wethBalanceAfterSellBalAndAura - _wethBalanceAfterSellBAL;
+        _wantAmounts[2] = _wethBalanceAfterSellTotal - _wethBalanceAfterSellBalAndAura;
+        
     }
 }

@@ -62,11 +62,6 @@ interface ICurveMini {
 contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    event UpdateBorrowFactor(uint256 _borrowFactor);
-    event UpdateMaxCollateralRate(uint256 _maxCollateralRate);
-    event UpdateUnderlyingPartRatio(uint256 _underlyingPartRatio);
-    event UpdateForexReduceStep(uint256 _forexReduceStep);
-
     // minimum amount to be liquidation
     uint256 public constant SELL_FLOOR = 1e16;
 
@@ -114,6 +109,19 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
 
     //reward swap path
     mapping(address => address[]) public rewardRoutes;
+
+    /// Events
+    event UpdateBorrowFactor(uint256 _borrowFactor);
+    event UpdateMaxCollateralRate(uint256 _maxCollateralRate);
+    event UpdateUnderlyingPartRatio(uint256 _underlyingPartRatio);
+    event UpdateForexReduceStep(uint256 _forexReduceStep);
+    event SwapRewardsToWants(
+        address _strategy,
+        address[] _rewards,
+        uint256[] _rewardAmounts,
+        address[] _wants,
+        uint256[] _wantAmounts
+    );
 
     // === fallback and receive === //
     receive() external payable {}
@@ -447,13 +455,18 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
      *  sell Crv And Cvx
      */
     function _sellCrvAndCvx(uint256 _crvAmount, uint256 _convexAmount) internal {
+        uint256 _ethBalanceInit = address(this).balance;
+
         if (_crvAmount > 0) {
             ICurveMini(CRV_ETH_POOL).exchange(1, 0, _crvAmount, 0, true);
         }
+        uint256 _ethBalanceAfterSellCrv = address(this).balance;
+
         if (_convexAmount > 0) {
             ICurveMini(CVX_ETH_POOL).exchange(1, 0, _convexAmount, 0, true);
         }
-
+        uint256 _ethBalanceAfterSellTotal = address(this).balance;
+        
         //ETH wrap to WETH
         IWeth(WETH).deposit{value: address(this).balance}();
 
@@ -465,6 +478,27 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             address(this),
             block.timestamp
         );
+
+        uint256 _usdcBalance = balanceOfToken(USDC);
+
+        // fulfill 'SwapRewardsToWants' event data
+        address[] memory _rewardTokens = new address[](2);
+        uint256[] memory _rewardAmounts = new uint256[](2);
+        address[] memory _wantTokens = new address[](2);
+        uint256[] memory _wantAmounts = new uint256[](2);
+        _rewardTokens[0] = REWARD_CRV;
+        _rewardTokens[1] = REWARD_CVX;
+        _rewardAmounts[0] = _crvAmount;
+        _rewardAmounts[1] = _convexAmount;
+        _wantTokens[0] = USDC;
+        _wantTokens[1] = USDC;
+        // fulfill 'SwapRewardsToWants' event data
+        if(_ethBalanceAfterSellTotal - _ethBalanceInit > 0) {
+            _wantAmounts[0] = _usdcBalance *(_ethBalanceAfterSellCrv - _ethBalanceInit) 
+                / (_ethBalanceAfterSellTotal - _ethBalanceInit);
+            _wantAmounts[1] = _usdcBalance - _wantAmounts[0];
+        }
+        emit SwapRewardsToWants(address(this),_rewardTokens,_rewardAmounts,_wantTokens,_wantAmounts);
         
     }
 

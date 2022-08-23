@@ -17,11 +17,11 @@ contract ConvexrETHwstETHStrategy is ConvexBaseStrategy {
         //set up sell reward path
         address[] memory _rewardCRVPath = new address[](2);
         _rewardCRVPath[0] = CRV;
-        _rewardCRVPath[1] = wETH;
+        _rewardCRVPath[1] = W_ETH;
         uniswapRewardRoutes[CRV] = _rewardCRVPath;
         address[] memory _rewardCVXPath = new address[](2);
         _rewardCVXPath[0] = CVX;
-        _rewardCVXPath[1] = wETH;
+        _rewardCVXPath[1] = W_ETH;
         uniswapRewardRoutes[CVX] = _rewardCVXPath;
     }
 
@@ -124,7 +124,7 @@ contract ConvexrETHwstETHStrategy is ConvexBaseStrategy {
     }
 
     function sellWETH2Want() internal override {
-        IWeth(wETH).withdraw(balanceOfToken(wETH));
+        IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
         convertETH2wstETH();
     }
 
