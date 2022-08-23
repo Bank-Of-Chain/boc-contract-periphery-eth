@@ -470,7 +470,8 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         //ETH wrap to WETH
         IWeth(WETH).deposit{value: address(this).balance}();
 
-        //crv swap to USDC
+        uint256 _usdcBalanceInit = balanceOfToken(USDC);
+        // swap from WETH to USDC
         IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(
             balanceOfToken(WETH),
             0,
@@ -478,8 +479,8 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             address(this),
             block.timestamp
         );
-
-        uint256 _usdcBalance = balanceOfToken(USDC);
+        uint256 _usdcBalanceAfterSellWeth = balanceOfToken(USDC);
+        uint256 _usdcAmountSell = _usdcBalanceAfterSellWeth - _usdcBalanceInit;
 
         // fulfill 'SwapRewardsToWants' event data
         address[] memory _rewardTokens = new address[](2);
@@ -494,9 +495,9 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         _wantTokens[1] = USDC;
         // fulfill 'SwapRewardsToWants' event data
         if(_ethBalanceAfterSellTotal - _ethBalanceInit > 0) {
-            _wantAmounts[0] = _usdcBalance *(_ethBalanceAfterSellCrv - _ethBalanceInit) 
+            _wantAmounts[0] = _usdcAmountSell *(_ethBalanceAfterSellCrv - _ethBalanceInit) 
                 / (_ethBalanceAfterSellTotal - _ethBalanceInit);
-            _wantAmounts[1] = _usdcBalance - _wantAmounts[0];
+            _wantAmounts[1] = _usdcAmountSell - _wantAmounts[0];
         }
         emit SwapRewardsToWants(address(this),_rewardTokens,_rewardAmounts,_wantTokens,_wantAmounts);
         
