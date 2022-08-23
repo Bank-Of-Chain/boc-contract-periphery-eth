@@ -1,7 +1,5 @@
 const Vault = hre.artifacts.require("Vault");
-const TestAdapter = hre.artifacts.require(
-    "/contracts/usd/exchanges/adapters/TestAdapter.sol:TestAdapter",
-);
+const TestAdapter = hre.artifacts.require("TestAdapter");
 const ExchangeAggregator = hre.artifacts.require("ExchangeAggregator");
 const ERC20 = hre.artifacts.require("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20");
 
