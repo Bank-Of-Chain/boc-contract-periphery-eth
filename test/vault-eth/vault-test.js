@@ -34,7 +34,7 @@ const expect = chai.expect;
 
 const AccessControlProxy = hre.artifacts.require('AccessControlProxy');
 const Treasury = hre.artifacts.require('Treasury');
-const PriceOracle = hre.artifacts.require('PriceOracle');
+const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
 const Vault = hre.artifacts.require('ETHVault');
 const VaultBuffer = hre.artifacts.require('VaultBuffer');
 const PegToken = hre.artifacts.require('PegToken');
@@ -92,7 +92,7 @@ describe("Vault", function () {
     let usdcToken;
     let stethToken;
     let underlyingAddress;
-    let priceOracle;
+    let priceOracleConsumer;
     let ethExchanger;
     let treasuryAddress;
     let exchangePlatformAdapters;
@@ -135,7 +135,7 @@ describe("Vault", function () {
         
         // PriceOracle
         console.log('deploy PriceOracle');
-        priceOracle = await PriceOracle.new();
+        priceOracleConsumer = await PriceOracleConsumer.new();
         // ETHExchanger
         console.log('deploy ETHExchanger');
         ethExchanger = await ETHExchanger.new();
@@ -160,7 +160,7 @@ describe("Vault", function () {
 
         treasuryAddress = treasury.address;
              
-        await vault.initialize(accessControlProxy.address, treasuryAddress, exchangeAggregator.address, priceOracle.address);
+        await vault.initialize(accessControlProxy.address, treasuryAddress, exchangeAggregator.address, priceOracleConsumer.address);
         vaultAdmin = await VaultAdmin.new();
         await vault.setAdminImpl(vaultAdmin.address, {from: governance});
 

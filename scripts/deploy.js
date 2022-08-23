@@ -64,7 +64,7 @@ const ETHVault = 'ETHVault';
 const ETHVaultAdmin = 'ETHVaultAdmin';
 const ETHVaultBuffer = 'ETHVaultBuffer';
 const ETHPegToken = 'ETHPegToken';
-const PriceOracle = 'PriceOracle';
+const PriceOracleConsumer = 'PriceOracleConsumer';
 const HarvestHelper = 'HarvestHelper';
 const ETH_INITIAL_ASSET_LIST = [
     MFC_PRODUCTION.ETH_ADDRESS,
@@ -98,7 +98,7 @@ const addressMap = {
         rs[i.name] = '';
         return rs
     }, {}),
-    [PriceOracle]: '',
+    [PriceOracleConsumer]: '',
     [ETHVault]: '',
     [ETHVaultAdmin]: '',
     [HarvestHelper]: '',
@@ -695,8 +695,8 @@ const deploy_eth = async () => {
     let harvestHelper;
 
 
-    if (isEmpty(addressMap[PriceOracle])) {
-        priceOracle = await deployProxyBase(PriceOracle, []);
+    if (isEmpty(addressMap[PriceOracleConsumer])) {
+        priceOracle = await deployProxyBase(PriceOracleConsumer, []);
     }
 
     if (isEmpty(addressMap[OneInchV4Adapter])) {
@@ -717,7 +717,7 @@ const deploy_eth = async () => {
 
     let cVault;
     if (isEmpty(addressMap[ETHVault])) {
-        vault = await deployProxyBase(ETHVault, [AccessControlProxy, Treasury, ExchangeAggregator, PriceOracle]);
+        vault = await deployProxyBase(ETHVault, [AccessControlProxy, Treasury, ExchangeAggregator, PriceOracleConsumer]);
         cVault = await VaultContract.at(addressMap[ETHVault]);
         await vault.setAdminImpl(vaultAdmin.address);
         for (let i = 0; i < ETH_INITIAL_ASSET_LIST.length; i++) {

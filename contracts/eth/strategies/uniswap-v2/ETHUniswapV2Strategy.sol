@@ -70,8 +70,8 @@ contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin
         uint256 _lpDecimalUnit = 1e18;
         uint256 _part0 = (uint256(_reserve0) * (_lpDecimalUnit)) / _totalSupply;
         uint256 _part1 = (uint256(_reserve1) * (_lpDecimalUnit)) / _totalSupply;
-        uint256 _partValue0 = priceOracle.valueInEth(wants[0], _part0);
-        uint256 _partValue1 = priceOracle.valueInEth(wants[1], _part1);
+        uint256 _partValue0 = priceOracleConsumer.valueInEth(wants[0], _part0);
+        uint256 _partValue1 = priceOracleConsumer.valueInEth(wants[1], _part1);
         _lpValue = _partValue0 + _partValue1;
     }
 
