@@ -502,7 +502,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     ) internal override {
         // if withdraw all,force claim reward.
         if (_withdrawShares == _totalShares) {
-            // harvest();
+            harvest();
         }
         uint256 _totalStaking = balanceOfToken(rewardPool);
         uint256 _cvxLpAmount = (_totalStaking * _withdrawShares) / _totalShares;
