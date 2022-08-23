@@ -62,11 +62,6 @@ interface ICurveMini {
 contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    event UpdateBorrowFactor(uint256 _borrowFactor);
-    event UpdateMaxCollateralRate(uint256 _maxCollateralRate);
-    event UpdateUnderlyingPartRatio(uint256 _underlyingPartRatio);
-    event UpdateForexReduceStep(uint256 _forexReduceStep);
-
     // minimum amount to be liquidation
     uint256 public constant SELL_FLOOR = 1e16;
 
@@ -114,6 +109,19 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
 
     //reward swap path
     mapping(address => address[]) public rewardRoutes;
+
+    /// Events
+    event UpdateBorrowFactor(uint256 _borrowFactor);
+    event UpdateMaxCollateralRate(uint256 _maxCollateralRate);
+    event UpdateUnderlyingPartRatio(uint256 _underlyingPartRatio);
+    event UpdateForexReduceStep(uint256 _forexReduceStep);
+    event SwapRewardsToWants(
+        address _strategy,
+        address[] _rewards,
+        uint256[] _rewardAmounts,
+        address[] _wants,
+        uint256[] _wantAmounts
+    );
 
     // === fallback and receive === //
     receive() external payable {}
@@ -443,13 +451,6 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         }
     }
 
-    event SwapRewardsToWants(
-        address _strategy,
-        address[] _rewards,
-        uint256[] _rewardAmounts,
-        address[] _wants,
-        uint256[] _wantAmounts
-    );
     /**
      *  sell Crv And Cvx
      */

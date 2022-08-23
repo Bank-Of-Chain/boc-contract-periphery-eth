@@ -79,11 +79,8 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
         _wantTokens[0] = SETH2;
         _wantTokens[1] = SETH2;
 
-        uint256 _totalSeth2Sell = _seth2BalanceAfterSellTotal - _seth2BalanceInit;
-        if(_totalSeth2Sell > 0) {
-            _wantAmounts[0] = _totalSeth2Sell *(_seth2BalanceAfterSellSwise - _seth2BalanceInit) 
-                / _totalSeth2Sell;
-            _wantAmounts[1] = _totalSeth2Sell - _wantAmounts[0];
-        }
+        _wantAmounts[0] = _seth2BalanceAfterSellSwise - _seth2BalanceInit;
+        _wantAmounts[1] = _seth2BalanceAfterSellTotal - _seth2BalanceAfterSellSwise;
+        
     }
 }

@@ -16,15 +16,15 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         //set up sell reward path
         address[] memory _rewardCRVPath = new address[](2);
         _rewardCRVPath[0] = CRV;
-        _rewardCRVPath[1] = wETH;
+        _rewardCRVPath[1] = W_ETH;
         uniswapRewardRoutes[CRV] = _rewardCRVPath;
         address[] memory _rewardCVXPath = new address[](2);
         _rewardCVXPath[0] = CVX;
-        _rewardCVXPath[1] = wETH;
+        _rewardCVXPath[1] = W_ETH;
         uniswapRewardRoutes[CVX] = _rewardCVXPath;
         address[] memory _rewardLDOPath = new address[](2);
         _rewardLDOPath[0] = LDO;
-        _rewardLDOPath[1] = wETH;
+        _rewardLDOPath[1] = W_ETH;
         uniswapRewardRoutes[LDO] = _rewardLDOPath;
     }
 
@@ -35,7 +35,7 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
     function getConvexWants() internal pure override returns (address[] memory) {
         address[] memory _wants = new address[](2);
         _wants[0] = NativeToken.NATIVE_TOKEN;
-        _wants[1] = stETH;
+        _wants[1] = ST_ETH;
         return _wants;
     }
 
@@ -96,7 +96,7 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
         OutputInfo memory _info2 = _outputsInfo[2];
         _info2.outputCode = 2;
         _info2.outputTokens = new address[](1);
-        _info2.outputTokens[0] = stETH;
+        _info2.outputTokens[0] = ST_ETH;
     }
 
     function getPositionDetail()
@@ -126,7 +126,7 @@ contract ConvexStETHStrategy is ConvexBaseStrategy {
 
     function sellWETH2Want() internal override {
         // Unwrap wEth to Eth
-        IWeth(wETH).withdraw(balanceOfToken(wETH));
+        IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
     }
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)

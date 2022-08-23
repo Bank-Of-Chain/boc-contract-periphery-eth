@@ -361,13 +361,9 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         _wantTokens[1] = WETH;
         _wantTokens[2] = WETH;
 
-        uint256 _totalWethSell = _wethBalanceAfterSellTotal - _wethBalanceInit;
-        if(_totalWethSell > 0) {
-            _wantAmounts[0] = _totalWethSell *(_wethBalanceAfterSellBAL - _wethBalanceInit) 
-                / _totalWethSell;
-            _wantAmounts[1] = _totalWethSell *(_wethBalanceAfterSellBalAndAura - _wethBalanceAfterSellBAL) 
-                / _totalWethSell;
-            _wantAmounts[2] = _totalWethSell - _wantAmounts[0]- _wantAmounts[1];
-        }
+        _wantAmounts[0] = _wethBalanceAfterSellBAL - _wethBalanceInit;
+        _wantAmounts[1] = _wethBalanceAfterSellBalAndAura - _wethBalanceAfterSellBAL;
+        _wantAmounts[2] = _wethBalanceAfterSellTotal - _wethBalanceAfterSellBalAndAura;
+        
     }
 }

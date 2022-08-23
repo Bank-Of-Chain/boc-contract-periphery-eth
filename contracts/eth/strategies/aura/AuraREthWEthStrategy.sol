@@ -312,7 +312,6 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         }
         uint256 _wethBalanceAfterSellBAL = balanceOfToken(WETH);
 
-
         uint256 _balanceOfAura = balanceOfToken(AURA_TOKEN);
         if (_balanceOfAura > 0) {
             IERC20Upgradeable(AURA_TOKEN).safeApprove(address(UNIROUTER2), 0);
@@ -333,12 +332,7 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         _wantTokens[0] = WETH;
         _wantTokens[1] = WETH;
 
-        uint256 _totalWethSell = _wethBalanceAfterSellTotal - _wethBalanceInit;
-        if(_totalWethSell > 0) {
-            _wantAmounts[0] = _totalWethSell *(_wethBalanceAfterSellBAL - _wethBalanceInit) 
-                / _totalWethSell;
-            _wantAmounts[1] = _totalWethSell - _wantAmounts[0];
-        }
-
+        _wantAmounts[0] = _wethBalanceAfterSellBAL - _wethBalanceInit;
+        _wantAmounts[1] = _wethBalanceAfterSellTotal - _wethBalanceAfterSellBAL;
     }
 }

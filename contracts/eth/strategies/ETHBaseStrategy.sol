@@ -22,6 +22,13 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
         address[] outputTokens; //output tokens
     }
 
+    IETHVault public vault;
+    IPriceOracle public priceOracle;
+    uint16 public protocol;
+    string public name;
+    address[] public wants;
+    bool public isWantRatioIgnorable;
+
     event Borrow(address[] _assets, uint256[] _amounts);
 
     event Repay(
@@ -40,13 +47,6 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
         address[] _wants,
         uint256[] _wantAmounts
     );
-
-    IETHVault public vault;
-    IPriceOracle public priceOracle;
-    uint16 public protocol;
-    string public name;
-    address[] public wants;
-    bool public isWantRatioIgnorable;
 
 
     modifier onlyVault() {

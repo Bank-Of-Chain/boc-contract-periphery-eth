@@ -31,8 +31,6 @@ interface ICurveMini {
 contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    event UpdateBorrowFactor(uint256 _borrowFactor);
-
     // IronBank
     Comptroller public constant COMPTROLLER =
         Comptroller(0xAB1c342C7bf5Ec5F02ADEA1c2270670bCa144CbB);
@@ -71,6 +69,16 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     mapping(address => address[]) public rewardRoutes;
 
     address public curve_usdc_ibforex_pool;
+
+    /// Events
+    event UpdateBorrowFactor(uint256 _borrowFactor);
+    event SwapRewardsToWants(
+        address _strategy,
+        address[] _rewards,
+        uint256[] _rewardAmounts,
+        address[] _wants,
+        uint256[] _wantAmounts
+    );
 
     // === fallback and receive === //
     receive() external payable {}
@@ -328,13 +336,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         vault.report(_rewardsTokens, _claimAmounts);
     }
 
-    event SwapRewardsToWants(
-        address _strategy,
-        address[] _rewards,
-        uint256[] _rewardAmounts,
-        address[] _wants,
-        uint256[] _wantAmounts
-    );
     /**
      *  sell crv and cvx
      */

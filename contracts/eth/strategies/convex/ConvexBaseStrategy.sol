@@ -14,8 +14,8 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
     mapping(address => uint256) public sellFloor;
     address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
     address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
-    address public constant wETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+    address public constant W_ETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant ST_ETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     IConvex internal constant BOOSTER = IConvex(address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31));
     IUniswapV2Router2 public constant ROUTER2 = IUniswapV2Router2(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
 
@@ -85,7 +85,7 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
     }
 
     function swapRewardsToWants() internal virtual override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){
-        uint256 _wethBalanceInit = balanceOfToken(wETH);
+        uint256 _wethBalanceInit = balanceOfToken(W_ETH);
         uint256 _wethBalanceLast = _wethBalanceInit;
         uint256 _wethBalanceCur;
 
@@ -94,14 +94,16 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
         _wantAmounts = new uint256[](_rewardTokens.length);
         for (uint256 i = 0; i < _rewardTokens.length; i++) {
             uint256 _rewardAmount = balanceOfToken(_rewardTokens[i]);
-            _wantTokens[i] = wETH;
             if (_rewardAmount > 0) {
                 IERC20Upgradeable(_rewardTokens[i]).safeApprove(address(ROUTER2), 0);
                 IERC20Upgradeable(_rewardTokens[i]).safeApprove(address(ROUTER2), _rewardAmount);
                 // sell to one coin then reinvest
                 ROUTER2.swapExactTokensForTokens(_rewardAmount, 0, uniswapRewardRoutes[_rewardTokens[i]], address(this), block.timestamp);
             }
-            _wethBalanceCur = balanceOfToken(wETH);
+
+            _wantTokens[i] = W_ETH;
+            
+            _wethBalanceCur = balanceOfToken(W_ETH);
             _wantAmounts[i] = _wethBalanceCur - _wethBalanceLast;
             _wethBalanceLast = _wethBalanceCur;
         }
