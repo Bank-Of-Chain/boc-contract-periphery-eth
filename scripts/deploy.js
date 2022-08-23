@@ -26,9 +26,12 @@ const {
     deploy,
     deployProxy
 } = require('../utils/deploy-utils');
+const {CHAINLINK} = require("../config/mainnet-fork-test-config");
 
 // === Utils === //
 const USDVaultContract = hre.artifacts.require("IVault");
+const ValueInterpreterContract = hre.artifacts.require("ValueInterpreter");
+const ChainlinkPriceFeedContract = hre.artifacts.require("ChainlinkPriceFeed");
 
 // === USD Constants === //
 const USDVault = 'Vault';
@@ -61,7 +64,7 @@ const ETHVault = 'ETHVault';
 const ETHVaultAdmin = 'ETHVaultAdmin';
 const ETHVaultBuffer = 'ETHVaultBuffer';
 const ETHPegToken = 'ETHPegToken';
-const PriceOracle = 'PriceOracle';
+const PriceOracleConsumer = 'PriceOracleConsumer';
 const HarvestHelper = 'HarvestHelper';
 const ETH_INITIAL_ASSET_LIST = [
     MFC_PRODUCTION.ETH_ADDRESS,
@@ -95,7 +98,7 @@ const addressMap = {
         rs[i.name] = '';
         return rs
     }, {}),
-    [PriceOracle]: '',
+    [PriceOracleConsumer]: '',
     [ETHVault]: '',
     [ETHVaultAdmin]: '',
     [HarvestHelper]: '',
@@ -119,6 +122,24 @@ const questionOfWhichVault = [{
             key: 'ETH Vault',
             name: 'ETH Vault',
             value: 2,
+        }
+    ]
+}];
+
+const questionOfUpdateType = [{
+    type: 'list',
+    name: 'type',
+    message: 'Please select the type to be update？\n',
+    choices: [
+        {
+            key: 'Update aggregator',
+            name: 'Update aggregator',
+            value: 1,
+        },
+        {
+            key: 'Not Update',
+            name: 'Not Update',
+            value: 0,
         }
     ]
 }];
@@ -456,6 +477,45 @@ const main = async () => {
     }
 
     console.table(addressMap);
+
+    let updateType = process.env.AGGREGATOR_UPDATE_TYPE_VALUE;
+    if(!updateType){
+        updateType = await inquirer.prompt(questionOfUpdateType).then((answers) => {
+            const {
+                type
+            } = answers;
+
+            return type;
+        })
+    }
+    if (updateType) {
+        let primitives = []
+        let aggregators = []
+        let heartbeats = []
+        const valueInterpreter = await ValueInterpreterContract.at(addressMap[ValueInterpreter]);
+        const chainlinkPriceFeedAddr = await valueInterpreter.getPrimitivePriceFeed()
+
+        const chainlinkPriceFeed = await ChainlinkPriceFeedContract.at(chainlinkPriceFeedAddr)
+
+        for (const key in CHAINLINK.aggregators) {
+            if (Object.hasOwnProperty.call(CHAINLINK.aggregators, key)) {
+                const aggregator = CHAINLINK.aggregators[key]
+                if (await chainlinkPriceFeed.isSupportedAsset(aggregator.primitive)) {
+                    primitives.push(aggregator.primitive)
+                    aggregators.push(aggregator.aggregator)
+                    heartbeats.push(60 * 60 * 24 * 365)
+                    console.log(`will update ${aggregator.primitive} aggregator`)
+                }
+            }
+        }
+
+        await chainlinkPriceFeed.updatePrimitives(primitives, aggregators, heartbeats);
+
+        await chainlinkPriceFeed.setEthUsdAggregator('0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', 60 * 60 * 24 * 365)
+
+        console.log('update aggregator successfully')
+    }
+
     const balanceAfterDeploy = await ethers.provider.getBalance(accounts[0].address);
     console.log('balanceBeforeDeploy:%d,balanceAfterDeploy:%d', ethers.utils.formatEther(balanceBeforeDeploy), ethers.utils.formatEther(balanceAfterDeploy));
 
@@ -635,8 +695,8 @@ const deploy_eth = async () => {
     let harvestHelper;
 
 
-    if (isEmpty(addressMap[PriceOracle])) {
-        priceOracle = await deployProxyBase(PriceOracle, []);
+    if (isEmpty(addressMap[PriceOracleConsumer])) {
+        priceOracle = await deployProxyBase(PriceOracleConsumer, []);
     }
 
     if (isEmpty(addressMap[OneInchV4Adapter])) {
@@ -657,7 +717,7 @@ const deploy_eth = async () => {
 
     let cVault;
     if (isEmpty(addressMap[ETHVault])) {
-        vault = await deployProxyBase(ETHVault, [AccessControlProxy, Treasury, ExchangeAggregator, PriceOracle]);
+        vault = await deployProxyBase(ETHVault, [AccessControlProxy, Treasury, ExchangeAggregator, PriceOracleConsumer]);
         cVault = await VaultContract.at(addressMap[ETHVault]);
         await vault.setAdminImpl(vaultAdmin.address);
         for (let i = 0; i < ETH_INITIAL_ASSET_LIST.length; i++) {

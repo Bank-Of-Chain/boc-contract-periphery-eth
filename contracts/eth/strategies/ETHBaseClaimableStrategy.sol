@@ -15,7 +15,7 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
             uint256[] memory _claimAmounts
         );
 
-    function swapRewardsToWants() internal virtual;
+    function swapRewardsToWants() internal virtual returns(address[] memory _wantTokens,uint256[] memory _wantAmounts);
 
     /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
     function harvest() public virtual override returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts){
@@ -23,12 +23,17 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
         (bool _claimIsWorth, address[] memory __rewardsTokens,uint256[] memory __claimAmounts ) = claimRewards();
         _rewardsTokens = __rewardsTokens;
         _claimAmounts = __claimAmounts;
+        address[] memory _wantTokens;
+        uint256[] memory _wantAmounts;
         if (_claimIsWorth) {
-            swapRewardsToWants();
+            (_wantTokens,_wantAmounts) = swapRewardsToWants();
+
             reInvest();
         }
 
         vault.report(_rewardsTokens,_claimAmounts);
+
+        emit SwapRewardsToWants(address(this),_rewardsTokens, _claimAmounts, _wantTokens,_wantAmounts);
     }
 
     function reInvest() internal {

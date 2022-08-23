@@ -52,7 +52,9 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
         vault.report(_rewardsTokens,_claimAmounts);
     }
 
-    function swapRewardsToWants() internal override {
+    function swapRewardsToWants() internal override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){
+        uint256 _seth2BalanceInit = balanceOfToken(SETH2);
+
         uint256 _balanceOfSwise = balanceOfToken(SWISE);
         if (_balanceOfSwise > 0) {
             IERC20(SWISE).approve(UNISWAP_V3_ROUTER, 0);
@@ -60,6 +62,7 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
             IUniswapV3.ExactInputSingleParams memory _params = IUniswapV3.ExactInputSingleParams(SWISE, SETH2, 3000, address(this), block.timestamp, _balanceOfSwise, 0, 0);
             IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(_params);
         }
+        uint256 _seth2BalanceAfterSellSwise = balanceOfToken(SETH2);
 
         uint256 _balanceOfRETH2 = balanceOfToken(RETH2);
         if (_balanceOfRETH2 > 0) {
@@ -68,5 +71,16 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
             IUniswapV3.ExactInputSingleParams memory _params = IUniswapV3.ExactInputSingleParams(RETH2, SETH2, 500, address(this), block.timestamp, _balanceOfRETH2, 0, 0);
             IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(_params);
         }
+        uint256 _seth2BalanceAfterSellTotal = balanceOfToken(SETH2);
+
+        // fulfill 'SwapRewardsToWants' event data
+        _wantTokens = new address[](2);
+        _wantAmounts = new uint256[](2);
+        _wantTokens[0] = SETH2;
+        _wantTokens[1] = SETH2;
+
+        _wantAmounts[0] = _seth2BalanceAfterSellSwise - _seth2BalanceInit;
+        _wantAmounts[1] = _seth2BalanceAfterSellTotal - _seth2BalanceAfterSellSwise;
+        
     }
 }

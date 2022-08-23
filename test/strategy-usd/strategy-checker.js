@@ -222,13 +222,18 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         assert(thirdPoolAssets.isGreaterThan(min) && thirdPoolAssets.isLessThan(max), 'large deviation in thirdPoolAssets estimation');
     });
 
+    it('[strategy estimatedTotalAssets should be zero]',async function(){
+        const estimatedTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
+        assert(estimatedTotalAssets.isZero());
+    });
+
     let depositUSD = new BigNumber(0);
     it('[estimatedTotalAssets = transferred tokens value]', async function () {
         let depositedAssets = [];
         let depositedAmounts = [];
         let wants0Contract = await ERC20.at(wantsInfo._assets[0]);
         let wants0Precision = new BigNumber(10 ** (await wants0Contract.decimals()));
-        let initialAmount = new BigNumber(0.5);
+        let initialAmount = new BigNumber(10000);
         let initialRatio = wantsInfo._ratios[0];
         let isIgnoreRatio = await strategy.isWantRatioIgnorable();
         console.log('isIgnoreRatio:', isIgnoreRatio);
@@ -271,7 +276,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         }
         const debtRate = new BigNumber(await debtRateQuery());
         console.log('depositUSD##:%d',depositUSD);
-        depositUSD = new BigNumber(ethers.utils.formatEther(depositUSD.toString()))//depositUSD.dividedBy(10 ** 18);
+        depositUSD = new BigNumber(ethers.utils.formatEther(depositUSD.toFixed()))//depositUSD.dividedBy(10 ** 18);
         
         let delta = depositUSD.minus(estimatedTotalAssets);
         console.log('depositUSD:%s,estimatedTotalAssets:%s,delta:%s', depositUSD.toFixed(), estimatedTotalAssets.toFixed(), delta.toFixed());
@@ -303,7 +308,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         pendingRewards = await strategy.harvest.call({
             from: keeper,
         });
-        await strategy.harvest({ from: keeper });
+        // await strategy.harvest({ from: keeper });
         // After the harvest is completed, IronBank needs to perform one more step to sell and reinvest the mine
         const {
             investWithSynthForex
@@ -349,7 +354,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
             withdrawUSD = withdrawUSD.plus(usd);
         }
         // withdrawUSD = withdrawUSD.dividedBy(10 ** 18);
-        withdrawUSD = new BigNumber(ethers.utils.formatEther(withdrawUSD.toString()))
+        withdrawUSD = new BigNumber(ethers.utils.formatEther(withdrawUSD.toFixed()))
         console.log('depositUSD:%s,withdrawUSD:%s,rewardUSD:%s', depositUSD.toFixed(), withdrawUSD.toFixed(), rewardUsd.toFixed());
         let strategyTotalWithdrawUsd = depositUSD.plus(rewardUsd);
         assert(strategyTotalWithdrawUsd.isGreaterThanOrEqualTo(depositUSD), 'the value of stablecoins user got do not increase');

@@ -54,13 +54,20 @@ contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
         vault.report(_rewardsTokens,_claimAmounts);
     }
 
-    function swapRewardsToWants() internal override {
+    function swapRewardsToWants() internal override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){
         uint256 _balanceOfSwise = balanceOfToken(SWISE);
+        _wantTokens = new address[](1);
+        _wantAmounts = new uint256[](1);
+        _wantTokens[0] = SETH2;
+
+        uint256 _seth2BalanceInit = balanceOfToken(SETH2);
         if (_balanceOfSwise > 0) {
             IERC20(SWISE).approve(UNISWAP_V3_ROUTER, 0);
             IERC20(SWISE).approve(UNISWAP_V3_ROUTER, _balanceOfSwise);
             IUniswapV3.ExactInputSingleParams memory _params = IUniswapV3.ExactInputSingleParams(SWISE, SETH2, 3000, address(this), block.timestamp, _balanceOfSwise, 0, 0);
             IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(_params);
         }
+        uint256 _seth2BalanceAfterSellSwise = balanceOfToken(SETH2);
+        _wantAmounts[0] = _seth2BalanceAfterSellSwise - _seth2BalanceInit;
     }
 }
