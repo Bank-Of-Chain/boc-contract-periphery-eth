@@ -364,11 +364,15 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _wantTokens[0] = USDC;
         _wantTokens[1] = USDC;
 
+        uint256 _usdcBalanceInit = balanceOfToken(USDC);
+        uint256 _usdcBalanceAfterSellWeth;
+        uint256 _usdcAmountSell;
+
         if (address(this).balance > 0) {
             //ETH wrap to WETH
             IWeth(WETH).deposit{value: address(this).balance}();
 
-            //crv swap to USDC
+            //swap from WETH to USDC
             IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(
                 balanceOfToken(WETH),
                 0,
@@ -376,18 +380,19 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
                 address(this),
                 block.timestamp
             );
-            uint256 _usdcBalance = balanceOfToken(USDC);
+            _usdcBalanceAfterSellWeth = balanceOfToken(USDC);
+            _usdcAmountSell = _usdcBalanceAfterSellWeth - _usdcBalanceInit;
 
             // fulfill 'SwapRewardsToWants' event data
             if(_ethBalanceAfterSellTotal - _ethBalanceInit > 0) {
-                _wantAmounts[0] = _usdcBalance *(_ethBalanceAfterSellCrv - _ethBalanceInit) 
+                _wantAmounts[0] = _usdcAmountSell *(_ethBalanceAfterSellCrv - _ethBalanceInit) 
                     / (_ethBalanceAfterSellTotal - _ethBalanceInit);
-                _wantAmounts[1] = _usdcBalance - _wantAmounts[0];
+                _wantAmounts[1] = _usdcAmountSell - _wantAmounts[0];
             }
             
             IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, 0);
-            IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, _usdcBalance);
-            ICurveMini(curve_usdc_ibforex_pool).exchange(1, 0, _usdcBalance, 0);
+            IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, _usdcBalanceAfterSellWeth);
+            ICurveMini(curve_usdc_ibforex_pool).exchange(1, 0, _usdcBalanceAfterSellWeth, 0);
             
         }
 
