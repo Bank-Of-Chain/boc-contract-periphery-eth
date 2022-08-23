@@ -41,7 +41,7 @@
    // Core protocol contracts
    let vault;
    let underlying;
-   let priceOracle;
+   let priceOracleConsumer;
    let exchangePlatformAdapters;
    let addToVaultStrategies;
    let farmer1Lp
@@ -59,7 +59,7 @@
      await topUpEthByAddress(depositAmount, farmer1);
      await setupCoreProtocol(MFC.ETH_ADDRESS, governance, keeper).then((resp) => {
        vault = resp.vault;
-       priceOracle = resp.priceOracle;
+       priceOracleConsumer = resp.priceOracleConsumer;
        exchangePlatformAdapters = resp.exchangePlatformAdapters;
        addToVaultStrategies = resp.addToVaultStrategies;
      });

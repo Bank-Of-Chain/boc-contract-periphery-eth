@@ -9,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "boc-contract-core/contracts/library/BocRoles.sol";
 import "boc-contract-core/contracts/library/StableMath.sol";
-import "../oracle/IPriceOracle.sol";
+import "../oracle/IPriceOracleConsumer.sol";
 import "../vault/IETHVault.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 
@@ -23,7 +23,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     }
 
     IETHVault public vault;
-    IPriceOracle public priceOracle;
+    IPriceOracle public priceOracleConsumer;
     uint16 public protocol;
     string public name;
     address[] public wants;
@@ -39,7 +39,6 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     );
 
     event SetIsWantRatioIgnorable(bool _oldValue, bool _newValue);
-
     event SwapRewardsToWants(
         address _strategy,
         address[] _rewards,
@@ -47,8 +46,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
         address[] _wants,
         uint256[] _wantAmounts
     );
-
-
+    
     modifier onlyVault() {
         require(msg.sender == address(vault));
         _;
@@ -66,7 +64,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
         protocol = _protocol;
         vault = IETHVault(_vault);
 
-        priceOracle = IPriceOracle(vault.priceProvider());
+        priceOracleConsumer = IPriceOracleConsumer(vault.priceProvider());
 
         _initAccessControl(vault.accessControlProxy());
 
@@ -222,7 +220,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
         if (_token == NativeToken.NATIVE_TOKEN) {
             _valueInETH = _amount;
         } else {
-            _valueInETH = priceOracle.valueInEth(_token, _amount);
+            _valueInETH = priceOracleConsumer.valueInEth(_token, _amount);
         }
     }
 

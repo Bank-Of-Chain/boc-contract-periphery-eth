@@ -144,7 +144,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
         assetSet.add(_asset);
         // Verify that our oracle supports the asset
         // slither-disable-next-line unused-return
-        IPriceOracle(priceProvider).priceInUSD(_asset);
+        IPriceOracleConsumer(priceProvider).priceInUSD(_asset);
         trackedAssetsMap.plus(_asset, 1);
         emit AddAsset(_asset);
     }

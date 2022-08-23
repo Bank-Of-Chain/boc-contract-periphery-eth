@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-interface IPriceOracle {
+interface IPriceOracleConsumer {
 
     function decimals() external view returns(uint8);
 

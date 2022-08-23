@@ -11,14 +11,14 @@ const { send } = require('@openzeppelin/test-helpers');
 
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 const AccessControlProxy = hre.artifacts.require('AccessControlProxy');
-const PriceOracle = hre.artifacts.require('PriceOracle');
+const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
 const MockVault = hre.artifacts.require('contracts/eth/mock/MockVault.sol:MockVault');
 const Mock3rdEthPool = hre.artifacts.require('contracts/eth/mock/Mock3rdEthPool.sol:Mock3rdEthPool');
 const MockUniswapV3Router = hre.artifacts.require('contracts/eth/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
 // const ILido = hre.artifacts.require('ILido');
 
 let accessControlProxy;
-let priceOracle;
+let priceOracleConsumer;
 let mockVault;
 let mockUniswapV3Router;
 let strategy;
@@ -135,10 +135,10 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         keeper = accounts[19].address;
 
         accessControlProxy = await AccessControlProxy.new();
-        priceOracle = await PriceOracle.new();
+        priceOracleConsumer = await PriceOracleConsumer.new();
         await accessControlProxy.initialize(governance, governance, governance, keeper);
         // init mockVault
-        mockVault = await MockVault.new(accessControlProxy.address, priceOracle.address);
+        mockVault = await MockVault.new(accessControlProxy.address, priceOracleConsumer.address);
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
         console.log('mock vault address:%s', mockVault.address);
@@ -258,7 +258,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
                 if (asset === MFC.ETH_ADDRESS) {
                     depositETH = depositETH.plus(amount);
                 } else {
-                    depositETH = depositETH.plus(await priceOracle.valueInEth(asset, amount));
+                    depositETH = depositETH.plus(await priceOracleConsumer.valueInEth(asset, amount));
                 }
             } else if (isIgnoreRatio) {
                 console.log('use 0');
@@ -334,7 +334,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
             if (want === MFC.ETH_ADDRESS) {
                 withdrawETH = withdrawETH.plus(balance);
             } else {
-                let eth = new BigNumber(await priceOracle.valueInEth(want, balance));
+                let eth = new BigNumber(await priceOracleConsumer.valueInEth(want, balance));
                 withdrawETH = withdrawETH.plus(eth);
             }
         }

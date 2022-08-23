@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./IPriceOracle.sol";
+import "./IPriceOracleConsumer.sol";
 import "../../external/lido/IWstETH.sol";
 import "../../external/rocketpool/RocketTokenRETHInterface.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -18,12 +18,12 @@ interface AggregatorInterface {
 
     function latestRound() external view returns (uint256);
 
-    function getAnswer(uint256 roundId) external view returns (int256);
+    function getAnswer(uint256 _roundId) external view returns (int256);
 
-    function getTimestamp(uint256 roundId) external view returns (uint256);
+    function getTimestamp(uint256 _roundId) external view returns (uint256);
 }
 
-contract PriceOracle is IPriceOracle, Initializable {
+contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
     AggregatorInterface public constant STETH_ETH_AGGREGATOR =
         AggregatorInterface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
     AggregatorInterface public constant ETH_USD_AGGREGATOR =

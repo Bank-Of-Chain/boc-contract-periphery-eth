@@ -113,7 +113,7 @@ contract ETHVault is ETHVaultStorage {
             address _trackedAsset = _trackedAssets[i];
             uint256 _balance = _balanceOfToken(_trackedAsset, address(this));
             if (_balance > 0) {
-                _value = _value + IPriceOracle(priceProvider).valueInUsd(_trackedAsset, _balance);
+                _value = _value + IPriceOracleConsumer(priceProvider).valueInUsd(_trackedAsset, _balance);
             }
         }
     }
@@ -129,7 +129,7 @@ contract ETHVault is ETHVaultStorage {
             if (_estimatedTotalAssets > 0) {
                 _value =
                     _value +
-                    IPriceOracle(priceProvider).valueInUsd(
+                    IPriceOracleConsumer(priceProvider).valueInUsd(
                         NativeToken.NATIVE_TOKEN,
                         _estimatedTotalAssets
                     );
@@ -314,7 +314,7 @@ contract ETHVault is ETHVaultStorage {
                     _lendValue += _actualAmount;
                     _ethAmount = _actualAmount;
                 } else {
-                    _lendValue += IPriceOracle(priceProvider).valueInEth(_wants[i], _actualAmount);
+                    _lendValue += IPriceOracleConsumer(priceProvider).valueInEth(_wants[i], _actualAmount);
                     IERC20Upgradeable(_wants[i]).safeTransfer(_strategy, _actualAmount);
                 }
             }
@@ -483,8 +483,8 @@ contract ETHVault is ETHVaultStorage {
             if (_vaultValueOfNow + _transferValue < _vaultValueOfBefore) {
                 _old2LendAssets = _vaultValueOfBefore - _vaultValueOfNow - _transferValue;
             }
-            if (_vaultValueOfBefore <= _transferValue) {
-                _redeemValue = 0;
+            if (_redeemValue + _old2LendAssets > _totalValueOfBefore - _transferValue) {
+                _redeemValue = _totalValueOfBefore - _transferValue - _old2LendAssets;
             }
             if (_totalValueOfNow > _totalValueOfBefore) {
                 uint256 _gain = _totalValueOfNow - _totalValueOfBefore;
@@ -632,7 +632,7 @@ contract ETHVault is ETHVaultStorage {
         checkIsSupportAsset(_asset);
         uint256 _mintAmount = _amount;
         if (_asset != NativeToken.NATIVE_TOKEN) {
-            _mintAmount = IPriceOracle(priceProvider).valueInEth(_asset, _amount);
+            _mintAmount = IPriceOracleConsumer(priceProvider).valueInEth(_asset, _amount);
         }
         uint256 _minimumInvestmentAmount = minimumInvestmentAmount;
         if (_minimumInvestmentAmount > 0) {
@@ -1187,7 +1187,7 @@ contract ETHVault is ETHVaultStorage {
             );
         }
 
-        uint256 _oracleExpectedAmount = IPriceOracle(priceProvider).valueInTargetToken(
+        uint256 _oracleExpectedAmount = IPriceOracleConsumer(priceProvider).valueInTargetToken(
             _fromToken,
             _amount,
             _toToken
@@ -1311,7 +1311,7 @@ contract ETHVault is ETHVaultStorage {
             if (_asset == NativeToken.NATIVE_TOKEN) {
                 _price = 1e18;
             } else {
-                _price = IPriceOracle(priceProvider).priceInEth(_asset);
+                _price = IPriceOracleConsumer(priceProvider).priceInEth(_asset);
             }
             _assetPrices[_assetIndex] = _price;
         }
