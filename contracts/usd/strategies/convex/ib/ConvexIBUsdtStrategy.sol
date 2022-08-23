@@ -314,7 +314,13 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         IConvexReward(rewardPool).getReward();
         uint256 _crvBalance = balanceOfToken(REWARD_CRV);
         uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
-        _sellCrvAndCvx(_crvBalance, _cvxBalance);
+        (
+            address[] memory _rewardTokens,
+            uint256[] memory _rewardAmounts,
+            address[] memory _wantTokens,
+            uint256[] memory _wantAmounts
+        ) = _sellCrvAndCvx(_crvBalance, _cvxBalance);
+
         uint256 _ibForexAmount = balanceOfToken(getIronBankForex());
         if (_ibForexAmount > 0) {
             _invest(_ibForexAmount);
@@ -334,12 +340,23 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _claimAmounts[2] = _rkprBalance;
         // report empty array for _profit
         vault.report(_rewardsTokens, _claimAmounts);
+
+        // emit 'SwapRewardsToWants' event after vault report
+        emit SwapRewardsToWants(address(this),_rewardTokens,_rewardAmounts,_wantTokens,_wantAmounts);
     }
 
     /**
      *  sell crv and cvx
      */
-    function _sellCrvAndCvx(uint256 _crvAmount, uint256 _convexAmount) internal {
+    function _sellCrvAndCvx(uint256 _crvAmount, uint256 _convexAmount) 
+        internal 
+        returns(
+            address[] memory _rewardTokens,
+            uint256[] memory _rewardAmounts,
+            address[] memory _wantTokens,
+            uint256[] memory _wantAmounts
+        )
+    {
         uint256 _ethBalanceInit = address(this).balance;
 
         if (_crvAmount > 0) {
@@ -353,10 +370,11 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         uint256 _ethBalanceAfterSellTotal = address(this).balance;
 
         // fulfill 'SwapRewardsToWants' event data
-        address[] memory _rewardTokens = new address[](2);
-        uint256[] memory _rewardAmounts = new uint256[](2);
-        address[] memory _wantTokens = new address[](2);
-        uint256[] memory _wantAmounts = new uint256[](2);
+        _rewardTokens = new address[](2);
+        _rewardAmounts = new uint256[](2);
+        _wantTokens = new address[](2);
+        _wantAmounts = new uint256[](2);
+
         _rewardTokens[0] = REWARD_CRV;
         _rewardTokens[1] = REWARD_CVX;
         _rewardAmounts[0] = _crvAmount;
@@ -364,11 +382,15 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _wantTokens[0] = USDC;
         _wantTokens[1] = USDC;
 
+        uint256 _usdcBalanceInit = balanceOfToken(USDC);
+        uint256 _usdcBalanceAfterSellWeth;
+        uint256 _usdcAmountSell;
+
         if (address(this).balance > 0) {
             //ETH wrap to WETH
             IWeth(WETH).deposit{value: address(this).balance}();
 
-            //crv swap to USDC
+            //swap from WETH to USDC
             IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(
                 balanceOfToken(WETH),
                 0,
@@ -376,22 +398,21 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
                 address(this),
                 block.timestamp
             );
-            uint256 _usdcBalance = balanceOfToken(USDC);
+            _usdcBalanceAfterSellWeth = balanceOfToken(USDC);
+            _usdcAmountSell = _usdcBalanceAfterSellWeth - _usdcBalanceInit;
 
             // fulfill 'SwapRewardsToWants' event data
             if(_ethBalanceAfterSellTotal - _ethBalanceInit > 0) {
-                _wantAmounts[0] = _usdcBalance *(_ethBalanceAfterSellCrv - _ethBalanceInit) 
+                _wantAmounts[0] = _usdcAmountSell *(_ethBalanceAfterSellCrv - _ethBalanceInit) 
                     / (_ethBalanceAfterSellTotal - _ethBalanceInit);
-                _wantAmounts[1] = _usdcBalance - _wantAmounts[0];
+                _wantAmounts[1] = _usdcAmountSell - _wantAmounts[0];
             }
             
             IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, 0);
-            IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, _usdcBalance);
-            ICurveMini(curve_usdc_ibforex_pool).exchange(1, 0, _usdcBalance, 0);
+            IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, _usdcBalanceAfterSellWeth);
+            ICurveMini(curve_usdc_ibforex_pool).exchange(1, 0, _usdcBalanceAfterSellWeth, 0);
             
         }
-
-        emit SwapRewardsToWants(address(this),_rewardTokens,_rewardAmounts,_wantTokens,_wantAmounts);
     }
 
     // Collateral Token Price In USD ,decimals 1e30

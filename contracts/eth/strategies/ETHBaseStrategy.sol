@@ -23,7 +23,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
     }
 
     IETHVault public vault;
-    IPriceOracle public priceOracleConsumer;
+    IPriceOracleConsumer public priceOracleConsumer;
     uint16 public protocol;
     string public name;
     address[] public wants;
