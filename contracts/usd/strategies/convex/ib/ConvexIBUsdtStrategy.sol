@@ -82,6 +82,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
 
     // === fallback and receive === //
     receive() external payable {}
+
     fallback() external payable {}
 
     function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
@@ -260,7 +261,10 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         uint256 _borrowBalanceCurrent = _borrowCToken.borrowBalanceStored(address(this));
         address _borrowToken = _borrowCToken.underlying();
         uint256 _borrowTokenPrice = _borrowTokenPrice();
-        _value = (_borrowBalanceCurrent * _borrowTokenPrice) / decimalUnitOfToken(_borrowToken) / 1e12; //div 1e12 for normalized
+        _value =
+            (_borrowBalanceCurrent * _borrowTokenPrice) /
+            decimalUnitOfToken(_borrowToken) /
+            1e12; //div 1e12 for normalized
     }
 
     //_collateral assets（USD-1e18)
@@ -269,15 +273,18 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         address _collateralToken = COLLATERAL_TOKEN;
         //saving gas
         uint256 _exchangeRateMantissa = _collateralC.exchangeRateStored();
+        uint256 _collaterTokenPrecision = decimalUnitOfToken(_collateralToken);
         //Multiply by 18e to prevent loss of precision
-        uint256 _collateralTokenAmount = (((balanceOfToken(address(_collateralC)) *
-            _exchangeRateMantissa) * decimalUnitOfToken(_collateralToken)) * 1e18) /
+        uint256 _collateralTokenAmount = (balanceOfToken(address(_collateralC)) *
+            _exchangeRateMantissa *
+            _collaterTokenPrecision *
+            1e18) /
             1e16 /
             decimalUnitOfToken(address(_collateralC));
-        uint256 _collateralTokenPrice = _collateralTokenPrice();
+
         _value =
-            (_collateralTokenAmount * _collateralTokenPrice) /
-            decimalUnitOfToken(_collateralToken) /
+            (_collateralTokenAmount * _collateralTokenPrice()) /
+            _collaterTokenPrecision /
             1e18 /
             1e12; //div 1e12 for normalized
     }
@@ -342,15 +349,21 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         vault.report(_rewardsTokens, _claimAmounts);
 
         // emit 'SwapRewardsToWants' event after vault report
-        emit SwapRewardsToWants(address(this),_rewardTokens,_rewardAmounts,_wantTokens,_wantAmounts);
+        emit SwapRewardsToWants(
+            address(this),
+            _rewardTokens,
+            _rewardAmounts,
+            _wantTokens,
+            _wantAmounts
+        );
     }
 
     /**
      *  sell crv and cvx
      */
-    function _sellCrvAndCvx(uint256 _crvAmount, uint256 _convexAmount) 
-        internal 
-        returns(
+    function _sellCrvAndCvx(uint256 _crvAmount, uint256 _convexAmount)
+        internal
+        returns (
             address[] memory _rewardTokens,
             uint256[] memory _rewardAmounts,
             address[] memory _wantTokens,
@@ -402,29 +415,27 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
             _usdcAmountSell = _usdcBalanceAfterSellWeth - _usdcBalanceInit;
 
             // fulfill 'SwapRewardsToWants' event data
-            if(_ethBalanceAfterSellTotal - _ethBalanceInit > 0) {
-                _wantAmounts[0] = _usdcAmountSell *(_ethBalanceAfterSellCrv - _ethBalanceInit) 
-                    / (_ethBalanceAfterSellTotal - _ethBalanceInit);
+            if (_ethBalanceAfterSellTotal - _ethBalanceInit > 0) {
+                _wantAmounts[0] =
+                    (_usdcAmountSell * (_ethBalanceAfterSellCrv - _ethBalanceInit)) /
+                    (_ethBalanceAfterSellTotal - _ethBalanceInit);
                 _wantAmounts[1] = _usdcAmountSell - _wantAmounts[0];
             }
-            
+
             IERC20Upgradeable(USDC).safeApprove(curveUsdcIbforexPool, 0);
             IERC20Upgradeable(USDC).safeApprove(curveUsdcIbforexPool, _usdcBalanceAfterSellWeth);
             ICurveMini(curveUsdcIbforexPool).exchange(1, 0, _usdcBalanceAfterSellWeth, 0);
-            
         }
     }
 
     // Collateral Token Price In USD ,decimals 1e30
     function _collateralTokenPrice() internal view returns (uint256) {
-        uint256 _collateralTokenPrice = priceOracle.getUnderlyingPrice(address(COLLATERAL_CTOKEN));
-        return _collateralTokenPrice;
+        return priceOracle.getUnderlyingPrice(address(COLLATERAL_CTOKEN));
     }
 
     // Borrown Token Price In USD ，decimals 1e30
     function _borrowTokenPrice() internal view returns (uint256) {
-        uint256 _borrowTokenPrice = _getNormalizedBorrowToken();
-        return _borrowTokenPrice;
+        return _getNormalizedBorrowToken();
     }
 
     function _getNormalizedBorrowToken() internal view returns (uint256) {
@@ -436,7 +447,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         address _borrowToken = getIronBankForex();
         uint256 _borrowTokenPrice = _borrowTokenPrice(); // decimals 1e30
         //Maximum number of loans available
-        uint256 _maxBorrowAmount = ((liqudity * decimalUnitOfToken(_borrowToken))) /
+        uint256 _maxBorrowAmount = (liqudity * decimalUnitOfToken(_borrowToken)) /
             _borrowTokenPrice;
         //Borrowable quantity under the current borrowFactor factor
         _borrowAvaible = (_maxBorrowAmount * borrowFactor) / BPS;
@@ -600,5 +611,4 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
             }
         }
     }
-
 }

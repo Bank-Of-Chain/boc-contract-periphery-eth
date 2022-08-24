@@ -120,7 +120,8 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         _amounts[3] = (_pool.balances(USD_INDEX) * _lpAmount) / _totalSupply;
         for (uint256 i = 0; i < 3; i++) {
             _amounts[i] =
-                (((ICurveLiquidityPool(POOL3).balances(i) * _crv3Amount) / _crv3Supply) * _lpAmount) /
+                (ICurveLiquidityPool(POOL3).balances(i) * _crv3Amount * _lpAmount) /
+                _crv3Supply /
                 _totalSupply;
         }
     }
@@ -148,7 +149,7 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         returns (uint256)
     {
         address _curvePool = curvePool;
-        bool _has3Crv;
+        bool _has3Crv = false;
         for (uint256 i = 0; i < 3; i++) {
             if (_amounts[i] > 0) {
                 _has3Crv = true;
