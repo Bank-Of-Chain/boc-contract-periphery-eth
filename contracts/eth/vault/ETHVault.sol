@@ -32,7 +32,7 @@ contract ETHVault is ETHVaultStorage {
         rebaseThreshold = 1;
         // one week
         maxTimestampBetweenTwoReported = 604800;
-        underlyingUnitsPerShare =  1e18;
+        underlyingUnitsPerShare = 1e18;
     }
 
     modifier whenNotEmergency() {
@@ -113,7 +113,9 @@ contract ETHVault is ETHVaultStorage {
             address _trackedAsset = _trackedAssets[i];
             uint256 _balance = _balanceOfToken(_trackedAsset, address(this));
             if (_balance > 0) {
-                _value = _value + IPriceOracleConsumer(priceProvider).valueInUsd(_trackedAsset, _balance);
+                _value =
+                    _value +
+                    IPriceOracleConsumer(priceProvider).valueInUsd(_trackedAsset, _balance);
             }
         }
     }
@@ -181,15 +183,8 @@ contract ETHVault is ETHVaultStorage {
 
     /// @notice burn ETHi,return stablecoins
     /// @param _amount Amount of ETHi to burn
-    /// @param _asset one of StableCoin asset
     /// @param _minimumAmount Minimum stablecoin units to receive in return
-    function burn(
-        uint256 _amount,
-        address _asset,
-        uint256 _minimumAmount,
-        bool _needExchange,
-        IExchangeAggregator.ExchangeToken[] memory _exchangeTokens
-    )
+    function burn(uint256 _amount, uint256 _minimumAmount)
         external
         whenNotEmergency
         whenNotAdjustPosition
@@ -197,7 +192,7 @@ contract ETHVault is ETHVaultStorage {
         returns (address[] memory _assets, uint256[] memory _amounts)
     {
         uint256 _accountBalance = IPegToken(pegTokenAddress).balanceOf(msg.sender);
-        _checkAssetAndExchangeTokens(_accountBalance, _amount, _asset, _exchangeTokens);
+        require(_amount > 0 && _amount <= _accountBalance, "ETHi not enough");
         address[] memory _trackedAssets = _getTrackedAssets();
         uint256[] memory _assetPrices = new uint256[](_trackedAssets.length);
         uint256[] memory _assetDecimals = new uint256[](_trackedAssets.length);
@@ -210,9 +205,6 @@ contract ETHVault is ETHVaultStorage {
         );
         uint256 _actuallyReceivedAmount = 0;
         (_assets, _amounts, _actuallyReceivedAmount) = _calculateAndTransfer(
-            _asset,
-            _exchangeTokens,
-            _needExchange,
             _actualAsset,
             _trackedAssets,
             _assetPrices,
@@ -222,7 +214,6 @@ contract ETHVault is ETHVaultStorage {
             require(_actuallyReceivedAmount >= _minimumAmount, "amount lower than minimum");
         }
         _burnRebaseAndEmit(
-            _asset,
             _amount,
             _actuallyReceivedAmount,
             _sharesAmount,
@@ -305,7 +296,6 @@ contract ETHVault is ETHVaultStorage {
         for (uint256 i = 0; i < _toAmounts.length; i++) {
             uint256 _actualAmount = _toAmounts[i];
             if (_actualAmount > 0) {
-
                 if (!_isWantRatioIgnorable && _ratios[i] > 0) {
                     _actualAmount = (_ratios[i] * _minAmount) / _minAspect;
                     _toAmounts[i] = _actualAmount;
@@ -314,7 +304,10 @@ contract ETHVault is ETHVaultStorage {
                     _lendValue += _actualAmount;
                     _ethAmount = _actualAmount;
                 } else {
-                    _lendValue += IPriceOracleConsumer(priceProvider).valueInEth(_wants[i], _actualAmount);
+                    _lendValue += IPriceOracleConsumer(priceProvider).valueInEth(
+                        _wants[i],
+                        _actualAmount
+                    );
                     IERC20Upgradeable(_wants[i]).safeTransfer(_strategy, _actualAmount);
                 }
             }
@@ -325,7 +318,7 @@ contract ETHVault is ETHVaultStorage {
         } else {
             _ethStrategy.borrow(_wants, _toAmounts);
         }
-        _report(_strategy, new address[](0),new uint256[](0),_lendValue);
+        _report(_strategy, new address[](0), new uint256[](0), _lendValue);
         emit LendToStrategy(_strategy, _wants, _toAmounts, _lendValue);
     }
 
@@ -338,7 +331,7 @@ contract ETHVault is ETHVaultStorage {
         return _exchange(_fromToken, _toToken, _amount, _exchangeParam);
     }
 
-    /// @notice Change USDi supply with Vault total assets.
+    /// @notice Change ETHi supply with Vault total assets.
     function rebase()
         external
         whenNotEmergency
@@ -351,7 +344,7 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /**
-        * @dev Report the current asset of strategy caller
+     * @dev Report the current asset of strategy caller
      * @param _rewardTokens The reward token list
      * @param _claimAmounts The claim amount list
      * Emits a {StrategyReported} event.
@@ -419,7 +412,7 @@ contract ETHVault is ETHVaultStorage {
 
     /// @notice end  Adjust Position
     function endAdjustPosition() external isKeeper nonReentrant {
-        require(adjustPositionPeriod, "AD ING");
+        require(adjustPositionPeriod, "AD OVER");
         address[] memory _trackedAssets = _getTrackedAssets();
         uint256 _trackedAssetsLength = _trackedAssets.length;
         uint256[] memory _assetPrices = new uint256[](_trackedAssetsLength);
@@ -683,7 +676,8 @@ contract ETHVault is ETHVaultStorage {
             );
 
             uint256 _nowStrategyTotalDebt = strategies[_strategy].totalDebt;
-            uint256 _thisWithdrawValue = (_nowStrategyTotalDebt * _strategyWithdrawValue) / _strategyTotalValue;
+            uint256 _thisWithdrawValue = (_nowStrategyTotalDebt * _strategyWithdrawValue) /
+                _strategyTotalValue;
             strategies[_strategy].totalDebt = _nowStrategyTotalDebt - _thisWithdrawValue;
             _totalWithdrawValue += _thisWithdrawValue;
 
@@ -825,56 +819,6 @@ contract ETHVault is ETHVaultStorage {
         return _value;
     }
 
-    // @notice exchange token to _asset form vault and transfer to user
-    function _exchangeAndCalculateReceivedAmounts(
-        address _asset,
-        uint256[] memory _outputs,
-        address[] memory _trackedAssets,
-        IExchangeAggregator.ExchangeToken[] memory _exchangeTokens
-    ) internal returns (uint256[] memory) {
-        uint256 _trackedAssetsLength = _trackedAssets.length;
-        uint256[] memory _amounts = new uint256[](_trackedAssetsLength);
-        uint256 _toTokenIndex = _trackedAssetsLength;
-        uint256 _toTokenAmount;
-
-        for (uint256 i = 0; i < _trackedAssetsLength; i++) {
-            address _withdrawToken = _trackedAssets[i];
-            if (_toTokenIndex == _trackedAssetsLength && _withdrawToken == _asset) {
-                _toTokenIndex = i;
-            }
-            uint256 _withdrawAmount = _outputs[i];
-            if (_withdrawAmount > 0) {
-                if (_withdrawToken == _asset) {
-                    _toTokenAmount = _toTokenAmount + _withdrawAmount;
-                } else {
-                    _amounts[i] = _withdrawAmount;
-                    for (uint256 j = 0; j < _exchangeTokens.length; j++) {
-                        IExchangeAggregator.ExchangeToken memory _exchangeToken = _exchangeTokens[
-                            j
-                        ];
-                        if (
-                            _exchangeToken.fromToken == _withdrawToken &&
-                            _exchangeToken.toToken == _asset
-                        ) {
-                            _amounts[i] = 0;
-                            uint256 _toAmount = _exchange(
-                                _exchangeToken.fromToken,
-                                _exchangeToken.toToken,
-                                _withdrawAmount,
-                                _exchangeToken.exchangeParam
-                            );
-                            _toTokenAmount = _toTokenAmount + _toAmount;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        _amounts[_toTokenIndex] = _toTokenAmount;
-        return _amounts;
-    }
-
     // @notice without exchange token and transfer form vault to user
     function _transfer(
         uint256[] memory _outputs,
@@ -906,26 +850,6 @@ contract ETHVault is ETHVaultStorage {
             }
         }
         return _actualAmount;
-    }
-
-    function _checkAssetAndExchangeTokens(
-        uint256 _accountBalance,
-        uint256 _amount,
-        address _asset,
-        IExchangeAggregator.ExchangeToken[] memory _exchangeTokens
-    ) internal view {
-        require(
-            _amount > 0 && _amount <= _accountBalance,
-            "Amount must be gt 0 and lt or eq the balance"
-        );
-        checkIsSupportAsset(_asset);
-        for (uint256 i = 0; i < _exchangeTokens.length; i++) {
-            require(
-                _exchangeTokens[i].toToken == _asset ||
-                    _exchangeTokens[i].toToken == _exchangeTokens[i].fromToken,
-                "toToken is invalid"
-            );
-        }
     }
 
     function _replayToVault(
@@ -982,9 +906,6 @@ contract ETHVault is ETHVaultStorage {
     }
 
     function _calculateAndTransfer(
-        address _asset,
-        IExchangeAggregator.ExchangeToken[] memory _exchangeTokens,
-        bool _needExchange,
         uint256 _actualAsset,
         address[] memory _trackedAssets,
         uint256[] memory _assetPrices,
@@ -1004,14 +925,7 @@ contract ETHVault is ETHVaultStorage {
             _assetPrices,
             _assetDecimals
         );
-        if (_needExchange) {
-            _outputs = _exchangeAndCalculateReceivedAmounts(
-                _asset,
-                _outputs,
-                _trackedAssets,
-                _exchangeTokens
-            );
-        }
+
         uint256 _actuallyReceivedAmount = _transfer(
             _outputs,
             _trackedAssets,
@@ -1021,9 +935,8 @@ contract ETHVault is ETHVaultStorage {
         return (_trackedAssets, _outputs, _actuallyReceivedAmount);
     }
 
-    // @notice burn usdi and check rebase
+    // @notice burn ETHi and check rebase
     function _burnRebaseAndEmit(
-        address _asset,
         uint256 _amount,
         uint256 _actualAmount,
         uint256 _shareAmount,
@@ -1047,12 +960,12 @@ contract ETHVault is ETHVaultStorage {
             );
             _rebase(_totalAssetInVault + totalDebt);
         }
-        emit Burn(msg.sender, _asset, _amount, _actualAmount, _shareAmount, _assets, _amounts);
+        emit Burn(msg.sender, _amount, _actualAmount, _shareAmount, _assets, _amounts);
     }
 
     /**
      * @dev Calculate the total value of assets held by the Vault and all
-     *      strategies and update the supply of USDI, optionally sending a
+     *      strategies and update the supply of ETHi, optionally sending a
      *      portion of the yield to the trustee.
      */
     function _rebase(uint256 _totalAssets) internal {
@@ -1195,7 +1108,9 @@ contract ETHVault is ETHVaultStorage {
         require(
             _exchangeAmount >=
                 (_oracleExpectedAmount *
-                    (MAX_BPS - _exchangeParam.slippage - _exchangeParam.oracleAdditionalSlippage)) /
+                    (MAX_BPS -
+                        _exchangeParam.slippage -
+                        _exchangeParam.oracleAdditionalSlippage)) /
                     MAX_BPS,
             "OL"
         );
