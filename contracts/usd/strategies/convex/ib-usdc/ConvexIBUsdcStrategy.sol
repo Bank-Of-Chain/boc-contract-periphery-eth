@@ -128,7 +128,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     fallback() external payable {}
 
     function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
-        require(_borrowFactor >= 0 && _borrowFactor < BPS, "setting output the range");
+        require(_borrowFactor < BPS, "setting output the range");
         borrowFactor = _borrowFactor;
 
         emit UpdateBorrowFactor(_borrowFactor);

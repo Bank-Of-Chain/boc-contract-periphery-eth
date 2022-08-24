@@ -68,7 +68,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     //reward swap path
     mapping(address => address[]) public rewardRoutes;
 
-    address public curve_usdc_ibforex_pool;
+    address public curveUsdcIbforexPool;
 
     /// Events
     event UpdateBorrowFactor(uint256 _borrowFactor);
@@ -85,7 +85,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     fallback() external payable {}
 
     function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
-        require(_borrowFactor >= 0 && _borrowFactor < BPS, "setting output the range");
+        require(_borrowFactor < BPS, "setting output the range");
         borrowFactor = _borrowFactor;
 
         emit UpdateBorrowFactor(_borrowFactor);
@@ -102,7 +102,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         borrowCToken = CTokenInterface(_borrowCToken);
         rewardPool = _rewardPool;
         pId = IConvexReward(rewardPool).pid();
-        curve_usdc_ibforex_pool = _curve_usdc_ibforex_pool;
+        curveUsdcIbforexPool = _curve_usdc_ibforex_pool;
         address[] memory _wants = new address[](1);
         _wants[0] = COLLATERAL_TOKEN;
 
@@ -408,9 +408,9 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
                 _wantAmounts[1] = _usdcAmountSell - _wantAmounts[0];
             }
             
-            IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, 0);
-            IERC20Upgradeable(USDC).safeApprove(curve_usdc_ibforex_pool, _usdcBalanceAfterSellWeth);
-            ICurveMini(curve_usdc_ibforex_pool).exchange(1, 0, _usdcBalanceAfterSellWeth, 0);
+            IERC20Upgradeable(USDC).safeApprove(curveUsdcIbforexPool, 0);
+            IERC20Upgradeable(USDC).safeApprove(curveUsdcIbforexPool, _usdcBalanceAfterSellWeth);
+            ICurveMini(curveUsdcIbforexPool).exchange(1, 0, _usdcBalanceAfterSellWeth, 0);
             
         }
     }
