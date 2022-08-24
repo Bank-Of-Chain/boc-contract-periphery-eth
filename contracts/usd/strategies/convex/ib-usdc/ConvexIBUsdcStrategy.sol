@@ -125,6 +125,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
 
     // === fallback and receive === //
     receive() external payable {}
+
     fallback() external payable {}
 
     function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
@@ -310,7 +311,8 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         }
         address _curvePool = curvePool;
         uint256 _totalLp = IERC20Upgradeable(getCurveLpToken()).totalSupply();
-        uint256 _underlyingHoldOn = (ICurveMini(_curvePool).balances(1) * _rewardBalance) / _totalLp;
+        uint256 _underlyingHoldOn = (ICurveMini(_curvePool).balances(1) * _rewardBalance) /
+            _totalLp;
         uint256 _forexHoldOn = (ICurveMini(_curvePool).balances(0) * _rewardBalance) / _totalLp;
         uint256 _forexDebts = borrowCToken.borrowBalanceStored(address(this));
         if (_forexHoldOn > _forexDebts) {
@@ -329,7 +331,11 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             }
         } else {
             //need swap underlying to forex
-            uint256 _needUnderlying = ICurveMini(_curvePool).get_dy(0, 1, _forexDebts - _forexHoldOn);
+            uint256 _needUnderlying = ICurveMini(_curvePool).get_dy(
+                0,
+                1,
+                _forexDebts - _forexHoldOn
+            );
             uint256 _useUnderlying;
             uint256 _swapForex;
             if (_needUnderlying > _underlyingHoldOn) {
@@ -378,7 +384,10 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         uint256 _borrowBalanceCurrent = _borrowCToken.borrowBalanceStored(address(this));
         address _borrowToken = _borrowCToken.underlying();
         uint256 _borrowTokenPrice = _borrowTokenPrice();
-        _value = (_borrowBalanceCurrent * _borrowTokenPrice) / decimalUnitOfToken(_borrowToken) / 1e12; //div 1e12 for normalized
+        _value =
+            (_borrowBalanceCurrent * _borrowTokenPrice) /
+            decimalUnitOfToken(_borrowToken) /
+            1e12; //div 1e12 for normalized
     }
 
     //_collateral assets（USD-1e18)
@@ -431,40 +440,53 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     {
         // claim and invest
         address _rewardPool = rewardPool;
-        uint256 _rewardCRVAmount = IConvexReward(_rewardPool).earned(address(this));
 
         address[] memory _rewardTokens;
         uint256[] memory _rewardAmounts;
         address[] memory _wantTokens;
         uint256[] memory _wantAmounts;
-        if (_rewardCRVAmount > SELL_FLOOR) {
-            IConvexReward(_rewardPool).getReward();
-            uint256 _crvBalance = balanceOfToken(REWARD_CRV);
-            uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
+        IConvexReward(_rewardPool).getReward();
+        uint256 _crvBalance = balanceOfToken(REWARD_CRV);
+        uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
 
-            (_rewardTokens,_rewardAmounts,_wantTokens,_wantAmounts) 
-                = _sellCrvAndCvx(_crvBalance, _cvxBalance);
-            //sell kpr
-            uint256 _rkprBalance = balanceOfToken(RKPR);
-            if (_rkprBalance > 0) {
-                IERC20Upgradeable(RKPR).transfer(harvester, _rkprBalance);
-            }
-            //reinvest
-            _invest(0, balanceOfToken(COLLATERAL_TOKEN));
+        (_rewardTokens, _rewardAmounts, _wantTokens, _wantAmounts) = _sellCrvAndCvx(
+            _crvBalance,
+            _cvxBalance
+        );
+        //sell kpr
+        uint256 _rkprBalance = balanceOfToken(RKPR);
+        if (_rkprBalance > 0) {
+            IERC20Upgradeable(RKPR).transfer(harvester, _rkprBalance);
         }
+        //reinvest
+        _invest(0, balanceOfToken(COLLATERAL_TOKEN));
 
+        _rewardsTokens = new address[](3);
+        _rewardsTokens[0] = REWARD_CRV;
+        _rewardsTokens[1] = REWARD_CVX;
+        _rewardsTokens[2] = RKPR;
+        _claimAmounts = new uint256[](3);
+        _claimAmounts[0] = _crvBalance;
+        _claimAmounts[1] = _cvxBalance;
+        _claimAmounts[2] = _rkprBalance;
         vault.report(_rewardsTokens, _claimAmounts);
-        
+
         // emit 'SwapRewardsToWants' event after vault report
-        emit SwapRewardsToWants(address(this),_rewardTokens,_rewardAmounts,_wantTokens,_wantAmounts);
+        emit SwapRewardsToWants(
+            address(this),
+            _rewardTokens,
+            _rewardAmounts,
+            _wantTokens,
+            _wantAmounts
+        );
     }
 
     /**
      *  sell Crv And Cvx
      */
-    function _sellCrvAndCvx(uint256 _crvAmount, uint256 _convexAmount) 
-        internal 
-        returns(
+    function _sellCrvAndCvx(uint256 _crvAmount, uint256 _convexAmount)
+        internal
+        returns (
             address[] memory _rewardTokens,
             uint256[] memory _rewardAmounts,
             address[] memory _wantTokens,
@@ -482,7 +504,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             ICurveMini(CVX_ETH_POOL).exchange(1, 0, _convexAmount, 0, true);
         }
         uint256 _ethBalanceAfterSellTotal = address(this).balance;
-        
+
         //ETH wrap to WETH
         IWeth(WETH).deposit{value: address(this).balance}();
 
@@ -511,12 +533,12 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         _wantTokens[0] = USDC;
         _wantTokens[1] = USDC;
         // fulfill 'SwapRewardsToWants' event data
-        if(_ethBalanceAfterSellTotal - _ethBalanceInit > 0) {
-            _wantAmounts[0] = _usdcAmountSell *(_ethBalanceAfterSellCrv - _ethBalanceInit) 
-                / (_ethBalanceAfterSellTotal - _ethBalanceInit);
+        if (_ethBalanceAfterSellTotal - _ethBalanceInit > 0) {
+            _wantAmounts[0] =
+                (_usdcAmountSell * (_ethBalanceAfterSellCrv - _ethBalanceInit)) /
+                (_ethBalanceAfterSellTotal - _ethBalanceInit);
             _wantAmounts[1] = _usdcAmountSell - _wantAmounts[0];
         }
-        
     }
 
     // Collateral Token Price In USD ,decimals 1e30
@@ -752,5 +774,4 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         //remove _liquidity
         ICurveMini(curvePool).remove_liquidity(_cvxLpAmount, [uint256(0), uint256(0)]);
     }
-
 }
