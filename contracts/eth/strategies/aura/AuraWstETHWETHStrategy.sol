@@ -94,7 +94,6 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         external
         isVaultManager
     {
-        require(_token == _uniswapRouteToToken[_uniswapRouteToToken.length - 1]);
         swapRewardRoutes[_token] = _uniswapRouteToToken;
     }
 
