@@ -23,15 +23,15 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     event UniV3SetMaxTwapDeviation(int24 _maxTwapDeviation);
     event UniV3SetTwapDuration(uint32 _twapDuration);
 
-    int24 public baseThreshold;
-    int24 public limitThreshold;
-    int24 public minTickMove;
-    int24 public maxTwapDeviation;
-    int24 public lastTick;
-    int24 public tickSpacing;
-    uint256 public period;
-    uint256 public lastTimestamp;
-    uint32 public twapDuration;
+    int24 internal baseThreshold;
+    int24 internal limitThreshold;
+    int24 internal minTickMove;
+    int24 internal maxTwapDeviation;
+    int24 internal lastTick;
+    int24 internal tickSpacing;
+    uint256 internal period;
+    uint256 internal lastTimestamp;
+    uint32 internal twapDuration;
 
     struct MintInfo {
         uint256 tokenId;
@@ -85,6 +85,10 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         return "1.0.0";
     }
 
+    function getStatus() public view returns(int24, int24, int24, int24, int24, int24, uint256, uint256, uint32) {
+        return (baseThreshold, limitThreshold, minTickMove, maxTwapDeviation, lastTick, tickSpacing, period, lastTimestamp, twapDuration);
+    }
+
     function getWantsInfo() public view override virtual returns (address[] memory _assets, uint256[] memory _ratios) {
         _assets = wants;
         int24 _tickLower = baseMintInfo.tickLower;
@@ -94,17 +98,13 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
             (,, _tickLower, _tickUpper) = getSpecifiedRangesOfTick(_tick);
         }
 
-        (uint256 _amount0, uint256 _amount1) = getAmountsForLiquidity(_tickLower, _tickUpper, pool.liquidity());
         _ratios = new uint256[](2);
-        _ratios[0] = _amount0;
-        _ratios[1] = _amount1;
+        (_ratios[0], _ratios[1]) = getAmountsForLiquidity(_tickLower, _tickUpper, pool.liquidity());
     }
 
     function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo){
         _outputsInfo = new OutputInfo[](1);
-        OutputInfo memory _info = _outputsInfo[0];
-        _info.outputCode = 0;
-        _info.outputTokens = wants;
+        _outputsInfo[0].outputTokens = wants;
     }
 
     function getSpecifiedRangesOfTick(int24 _tick) internal view returns (int24 _tickFloor, int24 _tickCeil, int24 _tickLower, int24 _tickUpper) {
@@ -150,14 +150,16 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     function claimRewards() internal override virtual returns (bool _isWorth, address[] memory _assets, uint256[] memory _amounts) {
         _assets = wants;
         _amounts = new uint256[](2);
+        uint256 _amount0;
+        uint256 _amount1;
         if (baseMintInfo.tokenId > 0) {
-            (uint256 _amount0, uint256 _amount1) = __collectAll(baseMintInfo.tokenId);
+            (_amount0, _amount1) = __collectAll(baseMintInfo.tokenId);
             _amounts[0] += _amount0;
             _amounts[1] += _amount1;
         }
 
         if (limitMintInfo.tokenId > 0) {
-            (uint256 _amount0, uint256 _amount1) = __collectAll(limitMintInfo.tokenId);
+            (_amount0, _amount1) = __collectAll(limitMintInfo.tokenId);
             _amounts[0] += _amount0;
             _amounts[1] += _amount1;
         }

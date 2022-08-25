@@ -25,9 +25,7 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
 
     function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo){
         _outputsInfo = new OutputInfo[](1);
-        OutputInfo memory _info = _outputsInfo[0];
-        _info.outputCode = 0;
-        _info.outputTokens = wants;
+        _outputsInfo[0].outputTokens = wants;
     }
 
     function claimRewards() internal override returns (bool _isWorth, address[] memory _assets, uint256[] memory _amounts) {
@@ -45,7 +43,6 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
         uint256 _seth2BalanceInit = balanceOfToken(SETH2);
         uint256 _balanceOfRETH2 = balanceOfToken(RETH2);
         if (_balanceOfRETH2 > 0) {
-            IERC20(RETH2).approve(UNISWAP_V3_ROUTER, 0);
             IERC20(RETH2).approve(UNISWAP_V3_ROUTER, _balanceOfRETH2);
             IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(IUniswapV3.ExactInputSingleParams(RETH2, SETH2, 500, address(this), block.timestamp, _balanceOfRETH2, 0, 0));
         }
@@ -54,7 +51,6 @@ contract StakeWiseEthSeth23000Strategy is ETHUniswapV3BaseStrategy {
 
         uint256 _balanceOfSwise = balanceOfToken(SWISE);
         if (_balanceOfSwise > 0) {
-            IERC20(SWISE).approve(UNISWAP_V3_ROUTER, 0);
             IERC20(SWISE).approve(UNISWAP_V3_ROUTER, _balanceOfSwise);
             IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(IUniswapV3.ExactInputSingleParams(SWISE, SETH2, 3000, address(this), block.timestamp, _balanceOfSwise, 0, 0));
         }
