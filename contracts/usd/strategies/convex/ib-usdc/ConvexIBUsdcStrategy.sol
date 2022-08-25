@@ -440,35 +440,38 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     {
         // claim and invest
         address _rewardPool = rewardPool;
+        uint256 _rewardCRVAmount = IConvexReward(_rewardPool).earned(address(this));
 
         address[] memory _rewardTokens;
         uint256[] memory _rewardAmounts;
         address[] memory _wantTokens;
         uint256[] memory _wantAmounts;
-        IConvexReward(_rewardPool).getReward();
-        uint256 _crvBalance = balanceOfToken(REWARD_CRV);
-        uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
+        if (_rewardCRVAmount > SELL_FLOOR) {
+            IConvexReward(_rewardPool).getReward();
+            uint256 _crvBalance = balanceOfToken(REWARD_CRV);
+            uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
 
-        (_rewardTokens, _rewardAmounts, _wantTokens, _wantAmounts) = _sellCrvAndCvx(
-            _crvBalance,
-            _cvxBalance
-        );
-        //sell kpr
-        uint256 _rkprBalance = balanceOfToken(RKPR);
-        if (_rkprBalance > 0) {
-            IERC20Upgradeable(RKPR).transfer(harvester, _rkprBalance);
+            (_rewardTokens, _rewardAmounts, _wantTokens, _wantAmounts) = _sellCrvAndCvx(
+                _crvBalance,
+                _cvxBalance
+            );
+            //sell kpr
+            uint256 _rkprBalance = balanceOfToken(RKPR);
+            if (_rkprBalance > 0) {
+                IERC20Upgradeable(RKPR).transfer(harvester, _rkprBalance);
+            }
+            //reinvest
+            _invest(0, balanceOfToken(COLLATERAL_TOKEN));
+            _rewardsTokens = new address[](3);
+            _rewardsTokens[0] = REWARD_CRV;
+            _rewardsTokens[1] = REWARD_CVX;
+            _rewardsTokens[2] = RKPR;
+            _claimAmounts = new uint256[](3);
+            _claimAmounts[0] = _crvBalance;
+            _claimAmounts[1] = _cvxBalance;
+            _claimAmounts[2] = _rkprBalance;
         }
-        //reinvest
-        _invest(0, balanceOfToken(COLLATERAL_TOKEN));
 
-        _rewardsTokens = new address[](3);
-        _rewardsTokens[0] = REWARD_CRV;
-        _rewardsTokens[1] = REWARD_CVX;
-        _rewardsTokens[2] = RKPR;
-        _claimAmounts = new uint256[](3);
-        _claimAmounts[0] = _crvBalance;
-        _claimAmounts[1] = _cvxBalance;
-        _claimAmounts[2] = _rkprBalance;
         vault.report(_rewardsTokens, _claimAmounts);
 
         // emit 'SwapRewardsToWants' event after vault report
@@ -504,19 +507,21 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             ICurveMini(CVX_ETH_POOL).exchange(1, 0, _convexAmount, 0, true);
         }
         uint256 _ethBalanceAfterSellTotal = address(this).balance;
-
-        //ETH wrap to WETH
-        IWeth(WETH).deposit{value: address(this).balance}();
-
         uint256 _usdcBalanceInit = balanceOfToken(USDC);
-        // swap from WETH to USDC
-        IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(
-            balanceOfToken(WETH),
-            0,
-            rewardRoutes[WETH],
-            address(this),
-            block.timestamp
-        );
+
+        if (_ethBalanceAfterSellTotal > 0){
+            //ETH wrap to WETH
+            IWeth(WETH).deposit{value: _ethBalanceAfterSellTotal}();
+
+            // swap from WETH to USDC
+            IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(
+                balanceOfToken(WETH),
+                0,
+                rewardRoutes[WETH],
+                address(this),
+                block.timestamp
+            );
+        }
         uint256 _usdcBalanceAfterSellWeth = balanceOfToken(USDC);
         uint256 _usdcAmountSell = _usdcBalanceAfterSellWeth - _usdcBalanceInit;
 
