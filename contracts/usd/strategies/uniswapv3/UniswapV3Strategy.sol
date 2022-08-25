@@ -239,7 +239,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
                         amount1Min: 0,
                         deadline: block.timestamp
                     });
-                __addLiquidity(_params);
+                nonfungiblePositionManager.increaseLiquidity(_params);
             }
         }
     }
@@ -286,7 +286,11 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
                 amount1Min: 0,
                 deadline: block.timestamp
             });
-        __removeLiquidity(_params);
+
+        (uint256 _amount0, uint256 _amount1) = nonfungiblePositionManager.decreaseLiquidity(_params);
+        if (_amount0 > 0 || _amount1 > 0) {
+            __collect(_params.tokenId, uint128(_amount0), uint128(_amount1));
+        }
     }
 
     function balanceOfLpToken(uint256 _tokenId) public view returns (uint128) {
@@ -471,7 +475,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
     function _checkThreshold(int24 _threshold) internal view {
         require(
             _threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0,
-            "threshold validate error"
+            "TE"
         );
     }
 
@@ -493,19 +497,19 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
     }
 
     function setMinTickMove(int24 _minTickMove) external onlyGovOrDelegate {
-        require(_minTickMove >= 0, "minTickMove must be >= 0");
+        require(_minTickMove >= 0, "MINE");
         minTickMove = _minTickMove;
         emit UniV3SetMinTickMove(_minTickMove);
     }
 
     function setMaxTwapDeviation(int24 _maxTwapDeviation) external onlyGovOrDelegate {
-        require(_maxTwapDeviation >= 0, "maxTwapDeviation must be >= 0");
+        require(_maxTwapDeviation >= 0, "MAXE");
         maxTwapDeviation = _maxTwapDeviation;
         emit UniV3SetMaxTwapDeviation(_maxTwapDeviation);
     }
 
     function setTwapDuration(uint32 _twapDuration) external onlyGovOrDelegate {
-        require(_twapDuration > 0, "twapDuration must be > 0");
+        require(_twapDuration > 0, "TWAPE");
         twapDuration = _twapDuration;
         emit UniV3SetTwapDuration(_twapDuration);
     }
