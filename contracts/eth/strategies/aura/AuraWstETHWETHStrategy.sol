@@ -277,7 +277,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     {
         address _rewardPool = getRewardPool();
         uint256 _earn = IRewardPool(_rewardPool).earned(address(this));
-        if (_earn > 0) {
+        if (_earn >= 0) {
             _claimIsWorth = true;
             IRewardPool(_rewardPool).getReward();
             uint256 _extraRewardsLen = IRewardPool(_rewardPool).extraRewardsLength();
