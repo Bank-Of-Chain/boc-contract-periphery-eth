@@ -4,9 +4,7 @@ pragma experimental ABIEncoderV2;
 import "boc-contract-core/contracts/exchanges/IExchangeAdapter.sol";
 import "boc-contract-core/contracts/library/RevertReasonParser.sol";
 import "../utils/ExchangeHelpers.sol";
-import "../../external/oneinch/IOneInchV4.sol";
 
-import "@openzeppelin/contracts~v3/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts~v3/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts~v3/math/SafeMath.sol";
 
@@ -42,7 +40,7 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, _sd.amount);
             (_success, _result) = AGGREGATION_ROUTER_V4.call(_data);
         } else {
-            (_success, _result) = payable(AGGREGATION_ROUTER_V4).call{value: _sd.amount}(_data);
+            (_success, _result) = payable(AGGREGATION_ROUTER_V4).call{value: msg.value}(_data);
         }
 
         emit Response(_success, _result);
