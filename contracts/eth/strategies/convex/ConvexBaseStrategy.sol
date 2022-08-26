@@ -30,7 +30,6 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
     }
 
     function setRewardSwapPath(address _token, address[] memory _uniswapRouteToToken) public isVaultManager {
-        require(_token == _uniswapRouteToToken[_uniswapRouteToToken.length - 1]);
         uniswapRewardRoutes[_token] = _uniswapRouteToToken;
     }
 

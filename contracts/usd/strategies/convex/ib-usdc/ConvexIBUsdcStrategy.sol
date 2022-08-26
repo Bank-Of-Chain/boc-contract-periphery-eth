@@ -462,6 +462,14 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             }
             //reinvest
             _invest(0, balanceOfToken(COLLATERAL_TOKEN));
+            _rewardsTokens = new address[](3);
+            _rewardsTokens[0] = REWARD_CRV;
+            _rewardsTokens[1] = REWARD_CVX;
+            _rewardsTokens[2] = RKPR;
+            _claimAmounts = new uint256[](3);
+            _claimAmounts[0] = _crvBalance;
+            _claimAmounts[1] = _cvxBalance;
+            _claimAmounts[2] = _rkprBalance;
         }
 
         vault.report(_rewardsTokens, _claimAmounts);
@@ -502,16 +510,21 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
 
         //ETH wrap to WETH
         IWeth(WETH).deposit{value: address(this).balance}();
-
         uint256 _usdcBalanceInit = balanceOfToken(USDC);
-        // swap from WETH to USDC
-        IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(
-            balanceOfToken(WETH),
-            0,
-            rewardRoutes[WETH],
-            address(this),
-            block.timestamp
-        );
+
+        if (_ethBalanceAfterSellTotal > 0){
+            //ETH wrap to WETH
+            IWeth(WETH).deposit{value: _ethBalanceAfterSellTotal}();
+
+            // swap from WETH to USDC
+            IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(
+                balanceOfToken(WETH),
+                0,
+                rewardRoutes[WETH],
+                address(this),
+                block.timestamp
+            );
+        }
         uint256 _usdcBalanceAfterSellWeth = balanceOfToken(USDC);
         uint256 _usdcAmountSell = _usdcBalanceAfterSellWeth - _usdcBalanceInit;
 

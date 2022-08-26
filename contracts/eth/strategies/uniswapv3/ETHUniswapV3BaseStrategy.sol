@@ -5,10 +5,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-core/contracts/interfaces/IERC20Minimal.sol";
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
-import "@uniswap/v3-core/contracts/libraries/SqrtPriceMath.sol";
 import "../ETHBaseClaimableStrategy.sol";
 import "./../../../external/uniswapV3/INonfungiblePositionManager.sol";
 import "./../../../external/uniswapV3/libraries/LiquidityAmounts.sol";
@@ -25,15 +23,15 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     event UniV3SetMaxTwapDeviation(int24 _maxTwapDeviation);
     event UniV3SetTwapDuration(uint32 _twapDuration);
 
-    int24 public baseThreshold;
-    int24 public limitThreshold;
-    int24 public minTickMove;
-    int24 public maxTwapDeviation;
-    int24 public lastTick;
-    int24 public tickSpacing;
-    uint256 public period;
-    uint256 public lastTimestamp;
-    uint32 public twapDuration;
+    int24 internal baseThreshold;
+    int24 internal limitThreshold;
+    int24 internal minTickMove;
+    int24 internal maxTwapDeviation;
+    int24 internal lastTick;
+    int24 internal tickSpacing;
+    uint256 internal period;
+    uint256 internal lastTimestamp;
+    uint32 internal twapDuration;
 
     struct MintInfo {
         uint256 tokenId;
@@ -87,6 +85,10 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         return "1.0.0";
     }
 
+    function getStatus() public view returns(int24, int24, int24, int24, int24, int24, uint256, uint256, uint32) {
+        return (baseThreshold, limitThreshold, minTickMove, maxTwapDeviation, lastTick, tickSpacing, period, lastTimestamp, twapDuration);
+    }
+
     function getWantsInfo() public view override virtual returns (address[] memory _assets, uint256[] memory _ratios) {
         _assets = wants;
         int24 _tickLower = baseMintInfo.tickLower;
@@ -96,32 +98,29 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
             (,, _tickLower, _tickUpper) = getSpecifiedRangesOfTick(_tick);
         }
 
-        (uint256 _amount0, uint256 _amount1) = getAmountsForLiquidity(_tickLower, _tickUpper, pool.liquidity());
         _ratios = new uint256[](2);
-        _ratios[0] = _amount0;
-        _ratios[1] = _amount1;
+        (_ratios[0], _ratios[1]) = getAmountsForLiquidity(_tickLower, _tickUpper, pool.liquidity());
     }
 
     function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo){
         _outputsInfo = new OutputInfo[](1);
-        OutputInfo memory _info = _outputsInfo[0];
-        _info.outputCode = 0;
-        _info.outputTokens = wants;
+        _outputsInfo[0].outputTokens = wants;
     }
 
     function getSpecifiedRangesOfTick(int24 _tick) internal view returns (int24 _tickFloor, int24 _tickCeil, int24 _tickLower, int24 _tickUpper) {
-        _tickFloor = _floor(_tick);
-        _tickCeil = _tickFloor + tickSpacing;
+        // Rounds _tick down towards negative infinity so that it"s a multiple of `tickSpacing`.
+        int24 _tickSpacing = tickSpacing;
+        int24 _compressed = _tick / _tickSpacing;
+        if (_tick < 0 && _tick % _tickSpacing != 0) _compressed--;
+        _tickFloor = _compressed * _tickSpacing;
+        _tickCeil = _tickFloor + _tickSpacing;
         _tickLower = _tickFloor - baseThreshold;
         _tickUpper = _tickCeil + baseThreshold;
     }
 
     function getAmountsForLiquidity(int24 _tickLower, int24 _tickUpper, uint128 _liquidity) internal view returns (uint256, uint256) {
         (uint160 _sqrtPriceX96, , , , , ,) = pool.slot0();
-        (uint256 _amount0, uint256 _amount1) = LiquidityAmounts.getAmountsForLiquidity(
-            _sqrtPriceX96, TickMath.getSqrtRatioAtTick(_tickLower), TickMath.getSqrtRatioAtTick(_tickUpper), _liquidity
-            );
-        return (_amount0, _amount1);
+        return LiquidityAmounts.getAmountsForLiquidity(_sqrtPriceX96, TickMath.getSqrtRatioAtTick(_tickLower), TickMath.getSqrtRatioAtTick(_tickUpper), _liquidity);
     }
 
     function getPositionDetail() public view virtual override returns (address[] memory _tokens, uint256[] memory _amounts, bool _isETH, uint256 _ethValue) {
@@ -149,22 +148,20 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     function claimRewards() internal override virtual returns (bool _isWorth, address[] memory _assets, uint256[] memory _amounts) {
-        (_assets, _amounts) = this.collect();
-    }
-
-    function collect() external returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts) {
-        _rewardTokens = wants;
-        _claimAmounts = new uint256[](2);
+        _assets = wants;
+        _amounts = new uint256[](2);
+        uint256 _amount0;
+        uint256 _amount1;
         if (baseMintInfo.tokenId > 0) {
-            (uint256 _amount0, uint256 _amount1) = __collectAll(baseMintInfo.tokenId);
-            _claimAmounts[0] += _amount0;
-            _claimAmounts[1] += _amount1;
+            (_amount0, _amount1) = __collectAll(baseMintInfo.tokenId);
+            _amounts[0] += _amount0;
+            _amounts[1] += _amount1;
         }
 
         if (limitMintInfo.tokenId > 0) {
-            (uint256 _amount0, uint256 _amount1) = __collectAll(limitMintInfo.tokenId);
-            _claimAmounts[0] += _amount0;
-            _claimAmounts[1] += _amount1;
+            (_amount0, _amount1) = __collectAll(limitMintInfo.tokenId);
+            _amounts[0] += _amount0;
+            _amounts[1] += _amount1;
         }
     }
 
@@ -182,15 +179,14 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
                 rebalance(_tick);
             } else {
                 //add liquidity
-                INonfungiblePositionManager.IncreaseLiquidityParams memory _params = INonfungiblePositionManager.IncreaseLiquidityParams({
-                tokenId : baseMintInfo.tokenId,
-                amount0Desired : balanceOfToken(token0),
-                amount1Desired : balanceOfToken(token1),
-                amount0Min : 0,
-                amount1Min : 0,
-                deadline : block.timestamp
-                });
-                __addLiquidity(_params);
+                nonfungiblePositionManager.increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams({
+                    tokenId : baseMintInfo.tokenId,
+                    amount0Desired : balanceOfToken(token0),
+                    amount1Desired : balanceOfToken(token1),
+                    amount0Min : 0,
+                    amount1Min : 0,
+                    deadline : block.timestamp
+                }));
             }
         }
     }
@@ -216,14 +212,16 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
 
     function removeLiquidity(uint256 _tokenId, uint128 _liquidity) internal {
         // remove liquidity
-        INonfungiblePositionManager.DecreaseLiquidityParams memory _params = INonfungiblePositionManager.DecreaseLiquidityParams({
-        tokenId : _tokenId,
-        liquidity : _liquidity,
-        amount0Min : 0,
-        amount1Min : 0,
-        deadline : block.timestamp
-        });
-        __removeLiquidity(_params);
+        (uint256 _amount0, uint256 _amount1) = nonfungiblePositionManager.decreaseLiquidity(INonfungiblePositionManager.DecreaseLiquidityParams({
+            tokenId : _tokenId,
+            liquidity : _liquidity,
+            amount0Min : 0,
+            amount1Min : 0,
+            deadline : block.timestamp
+        }));
+        if (_amount0 > 0 || _amount1 > 0) {
+            __collect(_tokenId, uint128(_amount0), uint128(_amount1));
+        }
     }
 
     function balanceOfLpToken(uint256 _tokenId) public view returns (uint128) {
@@ -233,7 +231,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
 
     function rebalanceByKeeper() external isKeeper {
         (, int24 _tick,,,,,) = pool.slot0();
-        require(shouldRebalance(_tick), "cannot rebalance");
+        require(shouldRebalance(_tick), "NR");
         rebalance(_tick);
     }
 
@@ -323,30 +321,20 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         return int24((_tickCumulatives[1] - _tickCumulatives[0]) / int32(twapDuration));
     }
 
-    // Rounds _tick down towards negative infinity so that it"s a multiple of `tickSpacing`.
-    function _floor(int24 _tick) internal view returns (int24) {
-        // _compressed=-27633, _tick=-276330, tickSpacing=10
-        int24 _tickSpacing = tickSpacing;
-        int24 _compressed = _tick / _tickSpacing;
-        if (_tick < 0 && _tick % _tickSpacing != 0) _compressed--;
-        return _compressed * _tickSpacing;
-    }
-
     function mintNewPosition(int24 _tickLower, int24 _tickUpper, uint256 _amount0Desired, uint256 _amount1Desired, bool _base) internal returns (uint256 tokenId, uint128 liquidity, uint256 _amount0, uint256 _amount1) {
-        INonfungiblePositionManager.MintParams memory _params = INonfungiblePositionManager.MintParams({
-        token0 : token0,
-        token1 : token1,
-        fee : fee,
-        tickLower : _tickLower,
-        tickUpper : _tickUpper,
-        amount0Desired : _amount0Desired,
-        amount1Desired : _amount1Desired,
-        amount0Min : 0,
-        amount1Min : 0,
-        recipient : address(this),
-        deadline : block.timestamp
-        });
-        (tokenId, liquidity, _amount0, _amount1) = __mint(_params);
+        (tokenId, liquidity, _amount0, _amount1) = __mint(INonfungiblePositionManager.MintParams({
+            token0 : token0,
+            token1 : token1,
+            fee : fee,
+            tickLower : _tickLower,
+            tickUpper : _tickUpper,
+            amount0Desired : _amount0Desired,
+            amount1Desired : _amount1Desired,
+            amount0Min : 0,
+            amount1Min : 0,
+            recipient : address(this),
+            deadline : block.timestamp
+        }));
         if (_base) {
             baseMintInfo = MintInfo({tokenId : tokenId, tickLower : _tickLower, tickUpper : _tickUpper});
         } else {
@@ -355,7 +343,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     function _checkThreshold(int24 _threshold) internal view {
-        require(_threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0, "threshold validate error");
+        require(_threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0, "TE");
     }
 
     function setBaseThreshold(int24 _baseThreshold) external onlyGovOrDelegate {
@@ -376,19 +364,19 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     function setMinTickMove(int24 _minTickMove) external onlyGovOrDelegate {
-        require(_minTickMove >= 0, "minTickMove must be >= 0");
+        require(_minTickMove >= 0, "MINE");
         minTickMove = _minTickMove;
         emit UniV3SetMinTickMove(_minTickMove);
     }
 
     function setMaxTwapDeviation(int24 _maxTwapDeviation) external onlyGovOrDelegate {
-        require(_maxTwapDeviation >= 0, "maxTwapDeviation must be >= 0");
+        require(_maxTwapDeviation >= 0, "MAXE");
         maxTwapDeviation = _maxTwapDeviation;
         emit UniV3SetMaxTwapDeviation(_maxTwapDeviation);
     }
 
     function setTwapDuration(uint32 _twapDuration) external onlyGovOrDelegate {
-        require(_twapDuration > 0, "twapDuration must be > 0");
+        require(_twapDuration > 0, "TWAPE");
         twapDuration = _twapDuration;
         emit UniV3SetTwapDuration(_twapDuration);
     }
