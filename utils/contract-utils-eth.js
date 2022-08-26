@@ -52,7 +52,7 @@ const EthParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
 
 const IExchangeAdapter = hre.artifacts.require('IExchangeAdapter');
 const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
-const TestAdapter = hre.artifacts.require("contracts/exchanges/adapters/TestAdapter.sol:TestAdapter");
+const ETHTestAdapter = hre.artifacts.require("ETHTestAdapter");
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 
 /**
@@ -71,7 +71,7 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
     console.log('deploy PriceOracle');
     const priceOracleConsumer = await PriceOracleConsumer.new();
 
-    const testAdapter = await TestAdapter.new(priceOracleConsumer.address);
+    const testAdapter = await ETHTestAdapter.new(priceOracleConsumer.address);
 
     console.log('deploy EthOneInchV4Adapter');
     const ethOneInchV4Adapter = await EthOneInchV4Adapter.new();

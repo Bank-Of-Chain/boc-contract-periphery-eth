@@ -22,6 +22,11 @@ const {
     strategiesList: strategiesListEth
 } = require('../config/strategy-eth/strategy-config-eth');
 
+const axios = require('axios');
+const os = require('os')
+const hardhatConfig = require('../hardhat.config');
+
+
 const {
     deploy,
     deployProxy
@@ -45,6 +50,8 @@ const OneInchV4Adapter = 'OneInchV4Adapter';
 const ChainlinkPriceFeed = 'ChainlinkPriceFeed';
 const ExchangeAggregator = 'ExchangeAggregator';
 const AccessControlProxy = 'AccessControlProxy';
+const TestAdapter = 'TestAdapter';
+const ETHTestAdapter = 'ETHTestAdapter';
 const AggregatedDerivativePriceFeed = 'AggregatedDerivativePriceFeed';
 const Harvester = 'Harvester';
 const Dripper = 'Dripper';
@@ -519,6 +526,109 @@ const main = async () => {
     const balanceAfterDeploy = await ethers.provider.getBalance(accounts[0].address);
     console.log('balanceBeforeDeploy:%d,balanceAfterDeploy:%d', ethers.utils.formatEther(balanceBeforeDeploy), ethers.utils.formatEther(balanceAfterDeploy));
 
+    if (hre.network.name == 'localhost') {
+        console.log('start set apollo config');
+        let clusterName = await get_apollo_cluster_name();
+        const blockNumber = hardhatConfig.networks.hardhat.forking.blockNumber;
+        await modify_apollo_config('boc.networks.eth.startBlock', blockNumber, clusterName);
+        await modify_apollo_config('boc.networks.ethi.startBlock', blockNumber, clusterName);
+        for (let key in addressMap) {
+            if (Object.prototype.hasOwnProperty.call(addressMap, key)) {
+                if (key == 'Vault') {
+                    await modify_apollo_config('boc.networks.eth.vaultAddress', addressMap[key], clusterName);
+                } else if (key == 'ETHVault') {
+                    await modify_apollo_config('boc.networks.ethi.vaultAddress', addressMap[key], clusterName);
+                } else if (key == 'USDVaultBuffer') {
+                    await modify_apollo_config('boc.networks.eth.vaultBufferAddress', addressMap[key], clusterName);
+                } else if (key == 'ETHVaultBuffer') {
+                    await modify_apollo_config('boc.networks.ethi.vaultBufferAddress', addressMap[key], clusterName);
+                } else if (key == 'USDPegToken') {
+                    await modify_apollo_config('boc.networks.eth.pegTokenAddress', addressMap[key], clusterName);
+                } else if (key == 'TestAdapter') {
+                    await modify_apollo_config('boc.networks.eth.TestAdapter', addressMap[key], clusterName);
+                } else if (key == 'ETHTestAdapter') {
+                    await modify_apollo_config('boc.networks.ethi.TestAdapter', addressMap[key], clusterName);
+                } else if (key == 'ETHPegToken') {
+                    await modify_apollo_config('boc.networks.ethi.pegTokenAddress', addressMap[key], clusterName);
+                } else if (key == 'Verification') {
+                    await modify_apollo_config('boc.networks.eth.verificationAddress', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.ethi.verificationAddress', addressMap[key], clusterName);
+                } else if (key == 'Harvester') {
+                    await modify_apollo_config('boc.networks.eth.harvester', addressMap[key], clusterName);
+                } else if (key == 'Dripper') {
+                    await modify_apollo_config('boc.networks.eth.dripper', addressMap[key], clusterName);
+                } else if (key == 'HarvestHelper') {
+                    await modify_apollo_config('boc.networks.ethi.harvestHelpAddress', addressMap[key], clusterName);
+                } else {
+                    await modify_apollo_config(`boc.networks.eth.${key}`, addressMap[key], clusterName);
+                }
+            }
+        }
+
+        await publish_apollo_config(clusterName);
+        console.log('end set apollo config');
+    }
+}
+const get_apollo_cluster_name = async () =>{
+    const ip = os.networkInterfaces().eth0 &&os.networkInterfaces().eth0[0].addresss || '127.0.0.1';
+    let url = 'http://13.215.137.222:8070/openapi/v1/envs/DEV/apps/boc-common/clusters/default/namespaces/boc1.application';
+    let config = {
+        headers: {
+            Authorization:'e9ac544052e7e295e453f414363e8ccf5ff37ff3',
+            'Content-Type':'application/json;charset=UTF-8'
+        },
+        params: {
+
+        }
+    };
+    let resp =  await axios.get(url, config);
+    const itemData =  resp.data?.items.find(function (item) {
+        return item.key == ip;
+    });
+    let clusterName = 'local';
+    if(itemData && itemData.value){
+        clusterName = itemData.value;
+    }
+    return clusterName;
+}
+
+const publish_apollo_config = async (clusterName) =>{
+    let url = `http://13.215.137.222:8070/openapi/v1/envs/DEV/apps/boc-common/clusters/${clusterName}/namespaces/boc1.application/releases`;
+    let questBody = {
+        "releaseTitle": new Date().toLocaleDateString(),
+        "releaseComment": 'publish smart contract',
+        "releasedBy":"apollo"
+    };
+    let config = {
+        headers: {
+            Authorization:'e9ac544052e7e295e453f414363e8ccf5ff37ff3',
+            'Content-Type':'application/json;charset=UTF-8'
+        },
+        params: {
+            createIfNotExists: true
+        }
+    };
+    await axios.post(url, questBody, config);
+}
+
+const modify_apollo_config = async (key,value,clusterName) =>{
+    let url = `http://13.215.137.222:8070/openapi/v1/envs/DEV/apps/boc-common/clusters/${clusterName}/namespaces/boc1.application/items/${key}`;
+    let questBody = {
+        "key": key,
+        "value": value,
+        "dataChangeLastModifiedBy":"apollo",
+        "dataChangeCreatedBy":"apollo"
+    };
+    let config = {
+        headers: {
+            Authorization:'e9ac544052e7e295e453f414363e8ccf5ff37ff3',
+            'Content-Type':'application/json;charset=UTF-8'
+        },
+        params: {
+            createIfNotExists: true
+        }
+    };
+    await axios.put(url, questBody, config);
 }
 
 const deploy_common = async () => {
@@ -595,6 +705,9 @@ const deploy_usd = async () => {
     }
     if (isEmpty(addressMap[ParaSwapV5Adapter])) {
         paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
+    }
+    if (isEmpty(addressMap[TestAdapter])) {
+        await deployBase(TestAdapter,[ValueInterpreter]);
     }
 
     if (isEmpty(addressMap[ExchangeAggregator])) {
@@ -704,6 +817,9 @@ const deploy_eth = async () => {
     }
     if (isEmpty(addressMap[ParaSwapV5Adapter])) {
         paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
+    }
+    if (isEmpty(addressMap[ETHTestAdapter])) {
+        await deployBase(ETHTestAdapter,[PriceOracleConsumer]);
     }
 
     const adapterArray = [addressMap[OneInchV4Adapter], addressMap[ParaSwapV5Adapter]];

@@ -15,6 +15,7 @@
     "@openzeppelin/test-helpers": "^0.5.13",
     "@uniswap/v3-core": "github:lbertenasco/uniswap-v3-core",
     "@uniswap/v3-periphery": "github:lbertenasco/uniswap-v3-periphery",
+    "axios": "^0.21.4",
     "chai": "^4.3.4",
     "commander": "^8.3.0",
     "cross-env": "^7.0.3",

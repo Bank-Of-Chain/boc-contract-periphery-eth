@@ -1,6 +1,7 @@
 import "boc-contract-core/contracts/Verification.sol";
 import "boc-contract-core/contracts/access-control/AccessControlProxy.sol";
 import "boc-contract-core/contracts/treasury/Treasury.sol";
+import "boc-contract-core/contracts/exchanges/adapters/TestAdapter.sol";
 import "boc-contract-core/contracts/vault/Vault.sol";
 import "boc-contract-core/contracts/vault/VaultBuffer.sol";
 import "boc-contract-core/contracts/vault/VaultAdmin.sol";
