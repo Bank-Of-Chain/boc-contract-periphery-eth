@@ -129,7 +129,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     fallback() external payable {}
 
     function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
-        require(_borrowFactor >= 0 && _borrowFactor < BPS, "setting output the range");
+        require(_borrowFactor < BPS, "setting output the range");
         borrowFactor = _borrowFactor;
 
         emit UpdateBorrowFactor(_borrowFactor);
@@ -507,6 +507,9 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             ICurveMini(CVX_ETH_POOL).exchange(1, 0, _convexAmount, 0, true);
         }
         uint256 _ethBalanceAfterSellTotal = address(this).balance;
+
+        //ETH wrap to WETH
+        IWeth(WETH).deposit{value: address(this).balance}();
         uint256 _usdcBalanceInit = balanceOfToken(USDC);
 
         if (_ethBalanceAfterSellTotal > 0){
@@ -548,28 +551,20 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
 
     // Collateral Token Price In USD ,decimals 1e30
     function _collateralTokenPrice() internal view returns (uint256) {
-        uint256 _collateralTokenPrice = priceOracle.getUnderlyingPrice(address(COLLATERAL_CTOKEN));
-        return _collateralTokenPrice;
+        return priceOracle.getUnderlyingPrice(address(COLLATERAL_CTOKEN));
     }
 
     // Borrown Token Price In USD ，decimals 1e30
     function _borrowTokenPrice() internal view returns (uint256) {
-        uint256 _borrowTokenPrice = _getNormalizedBorrowToken();
-        require(_borrowTokenPrice > 0);
-        return _borrowTokenPrice;
-    }
-
-    function _getNormalizedBorrowToken() internal view returns (uint256) {
         return priceOracle.getUnderlyingPrice(address(borrowCToken)) * 1e12;
     }
 
     // Maximum number of borrowings under the specified amount of _collateral assets
     function _borrowAvaiable(uint256 liqudity) internal view returns (uint256 _borrowAvaible) {
         address _borrowToken = getIronBankForex();
-        uint256 _borrowTokenPrice = _borrowTokenPrice(); // decimals 1e30
         //Maximum number of loans available
-        uint256 _maxBorrowAmount = ((liqudity * decimalUnitOfToken(_borrowToken))) /
-            _borrowTokenPrice;
+        uint256 _maxBorrowAmount = (liqudity * decimalUnitOfToken(_borrowToken)) /
+            _borrowTokenPrice();
         //Borrowable quantity under the current borrowFactor factor
         _borrowAvaible = (_maxBorrowAmount * borrowFactor) / BPS;
     }
@@ -650,14 +645,17 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         (, uint256 _rate) = COMPTROLLER.markets(_collaterCTokenAddr);
         address _collateralToken = COLLATERAL_TOKEN;
         //exit add _collateral
-        uint256 _exitCollateral = ((((_spaceValue * 1e18) * BPS) / _rate / borrowFactor) *
-            decimalUnitOfToken(_collateralToken)) / _collateralTokenPrice();
+        uint256 _collaterTokenPrecision = decimalUnitOfToken(_collateralToken);
+        uint256 _exitCollateral = (_spaceValue * 1e18 * BPS * _collaterTokenPrecision) /
+            _rate /
+            borrowFactor /
+            _collateralTokenPrice();
         uint256 _exchangeRateMantissa = CTokenInterface(_collaterCTokenAddr).exchangeRateStored();
         uint256 _exitCollateralC = (_exitCollateral *
             1e16 *
             decimalUnitOfToken(_collaterCTokenAddr)) /
             _exchangeRateMantissa /
-            decimalUnitOfToken(_collateralToken);
+            _collaterTokenPrecision;
         CTokenInterface(_collaterCTokenAddr).redeem(
             MathUpgradeable.min(_exitCollateralC, balanceOfToken(_collaterCTokenAddr))
         );
