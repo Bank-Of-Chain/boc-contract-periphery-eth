@@ -62,8 +62,6 @@ interface ICurveMini {
 contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    // minimum amount to be liquidation
-    uint256 public constant SELL_FLOOR = 1e16;
 
     // IronBank
     Comptroller public constant COMPTROLLER =
@@ -446,7 +444,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         uint256[] memory _rewardAmounts;
         address[] memory _wantTokens;
         uint256[] memory _wantAmounts;
-        if (_rewardCRVAmount > SELL_FLOOR) {
+        if (_rewardCRVAmount > 0) {
             IConvexReward(_rewardPool).getReward();
             uint256 _crvBalance = balanceOfToken(REWARD_CRV);
             uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
@@ -506,12 +504,22 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         if (_convexAmount > 0) {
             ICurveMini(CVX_ETH_POOL).exchange(1, 0, _convexAmount, 0, true);
         }
+
+        // fulfill 'SwapRewardsToWants' event data
+        _rewardTokens = new address[](2);
+        _rewardAmounts = new uint256[](2);
+        _wantTokens = new address[](2);
+        _wantAmounts = new uint256[](2);
+
+        _rewardTokens[0] = REWARD_CRV;
+        _rewardTokens[1] = REWARD_CVX;
+        _rewardAmounts[0] = _crvAmount;
+        _rewardAmounts[1] = _convexAmount;
+        _wantTokens[0] = USDC;
+        _wantTokens[1] = USDC;
+        
         uint256 _ethBalanceAfterSellTotal = address(this).balance;
-
-        //ETH wrap to WETH
-        IWeth(WETH).deposit{value: address(this).balance}();
         uint256 _usdcBalanceInit = balanceOfToken(USDC);
-
         if (_ethBalanceAfterSellTotal > 0){
             //ETH wrap to WETH
             IWeth(WETH).deposit{value: _ethBalanceAfterSellTotal}();
@@ -528,18 +536,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         uint256 _usdcBalanceAfterSellWeth = balanceOfToken(USDC);
         uint256 _usdcAmountSell = _usdcBalanceAfterSellWeth - _usdcBalanceInit;
 
-        // fulfill 'SwapRewardsToWants' event data
-        _rewardTokens = new address[](2);
-        _rewardAmounts = new uint256[](2);
-        _wantTokens = new address[](2);
-        _wantAmounts = new uint256[](2);
-
-        _rewardTokens[0] = REWARD_CRV;
-        _rewardTokens[1] = REWARD_CVX;
-        _rewardAmounts[0] = _crvAmount;
-        _rewardAmounts[1] = _convexAmount;
-        _wantTokens[0] = USDC;
-        _wantTokens[1] = USDC;
+        
         // fulfill 'SwapRewardsToWants' event data
         if (_ethBalanceAfterSellTotal - _ethBalanceInit > 0) {
             _wantAmounts[0] =

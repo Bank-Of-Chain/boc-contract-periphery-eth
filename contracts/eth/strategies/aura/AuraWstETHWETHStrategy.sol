@@ -47,7 +47,6 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     address public constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;
 
     mapping(address => address[]) public swapRewardRoutes;
-    mapping(address => uint256) public sellFloor;
 
     function initialize(address _vault,string memory _name) external initializer {
         address[] memory _wants = new address[](2);
@@ -76,18 +75,10 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         _auraSellPath[0] = AURA_TOKEN;
         _auraSellPath[1] = WETH;
         swapRewardRoutes[AURA_TOKEN] = _auraSellPath;
-        sellFloor[BAL] = 1e17;
 
         isWantRatioIgnorable = true;
 
         super._initialize(_vault, uint16(ProtocolEnum.Aura), _name,_wants);
-    }
-
-    /**
-     * Sets the minimum amount of token needed to trigger a sale.
-     */
-    function setSellFloor(address _token, uint256 _floor) external isVaultManager {
-        sellFloor[_token] = _floor;
     }
 
     function setRewardSwapPath(address _token, address[] memory _uniswapRouteToToken)
@@ -286,7 +277,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     {
         address _rewardPool = getRewardPool();
         uint256 _earn = IRewardPool(_rewardPool).earned(address(this));
-        if (_earn > sellFloor[BAL]) {
+        if (_earn > 0) {
             _claimIsWorth = true;
             IRewardPool(_rewardPool).getReward();
             uint256 _extraRewardsLen = IRewardPool(_rewardPool).extraRewardsLength();

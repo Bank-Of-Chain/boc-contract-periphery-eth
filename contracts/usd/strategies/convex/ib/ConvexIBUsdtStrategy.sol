@@ -380,7 +380,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         if (_convexAmount > 0) {
             ICurveFi(CVX_ETH_POOL).exchange(1, 0, _convexAmount, 0, true);
         }
-        uint256 _ethBalanceAfterSellTotal = address(this).balance;
+        
 
         // fulfill 'SwapRewardsToWants' event data
         _rewardTokens = new address[](2);
@@ -395,13 +395,14 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _wantTokens[0] = USDC;
         _wantTokens[1] = USDC;
 
+        uint256 _ethBalanceAfterSellTotal = address(this).balance;
         uint256 _usdcBalanceInit = balanceOfToken(USDC);
         uint256 _usdcBalanceAfterSellWeth;
         uint256 _usdcAmountSell;
 
-        if (address(this).balance > 0) {
+        if (_ethBalanceAfterSellTotal > 0) {
             //ETH wrap to WETH
-            IWeth(WETH).deposit{value: address(this).balance}();
+            IWeth(WETH).deposit{value: _ethBalanceAfterSellTotal}();
 
             //swap from WETH to USDC
             IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(

@@ -11,7 +11,6 @@ import "../../../external/curve/ICurveLiquidityPoolPayable.sol";
 abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     mapping(address => address[]) public uniswapRewardRoutes;
-    mapping(address => uint256) public sellFloor;
     address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
     address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
     address public constant W_ETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -22,11 +21,6 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
     function _initialize(address _vault,string memory _name) internal {
         super._initialize(_vault, uint16(ProtocolEnum.Convex), _name,getConvexWants());
         isWantRatioIgnorable = true;
-        sellFloor[CRV] = 1e16;
-    }
-
-    function setSellFloor(address _token, uint256 _floor) public isVaultManager {
-        sellFloor[_token] = _floor;
     }
 
     function setRewardSwapPath(address _token, address[] memory _uniswapRouteToToken) public isVaultManager {
@@ -72,7 +66,7 @@ abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
         )
     {
         uint256 _rewardCRVAmount = getRewardPool().earned(address(this));
-        if (_rewardCRVAmount > sellFloor[CRV]) {
+        if (_rewardCRVAmount > 0) {
             getRewardPool().getReward();
             _assets = getConvexRewards();
             _amounts = new uint256[](_assets.length);
