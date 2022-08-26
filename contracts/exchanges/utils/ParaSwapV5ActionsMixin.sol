@@ -183,7 +183,7 @@ abstract contract ParaSwapV5ActionsMixin is ExchangeHelpers {
         uint256 _neededAmount
     ) internal {
         if (IERC20(_asset).allowance(address(this), _target) < _neededAmount) {
-            IERC20(_asset).safeApprove(_target, type(uint256).max);
+            IERC20(_asset).safeApprove(_target, _neededAmount);
         }
     }
 }
