@@ -6,7 +6,6 @@ pragma experimental ABIEncoderV2;
 import "boc-contract-core/contracts/exchanges/IExchangeAggregator.sol";
 
 interface IETHVault {
-
     /// @param lastReport The last report timestamp
     /// @param totalDebt The total asset of this strategy
     /// @param profitLimitRatio The limited ratio of profit
@@ -37,7 +36,6 @@ interface IETHVault {
     event Mint(address _account, address _asset, uint256 _amount, uint256 _mintAmount);
     event Burn(
         address _account,
-        address _asset,
         uint256 _amount,
         uint256 _actualAmount,
         uint256 _shareAmount,
@@ -51,8 +49,18 @@ interface IETHVault {
         address _distAsset,
         uint256 _distAmount
     );
-    event Redeem(address _strategy, uint256 _debtChangeAmount, address[] _assets, uint256[] _amounts);
-    event LendToStrategy(address indexed _strategy, address[] _wants, uint256[] _amounts, uint256 _lendValue);
+    event Redeem(
+        address _strategy,
+        uint256 _debtChangeAmount,
+        address[] _assets,
+        uint256[] _amounts
+    );
+    event LendToStrategy(
+        address indexed _strategy,
+        address[] _wants,
+        uint256[] _amounts,
+        uint256 _lendValue
+    );
     event RemoveStrategyFromQueue(address[] _strategies);
     event SetEmergencyShutdown(bool _shutdown);
     event RebasePaused();
@@ -95,7 +103,7 @@ interface IETHVault {
     /// @notice Version of vault
     function getVersion() external pure returns (string memory);
 
-    /// @notice Minting USDi supported assets
+    /// @notice Minting ETHi supported assets
     function getSupportAssets() external view returns (address[] memory _assets);
 
     /// @notice Check '_asset' is supported or not
@@ -149,7 +157,10 @@ interface IETHVault {
     /// @notice estimate Minting ETHi
     /// @param _amount Amount of the asset being deposited
     /// @return _sharesAmount  wethi amount
-    function estimateMint(address _asset, uint256 _amount) external view returns (uint256 _sharesAmount);
+    function estimateMint(address _asset, uint256 _amount)
+        external
+        view
+        returns (uint256 _sharesAmount);
 
     /// @notice Minting ETHi with ETH
     /// @return _sharesAmount  wethi amount
@@ -159,27 +170,26 @@ interface IETHVault {
         uint256 _minimumAmount
     ) external payable returns (uint256 _sharesAmount);
 
-    /// @notice burn USDi,return stablecoins
-    /// @param _amount Amount of USDi to burn
-    /// @param _asset one of StableCoin asset
+    /// @notice burn ETHi,return stablecoins
+    /// @param _amount Amount of ETHi to burn
     /// @param _minimumAmount Minimum stablecoin units to receive in return
-    function burn(
-        uint256 _amount,
-        address _asset,
-        uint256 _minimumAmount,
-        bool _needExchange,
-        IExchangeAggregator.ExchangeToken[] memory _exchangeTokens
-    ) external returns (address[] memory _assets, uint256[] memory _amounts);
+    function burn(uint256 _amount, uint256 _minimumAmount)
+        external
+        returns (address[] memory _assets, uint256[] memory _amounts);
 
     /// @notice Change ETHi supply with Vault total assets.
     function rebase() external;
 
     /// @notice Allocate funds in Vault to strategies.
     function lend(address _strategy, IExchangeAggregator.ExchangeToken[] calldata _exchangeTokens)
-    external;
+        external;
 
     /// @notice Withdraw the funds from specified strategy.
-    function redeem(address _strategy, uint256 _amount, uint256 _outputCode) external;
+    function redeem(
+        address _strategy,
+        uint256 _amount,
+        uint256 _outputCode
+    ) external;
 
     /**
      * @dev Exchange from '_fromToken' to '_toToken'
@@ -231,7 +241,7 @@ interface IETHVault {
     function setTreasuryAddress(address _address) external;
 
     /**
-    * @dev Sets the exchangeManagerAddress that can receive a portion of yield.
+     * @dev Sets the exchangeManagerAddress that can receive a portion of yield.
      */
     function setExchangeManagerAddress(address _exchangeManagerAddress) external;
 

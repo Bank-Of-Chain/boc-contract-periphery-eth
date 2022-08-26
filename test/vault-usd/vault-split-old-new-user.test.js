@@ -364,7 +364,7 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
       const vaultTotalAssetsBeforeWithdraw = new BigNumber(await vault.totalAssets());
       const account = accounts2[i];
       const balanceOfUSDi = new BigNumber(await pegToken.balanceOf(account));
-      await withdraw(vault.address, account, MFC.USDT_ADDRESS, balanceOfUSDi.toFixed(), exchangePlatformAdapters);
+      await withdraw(account, vault.address, balanceOfUSDi.toFixed());
       const vaultTotalAssetsAfterWithdraw = new BigNumber(await vault.totalAssets());
       const receiveUsdt = new BigNumber(await token.balanceOf(account));
       console.log('NO %d account %s receiveUsdt:%d', i + 1, account, receiveUsdt.toFixed());

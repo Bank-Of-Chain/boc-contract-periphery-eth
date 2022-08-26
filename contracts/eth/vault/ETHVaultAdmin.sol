@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 /**
- * @title USDI Vault Admin Contract
+ * @title ETHi Vault Admin Contract
  * @notice The VaultAdmin contract makes configuration and admin calls on the vault.
  * @author Bank OF CHAIN Protocol Inc
  */
@@ -15,6 +15,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     using IterableIntMap for IterableIntMap.AddressToIntMap;
 
     receive() external payable {}
+
     fallback() external payable {}
 
     /// @notice Shutdown the vault when an emergency occurs, cannot mint/burn.
@@ -80,7 +81,10 @@ contract ETHVaultAdmin is ETHVaultStorage {
     /**
      * @dev Sets the exchangeManagerAddress that can receive a portion of yield.
      */
-    function setExchangeManagerAddress(address _exchangeManagerAddress) external onlyRole(BocRoles.GOV_ROLE) {
+    function setExchangeManagerAddress(address _exchangeManagerAddress)
+        external
+        onlyRole(BocRoles.GOV_ROLE)
+    {
         require(_exchangeManagerAddress != address(0), "exchangeManager ad is 0");
         exchangeManager = _exchangeManagerAddress;
         emit ExchangeManagerAddressChanged(_exchangeManagerAddress);
@@ -241,7 +245,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
      * @param _addr Address of the strategy to remove
      */
     function _removeStrategy(address _addr, bool _force) internal {
-        if(strategies[_addr].totalDebt > 0){
+        if (strategies[_addr].totalDebt > 0) {
             // Withdraw all assets
             try IETHStrategy(_addr).repay(MAX_BPS, MAX_BPS, 0) {} catch {
                 if (!_force) {
@@ -266,7 +270,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
                 }
             }
         }
-        if(strategies[_addr].totalDebt > 0){
+        if (strategies[_addr].totalDebt > 0) {
             totalDebt -= strategies[_addr].totalDebt;
         }
         delete strategies[_addr];
@@ -313,7 +317,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
             if (_curStrategy == _strategy) {
                 withdrawQueue[i] = ZERO_ADDRESS;
                 _organizeWithdrawalQueue();
-                
+
                 return;
             }
         }
@@ -331,5 +335,4 @@ contract ETHVaultAdmin is ETHVaultStorage {
             }
         }
     }
-
 }
