@@ -30,13 +30,13 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
     bytes4(keccak256("swapOnZeroXv4(bytes,(uint256,address,address,address))"))
     ];
 
+    receive() external payable {
+    }
+
     /// @notice Provides a constant string identifier for an adapter
     /// @return identifier_ An identifier string
     function identifier() external pure override returns (string memory) {
         return "paraswap";
-    }
-
-    receive() external payable {
     }
 
     // EXTERNAL FUNCTIONS

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
+
 import "boc-contract-core/contracts/exchanges/IExchangeAdapter.sol";
 import "boc-contract-core/contracts/library/RevertReasonParser.sol";
 import "../utils/ExchangeHelpers.sol";
-import "../../external/oneinch/IOneInchV4.sol";
 
 import "@openzeppelin/contracts~v3/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts~v3/token/ERC20/SafeERC20.sol";
@@ -14,9 +14,9 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    event Response(bool _success, bytes _data);
-
     address private constant AGGREGATION_ROUTER_V4 = 0x1111111254fb6c44bAC0beD2854e76F90643097d;
+
+    event Response(bool _success, bytes _data);
 
     receive() external payable {}
 
@@ -29,7 +29,7 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
     }
 
     function swap(
-        uint8,
+        uint8 _method,
         bytes calldata _data,
         SwapDescription calldata _sd
     ) external payable override returns (uint256) {
@@ -42,7 +42,7 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
             IERC20(_sd.srcToken).safeApprove(AGGREGATION_ROUTER_V4, _sd.amount);
             (_success, _result) = AGGREGATION_ROUTER_V4.call(_data);
         } else {
-            (_success, _result) = payable(AGGREGATION_ROUTER_V4).call{value: _sd.amount}(_data);
+            (_success, _result) = payable(AGGREGATION_ROUTER_V4).call{value: msg.value}(_data);
         }
 
         emit Response(_success, _result);

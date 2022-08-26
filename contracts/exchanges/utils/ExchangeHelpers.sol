@@ -7,29 +7,6 @@ import "@openzeppelin/contracts~v3/token/ERC20/SafeERC20.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 
 abstract contract ExchangeHelpers {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
-
-    function __validateFromTokenAmount(address _fromToken, address _srcToken) internal pure {
-        require(_fromToken == _srcToken, "srcToken diff");
-    }
-
-    function __validateToTokenAddress(address _toToken, address _dstToken) internal pure {
-        require(_toToken == _dstToken, "dstToken diff");
-    }
-
-    function __approveAssetMaxAsNeeded(
-        address _asset,
-        address _target,
-        uint256 _neededAmount
-    ) internal {
-        if(_asset == NativeToken.NATIVE_TOKEN){
-            return;
-        }
-        if (IERC20(_asset).allowance(address(this), _target) < _neededAmount) {
-            IERC20(_asset).safeApprove(_target, type(uint256).max);
-        }
-    }
 
     function getTokenBalance(address _dstToken, address _owner) internal view returns (uint256){
         uint256 _tokenBalance;
