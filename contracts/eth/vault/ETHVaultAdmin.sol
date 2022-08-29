@@ -62,7 +62,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     /**
-     * @dev Set the Maximum allow gain or loss value when strategy report
+     * @dev Set the Maximum gain or loss value allowed when the strategy report
      */
     function setMaxAllowGainOrLossValue(uint256 _maxAllowGainOrLossValue)
     external
