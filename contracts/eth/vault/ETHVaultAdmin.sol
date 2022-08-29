@@ -62,14 +62,14 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     /**
-     * @dev Set the Maximum gain or loss value allowed when the strategy report
+     * @dev Set the minimum strategy total debt that will be checked for the strategy reporting
      */
-    function setMaxAllowGainOrLossValue(uint256 _maxAllowGainOrLossValue)
+    function setMinCheckedStrategyTotalDebt(uint256 _minCheckedStrategyTotalDebt)
     external
     isVaultManager
     {
-        maxAllowGainOrLossValue = _maxAllowGainOrLossValue;
-        emit MaxAllowGainOrLossValueChanged(_maxAllowGainOrLossValue);
+        minCheckedStrategyTotalDebt = _minCheckedStrategyTotalDebt;
+        emit MinCheckedStrategyTotalDebtChanged(_minCheckedStrategyTotalDebt);
     }
 
     /**
