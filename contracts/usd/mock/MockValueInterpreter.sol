@@ -2,12 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "boc-contract-core/contracts/price-feeds/IValueInterpreter.sol";
 import "boc-contract-core/contracts/price-feeds/derivatives/IAggregatedDerivativePriceFeed.sol";
 import "boc-contract-core/contracts/price-feeds/derivatives/IDerivativePriceFeed.sol";
 import "boc-contract-core/contracts/price-feeds/primitives/IPrimitivePriceFeed.sol";
-import "boc-contract-core/contracts/util/Helpers.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title MockValueInterpreter Contract
 /// @author Enzyme Council <security@enzyme.finance>
@@ -94,10 +95,14 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
             return (_amount, true);
         }
         _isValid = true;
-        _value =
-            (priceValue[_baseAsset] * _amount * (10**Helpers.getDecimals(_quoteAsset))) /
+        if(priceValue[_baseAsset] == 0 || priceValue[_quoteAsset] == 0){
+            _isValid = false;
+        }else{
+            _value =
+            (priceValue[_baseAsset] * _amount * getPowDecimals(_quoteAsset)) /
             priceValue[_quoteAsset] /
-            (10**Helpers.getDecimals(_baseAsset));
+            getPowDecimals(_baseAsset);
+        }
     }
 
     /*
@@ -112,7 +117,7 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
         override
         returns (uint256 _value)
     {
-        return (priceValue[_baseAsset] * _amount) / (10**Helpers.getDecimals(_baseAsset));
+        return (priceValue[_baseAsset] * _amount) / getPowDecimals(_baseAsset);
     }
 
     /*
@@ -160,5 +165,13 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
     /// @return _primitivePriceFeed The `PRIMITIVE_PRICE_FEED` variable value
     function getPrimitivePriceFeed() external view returns (address _primitivePriceFeed) {
         return PRIMITIVE_PRICE_FEED;
+    }
+
+    function getPowDecimals(address _asset) private view returns (uint256) {
+        if (_asset == NativeToken.NATIVE_TOKEN) {
+            return 1e18;
+        } else {
+            return 10**IERC20Metadata(_asset).decimals();
+        }
     }
 }

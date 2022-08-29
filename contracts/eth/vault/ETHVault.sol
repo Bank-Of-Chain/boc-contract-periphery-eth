@@ -33,6 +33,7 @@ contract ETHVault is ETHVaultStorage {
         // one week
         maxTimestampBetweenTwoReported = 604800;
         underlyingUnitsPerShare = 1e18;
+        maxAllowGainOrLossValue = 1e17;
     }
 
     modifier whenNotEmergency() {
@@ -1141,13 +1142,15 @@ contract ETHVault is ETHVaultStorage {
             ) {
                 if (_gain > 0) {
                     require(
-                        _gain <=
+                        _gain > 1e18 &&
+                            _gain <=
                             ((_lastStrategyTotalDebt * _strategyParam.profitLimitRatio) / MAX_BPS),
                         "GL"
                     );
                 } else if (_loss > 0) {
                     require(
-                        _loss <=
+                        _loss > 1e18 &&
+                            _loss <=
                             ((_lastStrategyTotalDebt * _strategyParam.lossLimitRatio) / MAX_BPS),
                         "LL"
                     );

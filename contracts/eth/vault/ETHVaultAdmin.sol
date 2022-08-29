@@ -51,7 +51,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     /**
-     * @dev Sets the Maximum timestamp between two reported
+     * @dev Set the Maximum timestamp between two reported
      */
     function setMaxTimestampBetweenTwoReported(uint256 _maxTimestampBetweenTwoReported)
         external
@@ -59,6 +59,17 @@ contract ETHVaultAdmin is ETHVaultStorage {
     {
         maxTimestampBetweenTwoReported = _maxTimestampBetweenTwoReported;
         emit MaxTimestampBetweenTwoReportedChanged(_maxTimestampBetweenTwoReported);
+    }
+
+    /**
+     * @dev Set the Maximum allow gain or loss value when strategy report
+     */
+    function setMaxAllowGainOrLossValue(uint256 _maxAllowGainOrLossValue)
+    external
+    isVaultManager
+    {
+        maxAllowGainOrLossValue = _maxAllowGainOrLossValue;
+        emit MaxAllowGainOrLossValueChanged(_maxAllowGainOrLossValue);
     }
 
     /**

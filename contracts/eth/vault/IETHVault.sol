@@ -67,6 +67,8 @@ interface IETHVault {
     event RebaseUnpaused();
     event RebaseThresholdUpdated(uint256 _threshold);
     event TrusteeFeeBpsChanged(uint256 _basis);
+    event MaxTimestampBetweenTwoReportedChanged(uint256 _maxTimestampBetweenTwoReported);
+    event MaxAllowGainOrLossValueChanged(uint256 _maxAllowGainOrLossValue);
     event MinimumInvestmentAmountChanged(uint256 _minimumInvestmentAmount);
     event TreasuryAddressChanged(address _address);
     event ExchangeManagerAddressChanged(address _address);
@@ -337,6 +339,14 @@ interface IETHVault {
 
     /// @notice Return the address of access control proxy contract
     function accessControlProxy() external view returns (address);
+
+    /**
+     * @dev Set the Maximum gain or loss value allowed by the strategy report
+     */
+    function setMaxAllowGainOrLossValue(uint256 _maxAllowGainOrLossValue) external;
+
+    /// @notice Return the Maximum gain or loss value allowed by the strategy report
+    function maxAllowGainOrLossValue() external view returns (uint256);
 
     /**
      * @dev Sets the Maximum timestamp between two reported

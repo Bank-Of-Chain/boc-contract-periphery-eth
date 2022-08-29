@@ -97,6 +97,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     event RebaseThresholdUpdated(uint256 _threshold);
     event TrusteeFeeBpsChanged(uint256 _basis);
     event MaxTimestampBetweenTwoReportedChanged(uint256 _maxTimestampBetweenTwoReported);
+    event MaxAllowGainOrLossValueChanged(uint256 _maxAllowGainOrLossValue);
     event MinimumInvestmentAmountChanged(uint256 _minimumInvestmentAmount);
     event TreasuryAddressChanged(address _address);
     event ExchangeManagerAddressChanged(address _address);
@@ -179,6 +180,8 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     uint256 public underlyingUnitsPerShare;
     //Maximum timestamp between two reported
     uint256 public maxTimestampBetweenTwoReported;
+    //Maximum allow  gain or loss value when strategy report
+    uint256 public maxAllowGainOrLossValue;
     //Minimum investment amount
     uint256 public minimumInvestmentAmount;
 
