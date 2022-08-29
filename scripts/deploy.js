@@ -528,50 +528,57 @@ const main = async () => {
 
     if (hre.network.name == 'localhost') {
         console.log('start set apollo config');
-        let clusterName = await get_apollo_cluster_name();
+        const {clusterName,host} = await get_apollo_cluster_name();
+        console.log(clusterName,host);
         const blockNumber = hardhatConfig.networks.hardhat.forking.blockNumber;
-        await modify_apollo_config('boc.networks.eth.startBlock', blockNumber, clusterName);
-        await modify_apollo_config('boc.networks.ethi.startBlock', blockNumber, clusterName);
+        await modify_apollo_config('boc.networks.eth.startBlock', blockNumber, clusterName, host);
+        await modify_apollo_config('boc.networks.ethi.startBlock', blockNumber, clusterName, host);
         for (let key in addressMap) {
             if (Object.prototype.hasOwnProperty.call(addressMap, key)) {
                 if (key == 'Vault') {
-                    await modify_apollo_config('boc.networks.eth.vaultAddress', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.eth.vaultAddress', addressMap[key], clusterName, host);
                 } else if (key == 'ETHVault') {
-                    await modify_apollo_config('boc.networks.ethi.vaultAddress', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.ethi.vaultAddress', addressMap[key], clusterName, host);
                 } else if (key == 'USDVaultBuffer') {
-                    await modify_apollo_config('boc.networks.eth.vaultBufferAddress', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.eth.vaultBufferAddress', addressMap[key], clusterName, host);
                 } else if (key == 'ETHVaultBuffer') {
-                    await modify_apollo_config('boc.networks.ethi.vaultBufferAddress', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.ethi.vaultBufferAddress', addressMap[key], clusterName, host);
                 } else if (key == 'USDPegToken') {
-                    await modify_apollo_config('boc.networks.eth.pegTokenAddress', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.eth.pegTokenAddress', addressMap[key], clusterName, host);
                 } else if (key == 'TestAdapter') {
-                    await modify_apollo_config('boc.networks.eth.TestAdapter', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.eth.TestAdapter', addressMap[key], clusterName, host);
                 } else if (key == 'ETHTestAdapter') {
-                    await modify_apollo_config('boc.networks.ethi.TestAdapter', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.ethi.TestAdapter', addressMap[key], clusterName, host);
                 } else if (key == 'ETHPegToken') {
-                    await modify_apollo_config('boc.networks.ethi.pegTokenAddress', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.ethi.pegTokenAddress', addressMap[key], clusterName, host);
                 } else if (key == 'Verification') {
-                    await modify_apollo_config('boc.networks.eth.verificationAddress', addressMap[key], clusterName);
-                    await modify_apollo_config('boc.networks.ethi.verificationAddress', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.eth.verificationAddress', addressMap[key], clusterName, host);
+                    await modify_apollo_config('boc.networks.ethi.verificationAddress', addressMap[key], clusterName, host);
                 } else if (key == 'Harvester') {
-                    await modify_apollo_config('boc.networks.eth.harvester', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.eth.harvester', addressMap[key], clusterName, host);
                 } else if (key == 'Dripper') {
-                    await modify_apollo_config('boc.networks.eth.dripper', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.eth.dripper', addressMap[key], clusterName, host);
                 } else if (key == 'HarvestHelper') {
-                    await modify_apollo_config('boc.networks.ethi.harvestHelpAddress', addressMap[key], clusterName);
+                    await modify_apollo_config('boc.networks.ethi.harvestHelpAddress', addressMap[key], clusterName, host);
                 } else {
-                    await modify_apollo_config(`boc.networks.eth.${key}`, addressMap[key], clusterName);
+                    await modify_apollo_config(`boc.networks.eth.${key}`, addressMap[key], clusterName, host);
                 }
             }
         }
 
-        await publish_apollo_config(clusterName);
+        await publish_apollo_config(clusterName, host);
         console.log('end set apollo config');
     }
 }
 const get_apollo_cluster_name = async () =>{
-    const ip = os.networkInterfaces().eth0 &&os.networkInterfaces().eth0[0].addresss || '127.0.0.1';
-    let url = 'http://13.215.137.222:8070/openapi/v1/envs/DEV/apps/boc-common/clusters/default/namespaces/boc1.application';
+    let windowsIp = '127.0.0.1';
+    const ip = os.networkInterfaces().eth0 &&os.networkInterfaces().eth0[0].addresss || windowsIp;
+    console.log('ip',ip);
+    let host = '172.31.30.50:8070';
+    if(ip == windowsIp){
+        host = '13.215.137.222:8070';
+    }
+    let url = `http://${host}/openapi/v1/envs/DEV/apps/boc-common/clusters/default/namespaces/boc1.application`;
     let config = {
         headers: {
             Authorization:'e9ac544052e7e295e453f414363e8ccf5ff37ff3',
@@ -589,11 +596,11 @@ const get_apollo_cluster_name = async () =>{
     if(itemData && itemData.value){
         clusterName = itemData.value;
     }
-    return clusterName;
+    return {clusterName,host};
 }
 
-const publish_apollo_config = async (clusterName) =>{
-    let url = `http://13.215.137.222:8070/openapi/v1/envs/DEV/apps/boc-common/clusters/${clusterName}/namespaces/boc1.application/releases`;
+const publish_apollo_config = async (clusterName,host) =>{
+    let url = `http://${host}/openapi/v1/envs/DEV/apps/boc-common/clusters/${clusterName}/namespaces/boc1.application/releases`;
     let questBody = {
         "releaseTitle": new Date().toLocaleDateString(),
         "releaseComment": 'publish smart contract',
@@ -611,8 +618,8 @@ const publish_apollo_config = async (clusterName) =>{
     await axios.post(url, questBody, config);
 }
 
-const modify_apollo_config = async (key,value,clusterName) =>{
-    let url = `http://13.215.137.222:8070/openapi/v1/envs/DEV/apps/boc-common/clusters/${clusterName}/namespaces/boc1.application/items/${key}`;
+const modify_apollo_config = async (key,value,clusterName,host) =>{
+    let url = `http://${host}/openapi/v1/envs/DEV/apps/boc-common/clusters/${clusterName}/namespaces/boc1.application/items/${key}`;
     let questBody = {
         "key": key,
         "value": value,
