@@ -33,6 +33,7 @@ contract ETHVault is ETHVaultStorage {
         // one week
         maxTimestampBetweenTwoReported = 604800;
         underlyingUnitsPerShare = 1e18;
+        minCheckedStrategyTotalDebt = 1e17;
     }
 
     modifier whenNotEmergency() {
@@ -1137,7 +1138,10 @@ contract ETHVault is ETHVaultStorage {
 
         if (_strategyParam.enforceChangeLimit) {
             if (
-                block.timestamp - strategies[_strategy].lastReport < maxTimestampBetweenTwoReported
+                block.timestamp - strategies[_strategy].lastReport <
+                maxTimestampBetweenTwoReported ||
+                _lastStrategyTotalDebt > minCheckedStrategyTotalDebt ||
+                _nowStrategyTotalDebt > minCheckedStrategyTotalDebt
             ) {
                 if (_gain > 0) {
                     require(

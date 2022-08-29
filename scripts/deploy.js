@@ -50,8 +50,8 @@ const OneInchV4Adapter = 'OneInchV4Adapter';
 const ChainlinkPriceFeed = 'ChainlinkPriceFeed';
 const ExchangeAggregator = 'ExchangeAggregator';
 const AccessControlProxy = 'AccessControlProxy';
+const MockValueInterpreter = 'MockValueInterpreter';
 const TestAdapter = 'TestAdapter';
-const ETHTestAdapter = 'ETHTestAdapter';
 const AggregatedDerivativePriceFeed = 'AggregatedDerivativePriceFeed';
 const Harvester = 'Harvester';
 const Dripper = 'Dripper';
@@ -72,8 +72,6 @@ const ETHVaultAdmin = 'ETHVaultAdmin';
 const ETHVaultBuffer = 'ETHVaultBuffer';
 const ETHPegToken = 'ETHPegToken';
 const PriceOracleConsumer = 'PriceOracleConsumer';
-const MockPriceOracleConsumer = 'MockPriceOracleConsumer';
-const MockValueInterpreter = 'MockValueInterpreter';
 const HarvestHelper = 'HarvestHelper';
 const ETH_INITIAL_ASSET_LIST = [
     MFC_PRODUCTION.ETH_ADDRESS,
@@ -574,12 +572,29 @@ const main = async () => {
 }
 const get_apollo_cluster_name = async () =>{
     let windowsIp = '127.0.0.1';
-    const ip = os.networkInterfaces().eth0 && os.networkInterfaces().eth0.length>0 && os.networkInterfaces().eth0[0].address || windowsIp;
-    console.log('ip',ip);
+    let localIp = windowsIp;
     let host = '172.31.30.50:8070';
-    if(ip == windowsIp){
+    const osType = os.type();
+    const netInfo = os.networkInterfaces();
+    if (osType === 'Windows_NT'){
         host = '13.215.137.222:8070';
+        for (let devName  in netInfo) {
+            const iface = netInfo[devName];
+            for (let i = 0; i < iface.length; i++) {
+                const alias = iface[i];
+                if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+                    localIp = alias.address;
+                    break;
+                }
+            }
+            if(localIp != windowsIp){
+                break;
+            }
+        }
+    } else{
+        localIp = netInfo && netInfo.eth0 && netInfo.eth0.length>0 && netInfo.eth0[0].address || windowsIp;
     }
+    console.log('localIp',localIp);
     let url = `http://${host}/openapi/v1/envs/DEV/apps/boc-common/clusters/default/namespaces/boc1.application`;
     let config = {
         headers: {
@@ -592,7 +607,7 @@ const get_apollo_cluster_name = async () =>{
     };
     let resp =  await axios.get(url, config);
     const itemData =  resp.data?.items.find(function (item) {
-        return item.key == ip;
+        return item.key == localIp;
     });
     let clusterName = 'local';
     if(itemData && itemData.value){
@@ -833,11 +848,11 @@ const deploy_eth = async () => {
         paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
     }
     if (hre.network.name == 'localhost') {
-        if (isEmpty(addressMap[MockPriceOracleConsumer])) {
-            await deployProxyBase(MockPriceOracleConsumer, []);
+        if (isEmpty(addressMap[MockValueInterpreter])) {
+            await deployBase(MockValueInterpreter, [ChainlinkPriceFeed, AggregatedDerivativePriceFeed, AccessControlProxy]);
         }
-        if (isEmpty(addressMap[ETHTestAdapter])) {
-            await deployBase(ETHTestAdapter, [MockPriceOracleConsumer]);
+        if (isEmpty(addressMap[TestAdapter])) {
+            await deployBase(TestAdapter, [MockValueInterpreter]);
         }
     }
 

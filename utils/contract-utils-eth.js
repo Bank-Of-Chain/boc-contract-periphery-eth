@@ -52,7 +52,7 @@ const EthParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
 
 const IExchangeAdapter = hre.artifacts.require('IExchangeAdapter');
 const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
-const ETHTestAdapter = hre.artifacts.require("ETHTestAdapter");
+const TestAdapter = hre.artifacts.require("TestAdapter");
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 
 /**
@@ -71,7 +71,13 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
     console.log('deploy PriceOracle');
     const priceOracleConsumer = await PriceOracleConsumer.new();
 
-    const testAdapter = await ETHTestAdapter.new(priceOracleConsumer.address);
+    const  valueInterpreter = await MockValueInterpreter.new(
+        accessControlProxy.address,
+        accessControlProxy.address,
+        accessControlProxy.address
+    );
+
+    const testAdapter = await TestAdapter.new(valueInterpreter.address);
 
     console.log('deploy EthOneInchV4Adapter');
     const ethOneInchV4Adapter = await EthOneInchV4Adapter.new();
@@ -82,7 +88,7 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
     console.log('deploy ExchangeAggregator');
     let exchangeAggregator;
     if (mock) {
-        exchangeAggregator = await ExchangeAggregator.new([testAdapter.address], accessControlProxy.address);
+       exchangeAggregator = await ExchangeAggregator.new([testAdapter.address], accessControlProxy.address);
     } else {
         exchangeAggregator = await ExchangeAggregator.new([ethOneInchV4Adapter.address,ethParaSwapV5Adapter.address], accessControlProxy.address);
     }

@@ -51,7 +51,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     /**
-     * @dev Sets the Maximum timestamp between two reported
+     * @dev Set the Maximum timestamp between two reported
      */
     function setMaxTimestampBetweenTwoReported(uint256 _maxTimestampBetweenTwoReported)
         external
@@ -59,6 +59,17 @@ contract ETHVaultAdmin is ETHVaultStorage {
     {
         maxTimestampBetweenTwoReported = _maxTimestampBetweenTwoReported;
         emit MaxTimestampBetweenTwoReportedChanged(_maxTimestampBetweenTwoReported);
+    }
+
+    /**
+     * @dev Set the minimum strategy total debt that will be checked for the strategy reporting
+     */
+    function setMinCheckedStrategyTotalDebt(uint256 _minCheckedStrategyTotalDebt)
+    external
+    isVaultManager
+    {
+        minCheckedStrategyTotalDebt = _minCheckedStrategyTotalDebt;
+        emit MinCheckedStrategyTotalDebtChanged(_minCheckedStrategyTotalDebt);
     }
 
     /**
