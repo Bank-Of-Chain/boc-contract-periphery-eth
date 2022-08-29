@@ -88,43 +88,13 @@ const getVaultDetails = async vaultAddress => {
  * @param {any} exchangePlatformAdapters exchange platform adapters
  */
 const withdraw = async (
-    vaultAddress,
     userAddress,
-    assetAddress,
-    amount,
-    exchangePlatformAdapters,
+    vaultAddress,
+    amount
 ) => {
     const vault = await Vault.at(vaultAddress)
 
-    const resp = await vault.burn.call(amount, assetAddress, 0, false, [], {
-        from: userAddress,
-    })
-
-    const tokens = resp[0]
-    const amounts = resp[1]
-    const exchangeArray = await Promise.all(
-        map(tokens, async (tokenItem, index) => {
-            const exchangeAmounts = amounts[index].toString()
-            if (tokenItem === assetAddress) {
-                return
-            }
-            return {
-                fromToken: tokenItem,
-                toToken: assetAddress,
-                fromAmount: exchangeAmounts,
-                exchangeParam: {
-                    platform: exchangePlatformAdapters.testAdapter,
-                    method: 0,
-                    encodeExchangeArgs: "0x",
-                    slippage: 0,
-                    oracleAdditionalSlippage: 0,
-                },
-            }
-        }),
-    )
-    const exchangeArrayNext = filter(exchangeArray, i => !isEmpty(i))
-
-    let tx = await vault.burn(amount, assetAddress, 0, true, exchangeArrayNext, {
+    let tx = await vault.burn(amount, 0, {
         from: userAddress,
     })
 

@@ -6,7 +6,6 @@ import "../utils/ParaSwapV5ActionsMixin.sol";
 import "boc-contract-core/contracts/exchanges/IExchangeAdapter.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 import "boc-contract-core/contracts/library/RevertReasonParser.sol";
-import "@openzeppelin/contracts~v3/math/SafeMath.sol";
 
 /// @title ParaSwapV4Adapter Contract
 /// @author Enzyme Council <security@enzyme.finance>
@@ -30,13 +29,13 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
     bytes4(keccak256("swapOnZeroXv4(bytes,(uint256,address,address,address))"))
     ];
 
+    receive() external payable {
+    }
+
     /// @notice Provides a constant string identifier for an adapter
     /// @return identifier_ An identifier string
     function identifier() external pure override returns (string memory) {
         return "paraswap";
-    }
-
-    receive() external payable {
     }
 
     // EXTERNAL FUNCTIONS
