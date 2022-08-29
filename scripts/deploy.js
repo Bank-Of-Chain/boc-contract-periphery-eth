@@ -572,11 +572,7 @@ const main = async () => {
 }
 const get_apollo_cluster_name = async () =>{
     let windowsIp = '127.0.0.1';
-    console.log(os.networkInterfaces());
-    console.log(os.networkInterfaces().eth0);
-    console.log(os.networkInterfaces().eth0[0]);
-    console.log(os.networkInterfaces().eth0[0].addresss);
-    const ip = os.networkInterfaces().eth0 &&os.networkInterfaces().eth0[0].addresss || windowsIp;
+    const ip = os.networkInterfaces().eth0 && os.networkInterfaces().eth0.length>0 && os.networkInterfaces().eth0[0].address || windowsIp;
     console.log('ip',ip);
     let host = '172.31.30.50:8070';
     if(ip == windowsIp){
