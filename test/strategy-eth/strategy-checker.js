@@ -1,6 +1,7 @@
 const { default: BigNumber } = require('bignumber.js');
 const { ethers } = require('hardhat');
 const { assert } = require('chai');
+const { expectEvent} = require('@openzeppelin/test-helpers');
 
 const MFC = require('../../config/mainnet-fork-test-config');
 const {strategiesList} = require('../../config/strategy-eth/strategy-config-eth')
@@ -15,7 +16,6 @@ const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
 const MockVault = hre.artifacts.require('contracts/eth/mock/MockVault.sol:MockVault');
 const Mock3rdEthPool = hre.artifacts.require('contracts/eth/mock/Mock3rdEthPool.sol:Mock3rdEthPool');
 const MockUniswapV3Router = hre.artifacts.require('contracts/eth/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
-// const ILido = hre.artifacts.require('ILido');
 
 let accessControlProxy;
 let priceOracleConsumer;
@@ -128,6 +128,7 @@ function findStrategyItem(strategyName) {
 
 async function check(strategyName, beforeCallback, afterCallback, uniswapV3RebalanceCallback,outputCode = 0) {
     before(async function () {
+        BigNumber.set({ DECIMAL_PLACES: 6 });
         accounts = await ethers.getSigners();
         governance = accounts[0].address;
         investor = accounts[1].address;
@@ -182,9 +183,14 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         assert.deepEqual(name, strategyName, 'strategy name do not match the file name');
     });
 
-    it('[outputsInfo array length should bigger than zero]', async function () {
-        const ouputsInfo = await strategy.getOutputsInfo();
-        assert(ouputsInfo.length > 0);
+    it('[strategy version should not be empty]', async function () {
+        const version = await strategy.getVersion();
+        assert(version !== '', 'strategy version is empty');
+    });
+
+    it('[strategy outputsInfo should not be empty]', async function () {
+        const outputsInfo = await strategy.getOutputsInfo();
+        assert(outputsInfo.length > 0, 'The strategy did not return outputsInfo');
     });
 
     let wants;
@@ -267,10 +273,16 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         }
         console.log('Lend:', depositedAssets, depositedAmounts);
 
-        await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
-        const estimatedTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
+        const lendTx = await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
+        expectEvent.inTransaction(lendTx, 'Borrow', {
+            _assets: depositedAssets,
+            _amounts: depositedAmounts
+        });
+        depositETH = new BigNumber(ethers.utils.formatEther(depositETH.toFixed()));
+        const estimatedTotalAssets = new BigNumber(ethers.utils.formatEther(BigInt(await strategy.estimatedTotalAssets())));
         let delta = depositETH.minus(estimatedTotalAssets);
         console.log('depositETH:%d,estimatedTotalAssets:%d,delta:%d', depositETH, estimatedTotalAssets, delta);
+        
         // we can tolerate a little loss
         assertUtils.assertBNBt(
             depositETH.multipliedBy(9995).dividedBy(10000),
@@ -298,16 +310,8 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         if (afterCallback) {
             await afterCallback(strategy);
         }
-        // const lido = await ILido.at("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
-        // const stat = await lido.getBeaconStat();
-        // console.log('depositedValidators#:%d',stat.depositedValidators);
-        // console.log('beaconValidators#:%d',stat.beaconValidators);
-        // console.log('beaconBalance#:%d',stat.beaconBalance);
-        // const lidoOracle = "0x442af784a788a5bd6f42a01ebe9f287a871243fb";
-        // await impersonates([lidoOracle]);
-        // await send.ether(accounts[0].address,lidoOracle,1e18);
-        // await lido.pushBeacon(stat.beaconValidators,stat.beaconBalance,{from:lidoOracle});
-        await strategy.harvest({ from: keeper });
+        const harvestTx = await strategy.harvest({ from: keeper });
+        expectEvent.inTransaction(harvestTx,'StrategyReported');
         const afterTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
         console.log('beforeTotalAssets:%s, afterTotalAssets:%s', beforeTotalAssets.toFixed(), afterTotalAssets.toFixed());
         assert(afterTotalAssets.isGreaterThan(beforeTotalAssets), 'there is no profit after 3 days');
@@ -321,7 +325,8 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
         const estimatedTotalAssets0 = new BigNumber(await strategy.estimatedTotalAssets());
-        await mockVault.redeem(strategy.address, estimatedTotalAssets0, outputCode);
+        const redeemTx = await mockVault.redeem(strategy.address, estimatedTotalAssets0, outputCode);
+        expectEvent.inTransaction(redeemTx,'Repay');
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets());
         console.log('After withdraw all shares,strategy assets:%d', estimatedTotalAssets1);
         assert.isTrue(estimatedTotalAssets1.multipliedBy(10000).isLessThan(depositETH), 'assets left in strategy should not be more than 1/10000');
@@ -338,6 +343,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
                 withdrawETH = withdrawETH.plus(eth);
             }
         }
+        withdrawETH = new BigNumber(ethers.utils.formatEther(withdrawETH.toFixed()));
         console.log('depositETH:%s, withdrawETH:%s', depositETH.toFixed(), withdrawETH.toFixed());
         assert(withdrawETH.isGreaterThan(depositETH), 'the value of wants user got do not increase');
     });
