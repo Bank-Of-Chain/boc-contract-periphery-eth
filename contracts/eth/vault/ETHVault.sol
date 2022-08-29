@@ -1136,19 +1136,22 @@ contract ETHVault is ETHVaultStorage {
             _loss = _lastStrategyTotalDebt - _nowStrategyTotalDebt;
         }
 
-        if (_strategyParam.enforceChangeLimit && _lastStrategyTotalDebt > maxAllowGainOrLossValue) {
+        if (_strategyParam.enforceChangeLimit) {
             if (
-                block.timestamp - strategies[_strategy].lastReport < maxTimestampBetweenTwoReported
+                block.timestamp - strategies[_strategy].lastReport <
+                maxTimestampBetweenTwoReported ||
+                _lastStrategyTotalDebt > maxAllowGainOrLossValue ||
+                _nowStrategyTotalDebt > maxAllowGainOrLossValue
             ) {
                 if (_gain > 0) {
                     require(
-                            _gain <=
+                        _gain <=
                             ((_lastStrategyTotalDebt * _strategyParam.profitLimitRatio) / MAX_BPS),
                         "GL"
                     );
                 } else if (_loss > 0) {
                     require(
-                            _loss <=
+                        _loss <=
                             ((_lastStrategyTotalDebt * _strategyParam.lossLimitRatio) / MAX_BPS),
                         "LL"
                     );
