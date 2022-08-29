@@ -12,18 +12,28 @@ import "boc-contract-core/contracts/library/NativeToken.sol";
 contract MockVault is AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public priceProvider;
-    
+
+    event StrategyReported(
+        address indexed _strategy,
+        uint256 _gain,
+        uint256 _loss,
+        uint256 _lastStrategyTotalDebt,
+        uint256 _nowStrategyTotalDebt,
+        address[] _rewardTokens,
+        uint256[] _claimAmounts,
+        uint256 _type
+    );
+
     constructor(address _accessControlProxy, address _valueInterpreter) {
         _initAccessControl(_accessControlProxy);
         priceProvider = _valueInterpreter;
     }
 
     receive() external payable {}
-    
+
     fallback() external payable {}
 
-
-    function treasury() view external returns(address){
+    function treasury() external view returns (address) {
         return address(this);
     }
 
@@ -48,14 +58,19 @@ contract MockVault is AccessControlMixin {
     }
 
     /// @notice Withdraw the funds from specified strategy.
-    function redeem(address _strategy, uint256 _usdValue,uint256 _outputCode) external payable {
+    function redeem(
+        address _strategy,
+        uint256 _usdValue,
+        uint256 _outputCode
+    ) external payable {
         uint256 _totalValue = IETHStrategy(_strategy).estimatedTotalAssets();
         if (_usdValue > _totalValue) {
             _usdValue = _totalValue;
         }
-        IETHStrategy(_strategy).repay(_usdValue, _totalValue,_outputCode);
+        IETHStrategy(_strategy).repay(_usdValue, _totalValue, _outputCode);
     }
 
-    function report() external {}
-
+    function report(address[] memory _rewardTokens, uint256[] memory _claimAmounts) external {
+        emit StrategyReported(msg.sender, 0, 0, 0, 0, _rewardTokens, _claimAmounts, 0);
+    }
 }

@@ -1,10 +1,11 @@
 const { default: BigNumber } = require('bignumber.js');
 const { ethers } = require('hardhat');
 const { assert } = require('chai');
+const { expectEvent} = require('@openzeppelin/test-helpers');
 
 const MFC = require('../../config/mainnet-fork-test-config');
 const addressConfig = require('../../config/address-config');
-const {strategiesList} = require('../../config/strategy-usd/strategy-config-usd')
+const { strategiesList } = require('../../config/strategy-usd/strategy-config-usd')
 
 const topUp = require('../../utils/top-up-utils');
 const { advanceBlock, getLatestBlock } = require('../../utils/block-utils');
@@ -15,10 +16,8 @@ const ChainlinkPriceFeed = hre.artifacts.require('ChainlinkPriceFeed');
 const AggregatedDerivativePriceFeed = hre.artifacts.require('AggregatedDerivativePriceFeed');
 const ValueInterpreter = hre.artifacts.require('ValueInterpreter');
 const MockVault = hre.artifacts.require('contracts/usd/mock/MockVault.sol:MockVault');
-const IUniswapV2 = hre.artifacts.require('IUniswapV2');
 const MockUniswapV3Router = hre.artifacts.require('contracts/usd/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
 
-const ZERO_BN = new BigNumber(0);
 
 let accessControlProxy;
 let valueInterpreter;
@@ -148,15 +147,16 @@ function findStrategyItem(strategyName) {
 
     const result = strategiesList.find((item) => {
         // console.log('item.name:%s,strategyName:%s',item.name,strategyName);
-        
+
         return item.name == strategyName;
     });
 
     return result;
 }
 
-async function check(strategyName, callback, exchangeRewardTokenCallback = {}, uniswapV3RebalanceCallback, outputCode = 0) {
+async function check(strategyName, callback, uniswapV3RebalanceCallback, outputCode = 0) {
     before(async function () {
+        BigNumber.set({ DECIMAL_PLACES: 6 });
         accounts = await ethers.getSigners();
         governance = accounts[0].address;
         investor = accounts[1].address;
@@ -173,28 +173,28 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         mockVault = await MockVault.new(accessControlProxy.address, valueInterpreter.address);
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
-        console.log('mock vault address:%s,strategyName:%s', mockVault.address,strategyName);
+        console.log('mock vault address:%s,strategyName:%s', mockVault.address, strategyName);
         const strategyItem = findStrategyItem(strategyName);
-        console.log('strategyItem:',strategyItem);
-        
+        console.log('strategyItem:', strategyItem);
+
         const {
             name,
             contract,
             customParams
         } = strategyItem;
-        
+
         // init strategy
         const Strategy = hre.artifacts.require(contract);
         strategy = await Strategy.new();
-        
+
         const allParams = [
             mockVault.address,
             harvester,
             name,
             ...customParams
         ]
-        console.log('allParams:',allParams);
-        
+        console.log('allParams:', allParams);
+
         await strategy.initialize(...allParams);
         // top up for vault
         await _topUpFamilyBucket();
@@ -203,6 +203,16 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
     it('[strategy name should match the file name]', async function () {
         const name = await strategy.name();
         assert.deepEqual(name, strategyName, 'strategy name do not match the file name');
+    });
+
+    it('[strategy version should not be empty]', async function () {
+        const version = await strategy.getVersion();
+        assert(version !== '', 'strategy version is empty');
+    });
+
+    it('[strategy outputsInfo should not be empty]', async function () {
+        const outputsInfo = await strategy.getOutputsInfo();
+        assert(outputsInfo.length > 0, 'The strategy did not return outputsInfo');
     });
 
     let wants;
@@ -222,7 +232,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         assert(thirdPoolAssets.isGreaterThan(min) && thirdPoolAssets.isLessThan(max), 'large deviation in thirdPoolAssets estimation');
     });
 
-    it('[strategy estimatedTotalAssets should be zero]',async function(){
+    it('[strategy estimatedTotalAssets should be zero]', async function () {
         const estimatedTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
         assert(estimatedTotalAssets.isZero());
     });
@@ -244,7 +254,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
             const assetContract = await ERC20.at(asset);
             let assetPrecision = new BigNumber(10 ** (await assetContract.decimals()));
             let amount;
-            
+
             if (i !== 0) {
                 amount = new BigNumber(initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0));
             } else {
@@ -253,7 +263,7 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
             let wantToken = await ERC20.at(wantsInfo._assets[i]);
             let wantBalance = new BigNumber(await wantToken.balanceOf(investor));
             console.log('wantBalance:', wantBalance);
-            
+
             console.log('want:%s,balance:%s,amount:%s', asset, wantBalance.toFixed(), amount.toFixed());
             if (amount.gte(wantBalance)) {
                 amount = wantBalance;
@@ -266,8 +276,12 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         }
         console.log('Lend:', depositedAssets, depositedAmounts.map(i => i.toFormat()));
 
-        await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
-        const estimatedTotalAssets = new BigNumber(await strategy.estimatedTotalAssets()).dividedBy(10 ** 18);
+        const lendTx = await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
+        expectEvent.inTransaction(lendTx, 'Borrow', {
+            _assets: depositedAssets,
+            _amounts: depositedAmounts
+        });
+        const estimatedTotalAssets = new BigNumber(ethers.utils.formatEther(BigInt(await strategy.estimatedTotalAssets())));
         const debtRateQuery = () => {
             if (!strategy.debtRate) {
                 return Promise.resolve(-1);
@@ -275,9 +289,9 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
             return strategy.debtRate().catch(() => -1)
         }
         const debtRate = new BigNumber(await debtRateQuery());
-        console.log('depositUSD##:%d',depositUSD);
-        depositUSD = new BigNumber(ethers.utils.formatEther(depositUSD.toFixed()))//depositUSD.dividedBy(10 ** 18);
-        
+        console.log('depositUSD##:%d', depositUSD);
+        depositUSD = new BigNumber(ethers.utils.formatEther(depositUSD.toFixed()));
+
         let delta = depositUSD.minus(estimatedTotalAssets);
         console.log('depositUSD:%s,estimatedTotalAssets:%s,delta:%s', depositUSD.toFixed(), estimatedTotalAssets.toFixed(), delta.toFixed());
         console.log('debtRate=%s', debtRate.toString());
@@ -310,12 +324,6 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
         });
         // await strategy.harvest({ from: keeper });
         // After the harvest is completed, IronBank needs to perform one more step to sell and reinvest the mine
-        const {
-            investWithSynthForex
-        } = exchangeRewardTokenCallback;
-        if (typeof investWithSynthForex === 'function') {
-            await investWithSynthForex(strategy, keeper).catch(() => { });
-        }
         const rewardsTokens = pendingRewards._rewardsTokens;
         for (let i = 0; i < rewardsTokens.length; i++) {
             const rewardToken = rewardsTokens[i];
@@ -338,7 +346,8 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
         const estimatedTotalAssets0 = new BigNumber(await strategy.estimatedTotalAssets());
-        await mockVault.redeem(strategy.address, estimatedTotalAssets0, outputCode);
+        const redeemTx = await mockVault.redeem(strategy.address, estimatedTotalAssets0, outputCode);
+        expectEvent.inTransaction(redeemTx,'Repay');
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets()).dividedBy(10 ** 18);
         console.log('After withdraw all shares,strategy assets:%s', estimatedTotalAssets1.toFixed());
         assert.isTrue(estimatedTotalAssets1.multipliedBy(10000).isLessThan(depositUSD), 'assets left in strategy should not be more than 1/10000');
@@ -353,7 +362,6 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
             let usd = new BigNumber(await valueInterpreter.calcCanonicalAssetValueInUsd(want, balance));
             withdrawUSD = withdrawUSD.plus(usd);
         }
-        // withdrawUSD = withdrawUSD.dividedBy(10 ** 18);
         withdrawUSD = new BigNumber(ethers.utils.formatEther(withdrawUSD.toFixed()))
         console.log('depositUSD:%s,withdrawUSD:%s,rewardUSD:%s', depositUSD.toFixed(), withdrawUSD.toFixed(), rewardUsd.toFixed());
         let strategyTotalWithdrawUsd = depositUSD.plus(rewardUsd);
@@ -361,43 +369,6 @@ async function check(strategyName, callback, exchangeRewardTokenCallback = {}, u
     });
 }
 
-async function exchangeRewardToken(pendingRewards, harvesterAddress, valueInterpreter, rewardsExchangePath, router = addressConfig.QUICKSWAP_ADDRESS) {
-    let rewardUsd = new BigNumber(0);
-
-    const rewardsTokens = pendingRewards._rewardsTokens;
-    for (let i = 0; i < rewardsTokens.length; i++) {
-        //get reward token amount
-        const rewardTokenAddress = rewardsTokens[i];
-        let rewardTokenContract = await ERC20.at(rewardTokenAddress);
-        let rewardTokenAmount = new BigNumber(await rewardTokenContract.balanceOf(harvesterAddress));
-        console.log('rewardToken ' + rewardTokenAddress + ' amount ' + rewardTokenAmount);
-
-        //exchange reward token to stablecoins
-        await topUp.impersonates([harvesterAddress]);
-        let rewardTokenUsd = new BigNumber(0);
-        if (rewardTokenAmount.isGreaterThan(0)) {
-            rewardTokenContract.approve(router, 0, { from: harvesterAddress });
-            rewardTokenContract.approve(router, rewardTokenAmount, { from: harvesterAddress });
-            const routerContract = await IUniswapV2.at(router);
-            let lastBlock = await getLatestBlock();
-            let oneDayAfterLastBlockTimestamp = lastBlock.timestamp + 24 * 60 * 60;
-            let exchangePath = rewardsExchangePath.get(rewardTokenAddress);
-            await routerContract.swapExactTokensForTokens(rewardTokenAmount, 0, exchangePath, harvesterAddress, oneDayAfterLastBlockTimestamp, { from: harvesterAddress });
-
-            //get reward token usd value
-            let stablecoinsAddress = exchangePath[exchangePath.length - 1];
-            let stablecoinContract = await ERC20.at(stablecoinsAddress);
-            let harvesterStablecoinAmount = await stablecoinContract.balanceOf(harvesterAddress);
-            rewardTokenUsd = new BigNumber(await valueInterpreter.calcCanonicalAssetValueInUsd(stablecoinsAddress, harvesterStablecoinAmount));
-            console.log('reward[%s] harvester Usd Amount %s', i, rewardTokenUsd);
-        }
-
-        rewardUsd = rewardUsd.plus(rewardTokenUsd);
-    }
-    return rewardUsd;
-}
-
 module.exports = {
     check,
-    exchangeRewardToken,
 };
