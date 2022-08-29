@@ -25,15 +25,15 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
     event UniV3SetMaxTwapDeviation(int24 _maxTwapDeviation);
     event UniV3SetTwapDuration(uint32 _twapDuration);
 
-    int24 public baseThreshold;
-    int24 public limitThreshold;
-    int24 public minTickMove;
-    int24 public maxTwapDeviation;
-    int24 public lastTick;
-    int24 public tickSpacing;
-    uint256 public period;
-    uint256 public lastTimestamp;
-    uint32 public twapDuration;
+    int24 internal baseThreshold;
+    int24 internal limitThreshold;
+    int24 internal minTickMove;
+    int24 internal maxTwapDeviation;
+    int24 internal lastTick;
+    int24 internal tickSpacing;
+    uint256 internal period;
+    uint256 internal lastTimestamp;
+    uint32 internal twapDuration;
 
     struct MintInfo {
         uint256 tokenId;
@@ -41,8 +41,8 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
         int24 tickUpper;
     }
 
-    MintInfo public baseMintInfo;
-    MintInfo public limitMintInfo;
+    MintInfo internal baseMintInfo;
+    MintInfo internal limitMintInfo;
 
     function initialize(
         address _vault,
@@ -73,6 +73,14 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
 
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
+    }
+
+    function getStatus() public view returns(int24 baseThreshold, int24 limitThreshold, int24 minTickMove, int24 maxTwapDeviation, int24 lastTick, int24 tickSpacing, uint256 period, uint256 lastTimestamp, uint32 twapDuration) {
+        return (baseThreshold, limitThreshold, minTickMove, maxTwapDeviation, lastTick, tickSpacing, period, lastTimestamp, twapDuration);
+    }
+
+    function getMintInfo() public view returns(uint256 baseTokenId, int24 baseTickUpper, int24 baseTickLower, uint256 limitTokenId, int24 limitTickUpper, int24 limitTickLower) {
+        return (baseMintInfo.tokenId, baseMintInfo.tickUpper, baseMintInfo.tickLower, limitMintInfo.tokenId, limitMintInfo.tickUpper, limitMintInfo.tickLower);
     }
 
     function getWantsInfo()

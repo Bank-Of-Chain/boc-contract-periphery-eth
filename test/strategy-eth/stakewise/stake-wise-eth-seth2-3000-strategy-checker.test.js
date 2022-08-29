@@ -54,12 +54,12 @@ describe('【StakeWiseEthSeth23000Strategy Strategy Checker】', function () {
         twap = new BigNumber(await stakeWiseEthSeth23000Strategy.getTwap());
         console.log('after swap twap: %s', twap.toFixed());
 
-        const beforeBaseMintInfo = await stakeWiseEthSeth23000Strategy.baseMintInfo();
-        console.log('before rebalance beforeBaseMintInfo.tokenId: ', beforeBaseMintInfo.tokenId);
+        const beforeBaseMintInfo = await stakeWiseEthSeth23000Strategy.getMintInfo();
+        console.log('before rebalance beforeBaseMintInfo.tokenId: ', beforeBaseMintInfo.baseTokenId);
         await stakeWiseEthSeth23000Strategy.rebalanceByKeeper({"from": keeper});
-        const afterBaseMintInfo = await stakeWiseEthSeth23000Strategy.baseMintInfo();
-        console.log('after rebalance afterBaseMintInfo.tokenId: ', afterBaseMintInfo.tokenId);
-        assert(beforeBaseMintInfo.tokenId !== afterBaseMintInfo.tokenId, 'rebalance fail');
+        const afterBaseMintInfo = await stakeWiseEthSeth23000Strategy.getMintInfo();
+        console.log('after rebalance afterBaseMintInfo.tokenId: ', afterBaseMintInfo.baseTokenId);
+        assert(beforeBaseMintInfo.baseTokenId !== afterBaseMintInfo.baseTokenId, 'rebalance fail');
         wantBalance = new BigNumber(await balanceOf(wants[0], investor));
         console.log('StakeWiseEthSeth23000Strategy uniswapV3RebalanceCallback 2 wantBalance: %d', wantBalance);
         wantToken.approve(mockUniswapV3Router.address, new BigNumber(2).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {from: investor});

@@ -39,8 +39,8 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         int24 tickUpper;
     }
 
-    MintInfo public baseMintInfo;
-    MintInfo public limitMintInfo;
+    MintInfo internal baseMintInfo;
+    MintInfo internal limitMintInfo;
 
     function _initialize(
         address _vault,
@@ -85,8 +85,12 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         return "1.0.0";
     }
 
-    function getStatus() public view returns(int24, int24, int24, int24, int24, int24, uint256, uint256, uint32) {
+    function getStatus() public view returns(int24 baseThreshold, int24 limitThreshold, int24 minTickMove, int24 maxTwapDeviation, int24 lastTick, int24 tickSpacing, uint256 period, uint256 lastTimestamp, uint32 twapDuration) {
         return (baseThreshold, limitThreshold, minTickMove, maxTwapDeviation, lastTick, tickSpacing, period, lastTimestamp, twapDuration);
+    }
+
+    function getMintInfo() public view returns(uint256 baseTokenId, int24 baseTickUpper, int24 baseTickLower, uint256 limitTokenId, int24 limitTickUpper, int24 limitTickLower) {
+        return (baseMintInfo.tokenId, baseMintInfo.tickUpper, baseMintInfo.tickLower, limitMintInfo.tokenId, limitMintInfo.tickUpper, limitMintInfo.tickLower);
     }
 
     function getWantsInfo() public view override virtual returns (address[] memory _assets, uint256[] memory _ratios) {

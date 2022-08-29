@@ -53,12 +53,12 @@ describe('【UniswapV3RethEth3000Strategy Strategy Checker】', function () {
 
         await topUp.topUpRocketPoolEthByAddress(new BigNumber(10).pow(4), strategy);
 
-        const beforeBaseMintInfo = await uniswapV3RethEth3000Strategy.baseMintInfo();
-        console.log('before rebalance beforeBaseMintInfo.tokenId: ', beforeBaseMintInfo.tokenId);
+        const beforeBaseMintInfo = await uniswapV3RethEth3000Strategy.getMintInfo();
+        console.log('before rebalance beforeBaseMintInfo.tokenId: ', beforeBaseMintInfo.baseTokenId);
         await uniswapV3RethEth3000Strategy.rebalanceByKeeper({"from": keeper});
-        const afterBaseMintInfo = await uniswapV3RethEth3000Strategy.baseMintInfo();
-        console.log('after rebalance afterBaseMintInfo.tokenId: ', afterBaseMintInfo.tokenId);
-        assert(beforeBaseMintInfo.tokenId !== afterBaseMintInfo.tokenId, 'rebalance fail');
+        const afterBaseMintInfo = await uniswapV3RethEth3000Strategy.getMintInfo();
+        console.log('after rebalance afterBaseMintInfo.tokenId: ', afterBaseMintInfo.baseTokenId);
+        assert(beforeBaseMintInfo.baseTokenId !== afterBaseMintInfo.baseTokenId, 'rebalance fail');
         wantBalance = new BigNumber(await balanceOf(wants[0], investor));
         console.log('UniswapV3RethEth3000Strategy uniswapV3RebalanceCallback 2 wantBalance: %d', wantBalance);
         wantToken.approve(mockUniswapV3Router.address, new BigNumber(50).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), { from: investor });

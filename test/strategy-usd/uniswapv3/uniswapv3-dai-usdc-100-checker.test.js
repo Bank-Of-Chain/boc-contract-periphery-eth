@@ -45,12 +45,12 @@ describe('【UniswapV3DaiUsdc100Strategy Strategy Checker】', function () {
 
         await topUp.topUpDaiByAddress(new BigNumber(10).pow(22), strategy);
 
-        const beforeBaseMintInfo = await uniswapV3DaiUsdc100Strategy.baseMintInfo();
-        console.log('before rebalance beforeBaseMintInfo.tokenId: ', beforeBaseMintInfo.tokenId);
+        const beforeBaseMintInfo = await uniswapV3DaiUsdc100Strategy.getMintInfo();
+        console.log('before rebalance beforeBaseMintInfo.tokenId: ', beforeBaseMintInfo.baseTokenId);
         await uniswapV3DaiUsdc100Strategy.rebalanceByKeeper({"from": keeper});
-        const afterBaseMintInfo = await uniswapV3DaiUsdc100Strategy.baseMintInfo();
-        console.log('after rebalance afterBaseMintInfo.tokenId: ', afterBaseMintInfo.tokenId);
-        assert(beforeBaseMintInfo.tokenId !== afterBaseMintInfo.tokenId, 'rebalance fail');
+        const afterBaseMintInfo = await uniswapV3DaiUsdc100Strategy.getMintInfo();
+        console.log('after rebalance afterBaseMintInfo.tokenId: ', afterBaseMintInfo.baseTokenId);
+        assert(beforeBaseMintInfo.baseTokenId !== afterBaseMintInfo.baseTokenId, 'rebalance fail');
 
         wantToken.approve(mockUniswapV3Router.address, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), { from: investor });
         await mockUniswapV3Router.swap("0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168", false, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
