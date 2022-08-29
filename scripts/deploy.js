@@ -72,6 +72,8 @@ const ETHVaultAdmin = 'ETHVaultAdmin';
 const ETHVaultBuffer = 'ETHVaultBuffer';
 const ETHPegToken = 'ETHPegToken';
 const PriceOracleConsumer = 'PriceOracleConsumer';
+const MockPriceOracleConsumer = 'MockPriceOracleConsumer';
+const MockValueInterpreter = 'MockValueInterpreter';
 const HarvestHelper = 'HarvestHelper';
 const ETH_INITIAL_ASSET_LIST = [
     MFC_PRODUCTION.ETH_ADDRESS,
@@ -713,8 +715,13 @@ const deploy_usd = async () => {
     if (isEmpty(addressMap[ParaSwapV5Adapter])) {
         paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
     }
-    if (isEmpty(addressMap[TestAdapter])) {
-        await deployBase(TestAdapter,[ValueInterpreter]);
+    if (hre.network.name == 'localhost') {
+        if (isEmpty(addressMap[MockValueInterpreter])) {
+            await deployBase(MockValueInterpreter, [ChainlinkPriceFeed, AggregatedDerivativePriceFeed, AccessControlProxy]);
+        }
+        if (isEmpty(addressMap[TestAdapter])) {
+            await deployBase(TestAdapter, [MockValueInterpreter]);
+        }
     }
 
     if (isEmpty(addressMap[ExchangeAggregator])) {
@@ -825,8 +832,13 @@ const deploy_eth = async () => {
     if (isEmpty(addressMap[ParaSwapV5Adapter])) {
         paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
     }
-    if (isEmpty(addressMap[ETHTestAdapter])) {
-        await deployBase(ETHTestAdapter,[PriceOracleConsumer]);
+    if (hre.network.name == 'localhost') {
+        if (isEmpty(addressMap[MockPriceOracleConsumer])) {
+            await deployProxyBase(MockPriceOracleConsumer, []);
+        }
+        if (isEmpty(addressMap[ETHTestAdapter])) {
+            await deployBase(ETHTestAdapter, [MockPriceOracleConsumer]);
+        }
     }
 
     const adapterArray = [addressMap[OneInchV4Adapter], addressMap[ParaSwapV5Adapter]];
