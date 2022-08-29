@@ -1142,14 +1142,14 @@ contract ETHVault is ETHVaultStorage {
             ) {
                 if (_gain > 0) {
                     require(
-                        _gain > maxAllowGainOrLossValue &&
+                        _gain <= maxAllowGainOrLossValue &&
                             _gain <=
                             ((_lastStrategyTotalDebt * _strategyParam.profitLimitRatio) / MAX_BPS),
                         "GL"
                     );
                 } else if (_loss > 0) {
                     require(
-                        _loss > maxAllowGainOrLossValue &&
+                        _loss <= maxAllowGainOrLossValue &&
                             _loss <=
                             ((_lastStrategyTotalDebt * _strategyParam.lossLimitRatio) / MAX_BPS),
                         "LL"
