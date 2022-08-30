@@ -112,7 +112,7 @@ async function transfer(asset, amount, from, to) {
     } else {
         const tokenContract = await ERC20.at(asset);
         await tokenContract.transfer(to, amount, {
-            from
+            from: from
         });
     }
 }
@@ -249,9 +249,9 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
                 // ratios: [100, 200]
                 // we assume that ETH amount is 20
                 // then, USDT amount = ETH amount * 200 / 100 = 40
-                amount = initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio);
+                amount = initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0,1);
             } else {
-                amount = initialAmount.multipliedBy(assetPrecision);
+                amount = initialAmount.multipliedBy(assetPrecision).toFixed(0,1);
             }
 
             let wantBalance = new BigNumber(await balanceOf(asset, investor));
