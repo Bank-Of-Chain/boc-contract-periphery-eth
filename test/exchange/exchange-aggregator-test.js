@@ -10,12 +10,13 @@ const AccessControlProxy = artifacts.require('AccessControlProxy')
 const ExchangeAggregator = artifacts.require('ExchangeAggregator')
 const OneInchV4Adapter = artifacts.require('OneInchV4Adapter')
 const ParaSwapV5Adapter = artifacts.require('ParaSwapV5Adapter')
+const NativeToken = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 
 const EXCHANGE_PLATFORMS = {
     oneInchV4: {
         useHttp: true,
         network: 1,
-        protocols: 'CURVE_V2,SUSHI,CURVE,UNISWAP_V2,UNISWAP_V3'
+        // protocols: 'CURVE_V2,SUSHI,CURVE,UNISWAP_V2,UNISWAP_V3'
     },
     paraswap: {
         network: 1,
@@ -33,16 +34,16 @@ const getExchangePlatformAdapters = async exchangeAggregator => {
     return exchangePlatformAdapters
 }
 
-const getTokenDetail = async function (tokenAddr) {
-    if (tokenAddr == '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
+async function getTokenDetail(tokenAddr) {
+    if (tokenAddr == NativeToken) {
         return { address: tokenAddr, symbol: 'ETH', decimals: 18 }
     }
     const token = await ERC20.at(tokenAddr);
     return { address: tokenAddr, symbol: await token.symbol(), decimals: Number(await token.decimals()) }
 }
 
-const balanceOfToken = async function (account, tokenAddr) {
-    if (tokenAddr == '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
+async function balanceOfToken(account, tokenAddr) {
+    if (tokenAddr == NativeToken) {
         return new BigNumber(await ethers.provider.getBalance(account));
     }
     const token = await ERC20.at(tokenAddr);
@@ -56,13 +57,68 @@ describe('ExchangeAggregator test.', function () {
     let farmer1
     let exchangeAggregator;
 
+    let tokenList = [
+        MFC.ETH_ADDRESS,
+        MFC.rocketPoolETH_ADDRESS,
+        MFC.stETH_ADDRESS,
+        MFC.DAI_ADDRESS,
+        MFC.USDC_ADDRESS,
+        MFC.TUSD_ADDRESS,
+        MFC.LUSD_ADDRESS,
+        MFC.USDT_ADDRESS,
+        MFC.wstETH_ADDRESS
+    ];
+
+    async function swap(srcTokenAddr, dstTokenAddr, srcAmount = new BigNumber(1e18)) {
+        let platformAdapter = {
+            paraswap: exchangePlatformAdapters.paraswap,
+            oneInchV4: exchangePlatformAdapters.oneInchV4
+        };
+        const srcTokenDetail = await getTokenDetail(srcTokenAddr);
+        const dstTokenDetail = await getTokenDetail(dstTokenAddr);
+
+        if (srcTokenAddr != NativeToken){
+            srcAmount = new BigNumber(100 * 1e18);
+            const srcBalance = await balanceOfToken(farmer1,srcTokenAddr);
+            if (srcAmount.isGreaterThan(srcBalance)){
+                srcAmount = srcBalance;
+            }
+        }
+        console.log('getBestSwapInfo## from:%s to:%s,amount:%s',srcTokenDetail.symbol,dstTokenDetail.symbol,srcAmount);
+        const SWAP_INFO = await getBestSwapInfo(srcTokenDetail,
+            dstTokenDetail, srcAmount, 4900, 4900, platformAdapter, EXCHANGE_PLATFORMS);
+        const swapDesc = {
+            amount: srcAmount.toString(),
+            srcToken: srcTokenDetail.address,
+            dstToken: dstTokenDetail.address,
+            receiver: farmer1
+        };
+        let tx;
+        if (srcTokenAddr == NativeToken) {
+            tx = await exchangeAggregator.swap(SWAP_INFO.platform, SWAP_INFO.method, SWAP_INFO.encodeExchangeArgs, swapDesc, { from: farmer1, value: srcAmount });
+        } else {
+            const token = await ERC20.at(swapDesc.srcToken);
+            await token.approve(exchangeAggregator.address, srcAmount, { from: farmer1 });
+            tx = await exchangeAggregator.swap(SWAP_INFO.platform, SWAP_INFO.method, SWAP_INFO.encodeExchangeArgs, swapDesc, { from: farmer1 });
+        }
+
+        expectEvent(tx, 'Swap', {
+            _platform: SWAP_INFO.platform,
+            _amount: srcAmount.toString(),
+            _srcToken: swapDesc.srcToken,
+            _dstToken: swapDesc.dstToken,
+            _exchangeAmount: (await balanceOfToken(farmer1, swapDesc.dstToken)).toFixed(),
+            _receiver: farmer1,
+            _sender: farmer1,
+        });
+    }
 
 
     before('INIT', async function () {
         await ethers.getSigners().then((resp) => {
             accounts = resp;
             governance = accounts[0].address;
-            farmer1 = accounts[1].address;
+            farmer1 = accounts[13].address;
             vault = accounts[2].address;
             keeper = accounts[19].address;
         });
@@ -78,76 +134,16 @@ describe('ExchangeAggregator test.', function () {
         exchangePlatformAdapters = await getExchangePlatformAdapters(exchangeAggregator);
     });
 
-    it('Case 1: ETH swap to USDT should success.', async function () {
-        let platformAdapter = {
-            // paraswap: exchangePlatformAdapters.paraswap,
-            oneInchV4: exchangePlatformAdapters.oneInchV4
-        };
-        const srcTokenDetail = await getTokenDetail(MFC.ETH_ADDRESS);
-        const dstTokenDetail = await getTokenDetail(MFC.USDT_ADDRESS);
-        const srcAmount = new BigNumber(1e18);
-
-        const SWAP_INFO = await getBestSwapInfo(srcTokenDetail,
-            dstTokenDetail, srcAmount, 4999, 4999, platformAdapter, EXCHANGE_PLATFORMS);
-        const swapDesc = {
-            amount: srcAmount.toString(),
-            srcToken: srcTokenDetail.address,
-            dstToken: dstTokenDetail.address,
-            receiver: farmer1
-        };
-        const tx = await exchangeAggregator.swap(SWAP_INFO.platform, SWAP_INFO.method, SWAP_INFO.encodeExchangeArgs, swapDesc, { from: farmer1, value: srcAmount });
-
-        expectEvent(tx, 'Exchanged', {
-            _sender: farmer1,
-            _platform: SWAP_INFO.platform,
-            _srcToken: swapDesc.srcToken,
-            _srcAmount: srcAmount.toString(),
-            _dstToken: swapDesc.dstToken,
-            _dstAmount: (await balanceOfToken(farmer1, swapDesc.dstToken)).toString()
-        })
-    });
-
-    it('Case 2: USDT swap to USDC on curve should success.', async function () {
-        let platformAdapter = {
-            // paraswap: exchangePlatformAdapters.paraswap,
-            oneInchV4: exchangePlatformAdapters.oneInchV4
-        };
-        const srcTokenDetail = await getTokenDetail(MFC.USDT_ADDRESS);
-        const dstTokenDetail = await getTokenDetail(MFC.USDC_ADDRESS);
-        const srcAmount = await balanceOfToken(farmer1, MFC.USDT_ADDRESS);
-        const srcPlusAmount = srcAmount.plus(1000);
-        const SWAP_INFO = await getBestSwapInfo(srcTokenDetail,
-            dstTokenDetail, srcPlusAmount, 4999, 4999, platformAdapter, {
-            oneInchV4: {
-                useHttp: true,
-                network: 1,
-                protocols: 'BALANCER_V2'
+    for (let i = 0; i < tokenList.length - 1; i++) {
+        const srcToken = tokenList[i];
+        const dstToken = tokenList[i + 1];
+        it(`Case ${i}: swap ${srcToken} to ${dstToken} should be success.`, async function () {
+            let srcAmount = await balanceOfToken(farmer1,srcToken);
+            if (srcToken == NativeToken){
+                srcAmount = new BigNumber(10 * 1e18);
             }
+            await swap(srcToken, dstToken,srcAmount);
         });
-        const swapDesc = {
-            amount: srcAmount.toString(),
-            srcToken: srcTokenDetail.address,
-            dstToken: dstTokenDetail.address,
-            receiver: farmer1
-        };
-        const dstTokenBalance1 = await balanceOfToken(farmer1, swapDesc.dstToken);
-        console.log('dstTokenBalance1:%d',dstTokenBalance1);
-        const token = await ERC20.at(swapDesc.srcToken);
-        await token.approve(exchangeAggregator.address, srcAmount, { from: farmer1 });
-        console.log('perpare srcAmount:%d',srcAmount);
-        
-        const tx = await exchangeAggregator.swap(SWAP_INFO.platform, SWAP_INFO.method, SWAP_INFO.encodeExchangeArgs, swapDesc, { from: farmer1, value: srcAmount });
+    }
 
-        const dstTokenBalance2 = await balanceOfToken(farmer1, swapDesc.dstToken);
-        console.log('dstTokenBalance2:%d',dstTokenBalance2);
-        
-        expectEvent(tx, 'Exchanged', {
-            _sender: farmer1,
-            _platform: SWAP_INFO.platform,
-            _srcToken: swapDesc.srcToken,
-            _srcAmount: srcAmount.toString(),
-            _dstToken: swapDesc.dstToken,
-            _dstAmount: (dstTokenBalance2.minus(dstTokenBalance1)).toString()
-        })
-    });
 });
