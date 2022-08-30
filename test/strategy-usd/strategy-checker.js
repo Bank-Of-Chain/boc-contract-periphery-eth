@@ -256,7 +256,7 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
             let amount;
 
             if (i !== 0) {
-                amount = new BigNumber(initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0));
+                amount = new BigNumber(initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0,1));
             } else {
                 amount = initialAmount.multipliedBy(assetPrecision);
             }
@@ -322,7 +322,7 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         pendingRewards = await strategy.harvest.call({
             from: keeper,
         });
-        // await strategy.harvest({ from: keeper });
+        await strategy.harvest({ from: keeper });
         // After the harvest is completed, IronBank needs to perform one more step to sell and reinvest the mine
         const rewardsTokens = pendingRewards._rewardsTokens;
         for (let i = 0; i < rewardsTokens.length; i++) {

@@ -249,9 +249,9 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
                 // ratios: [100, 200]
                 // we assume that ETH amount is 20
                 // then, USDT amount = ETH amount * 200 / 100 = 40
-                amount = initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0,1);
+                amount = new BigNumber(initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0,1));
             } else {
-                amount = initialAmount.multipliedBy(assetPrecision).toFixed(0,1);
+                amount = initialAmount.multipliedBy(assetPrecision);
             }
 
             let wantBalance = new BigNumber(await balanceOf(asset, investor));
