@@ -405,7 +405,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
         int24 _tickUpper,
         uint256 _amount0,
         uint256 _amount1
-    ) internal view returns (uint128) {
+    ) public view returns (uint128) {
         (uint160 _sqrtPriceX96, , , , , , ) = pool.slot0();
         return
             LiquidityAmounts.getLiquidityForAmounts(

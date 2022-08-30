@@ -71,10 +71,10 @@ const setUsdcMinter = async (nextMinter, minterAmount) => {
 
     const callback = await impersonates([masterMinter])
     const isMinterBefore = await TOKEN.isMinter(nextMinter)
-    console.log("USDC isMinter before=", isMinterBefore)
+    // console.log("USDC isMinter before=", isMinterBefore)
     await TOKEN.configureMinter(nextMinter, minterAmount, { from: masterMinter })
     const isMinterAfter = await TOKEN.isMinter(nextMinter)
-    console.log("USDC isMinter after=", isMinterAfter)
+    // console.log("USDC isMinter after=", isMinterAfter)
     await callback()
 }
 
@@ -85,10 +85,10 @@ async function topUpMain (token, tokenHolder, toAddress, amount) {
     const TOKEN = await IEREC20Mint.at(token)
     const tokenName = await TOKEN.name()
     const farmerBalance = await TOKEN.balanceOf(tokenHolder)
-    console.log(
-        `[Transfer]Start recharge ${tokenName}，Balance of token holder：%s`,
-        new BigNumber(farmerBalance).toFormat(),
-    )
+    // console.log(
+    //     `[Transfer]Start recharge ${tokenName}，Balance of token holder：%s`,
+    //     new BigNumber(farmerBalance).toFormat(),
+    // )
 
     amount = amount.gt ? amount : new BigNumber(amount)
     // If the amount to be recharged is greater than the current account balance, the recharge is for the largest balance
@@ -96,8 +96,8 @@ async function topUpMain (token, tokenHolder, toAddress, amount) {
     await TOKEN.transfer(toAddress, nextAmount, {
         from: tokenHolder,
     })
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     return nextAmount
 }
 
@@ -114,7 +114,7 @@ async function topUpMainV2 (token, toAddress, amount) {
     await send.ether(accounts[0].address, tokenOwner, 10 * 10 ** 18)
 
     const nextAmount = new BigNumber(amount)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
     await impersonates([tokenOwner])
     await TOKEN.issue(nextAmount, {
         from: tokenOwner,
@@ -122,8 +122,8 @@ async function topUpMainV2 (token, toAddress, amount) {
     await TOKEN.transfer(toAddress, nextAmount, {
         from: tokenOwner,
     })
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     return amount
 }
 
@@ -138,13 +138,13 @@ async function topUpMainV2_1 (token, toAddress, amount) {
     const accounts = await ethers.getSigners()
     await send.ether(accounts[0].address, tokenOwner, 10 * 10 ** 18)
     const nextAmount = new BigNumber(amount)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
     await impersonates([tokenOwner])
     await TOKEN.mint(toAddress, nextAmount, {
         from: tokenOwner,
     })
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     return amount
 }
 
@@ -160,7 +160,7 @@ async function topUpMainV2_2 (token, toAddress, amount) {
     await send.ether(accounts[0].address, tokenOwner, 10 * 10 ** 18)
 
     const nextAmount = new BigNumber(amount)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
     await impersonates([tokenOwner])
 
     await TOKEN.increaseSupply(nextAmount, {
@@ -169,8 +169,8 @@ async function topUpMainV2_2 (token, toAddress, amount) {
     await TOKEN.transfer(toAddress, nextAmount, {
         from: tokenOwner,
     })
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     return amount
 }
 
@@ -183,7 +183,7 @@ async function topUpUsdtByAddress (amount = new BigNumber(10 * 6), toAddress) {
     const tokenOwner = await TOKEN.owner()
     const tokenName = await TOKEN.name()
     const nextAmount = new BigNumber(amount)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
 
     // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
     await sendEthers(tokenOwner)
@@ -196,8 +196,8 @@ async function topUpUsdtByAddress (amount = new BigNumber(10 * 6), toAddress) {
         from: tokenOwner,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     await callback()
     return amount
 }
@@ -211,7 +211,7 @@ async function topUpDaiByAddress (amount = new BigNumber(10 ** 18), toAddress) {
     const tokenName = await TOKEN.name()
     const tokenOwner = "0x9759a6ac90977b93b58547b4a71c78317f391a28"
     const nextAmount = new BigNumber(amount)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
 
     // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
     await sendEthers(tokenOwner)
@@ -221,8 +221,8 @@ async function topUpDaiByAddress (amount = new BigNumber(10 ** 18), toAddress) {
         from: tokenOwner,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     await callback()
     return amount
 }
@@ -236,14 +236,14 @@ async function topUpUsdcByAddress (amount = new BigNumber(10 ** 6), toAddress) {
     const TOKEN = await IERC20_USDC.at(addresses.USDC_ADDRESS)
     const tokenName = await TOKEN.name()
     const nextAmount = new BigNumber(amount)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
 
     await setUsdcMinter(accounts[0].address, amount)
 
     await TOKEN.mint(toAddress, nextAmount, { from: accounts[0].address })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     return amount
 }
 
@@ -284,7 +284,7 @@ async function topUpTusdByAddress (amount = new BigNumber(10 ** 18), toAddress) 
     const tokenName = await TOKEN.name()
     const tokenOwner = await TOKEN.owner()
     const nextAmount = new BigNumber(amount)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
 
     // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
     await sendEthers(tokenOwner)
@@ -294,8 +294,8 @@ async function topUpTusdByAddress (amount = new BigNumber(10 ** 18), toAddress) 
         from: tokenOwner,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     await callback()
     return amount
 }
@@ -315,7 +315,7 @@ async function topUpLusdByAddress (amount = new BigNumber(10 ** 18), toAddress) 
     const tokenName = await TOKEN.name()
     const tokenOwner = await TOKEN.borrowerOperationsAddress()
     const nextAmount = new BigNumber(amount)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
 
     // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
     await sendEthers(tokenOwner)
@@ -325,8 +325,8 @@ async function topUpLusdByAddress (amount = new BigNumber(10 ** 18), toAddress) 
         from: tokenOwner,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     await callback()
     return amount
 }
@@ -397,11 +397,11 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
     if (isEmpty(to)) return 0
     const tokenName = "ETH"
     const nextAmount = new BigNumber(amount)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
     const beforeBalance = await balance.current(to)
     await sendEthers(to, nextAmount.plus(beforeBalance))
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await await balance.current(to)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await await balance.current(to)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
 }
 
 
@@ -419,7 +419,7 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
 
     await topUpEthByAddress(nextAmount, account0)
 
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
 
     await TOKEN.deposit({ from: account0, value: nextAmount })
 
@@ -427,8 +427,8 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
         from: account0,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     return amount
 }
 
@@ -447,7 +447,7 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
 
     await topUpEthByAddress(nextAmount, account0)
 
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
 
     await removeSTETHStakeLimit()
 
@@ -456,8 +456,8 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
         from: account0,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     return amount
 }
 
@@ -476,7 +476,7 @@ async function topUpWstEthByAddress(amount = new BigNumber(10 ** 18), to) {
 
     await topUpSTETHByAddress(stEthAmount, account0)
 
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
 
     const stETHTOKEN = await IERC20_STETH.at(addresses.stETH_ADDRESS)
     const balanceOfSTETH = await stETHTOKEN.balanceOf(account0)
@@ -488,8 +488,8 @@ async function topUpWstEthByAddress(amount = new BigNumber(10 ** 18), to) {
         from: account0,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     return amount
 }
 
@@ -509,7 +509,7 @@ async function topUpRocketPoolEthByAddress(amount = new BigNumber(10 ** 18), to)
     const rethAmount = nextAmount.multipliedBy(rethValue).div(decimal).multipliedBy(101).div(100)
     await topUpEthByAddress(decimal, tokenOwner)
     await topUpEthByAddress(rethAmount, tokenOwner)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    // console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
 
     impersonates([tokenOwner])
 
@@ -517,8 +517,8 @@ async function topUpRocketPoolEthByAddress(amount = new BigNumber(10 ** 18), to)
         from: tokenOwner,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
-    console.log(`${tokenName} recharge completed`)
+    // console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    // console.log(`${tokenName} recharge completed`)
     return amount
 }
 
@@ -595,10 +595,10 @@ const tranferBackDai = async address => {
     await underlying.transfer(underlyingWhale, farmerBalance, {
         from: address,
     })
-    console.log(
-        `${tokenName} balance of the whale：` +
-            new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
-    )
+    // console.log(
+    //     `${tokenName} balance of the whale：` +
+    //         new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
+    // )
 }
 
 /**
@@ -614,10 +614,10 @@ const tranferBackUsdc = async address => {
     await underlying.transfer(underlyingWhale, farmerBalance, {
         from: address,
     })
-    console.log(
-        `${tokenName} balance of the whale：` +
-            new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
-    )
+    // console.log(
+    //     `${tokenName} balance of the whale：` +
+    //         new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
+    // )
 }
 
 /**
@@ -633,10 +633,10 @@ const tranferBackUsdt = async address => {
     await underlying.transfer(underlyingWhale, farmerBalance, {
         from: address,
     })
-    console.log(
-        `${tokenName} balance of the whale：` +
-            new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
-    )
+    // console.log(
+    //     `${tokenName} balance of the whale：` +
+    //         new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
+    // )
 }
 
 module.exports = {

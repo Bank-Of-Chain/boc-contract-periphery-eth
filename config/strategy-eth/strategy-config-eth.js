@@ -5,11 +5,11 @@ const {stakewiseStrategies} = require('./strategy-config-eth-stakewise');
 const {yearnStrategies} = require('./strategy-config-eth-yearn');
 
 const strategiesList = [
-    ...auraStrategies,
-    ...convexStrategies,
-    ...uniswapStrategies,
-    ...stakewiseStrategies,
-    ...yearnStrategies
+    // ...auraStrategies,
+    // ...convexStrategies,
+    // ...uniswapStrategies,
+    // ...stakewiseStrategies,
+    // ...yearnStrategies
 ]
 
 exports.strategiesList = strategiesList

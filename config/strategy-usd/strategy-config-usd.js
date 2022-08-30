@@ -8,10 +8,10 @@ const {uniswapStrategies} = require('./strategy-config-usd-uniswap');
 const {yearnStrategies} = require('./strategy-config-usd-yearn');
 
 const strategiesList = [
-    ...auraStrategies,
-    ...convexStrategies,
-    ...dForceStrategies,
-    ...dodoStrategies,
+    // ...auraStrategies,
+    // ...convexStrategies,
+    // ...dForceStrategies,
+    // ...dodoStrategies,
     // ...stargateStrategies,
     // ...sushiStrategies,
     ...uniswapStrategies,
