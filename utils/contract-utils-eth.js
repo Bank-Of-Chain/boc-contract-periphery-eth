@@ -50,7 +50,7 @@ const ExchangeAggregator = hre.artifacts.require('ExchangeAggregator');
 const EthOneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
 const EthParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
 
-const IExchangeAdapter = hre.artifacts.require('IExchangeAdapter');
+const MockValueInterpreter = hre.artifacts.require('MockValueInterpreter');
 const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
 const TestAdapter = hre.artifacts.require("TestAdapter");
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');

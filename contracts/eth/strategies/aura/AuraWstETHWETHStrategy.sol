@@ -334,7 +334,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         uint256 _balanceOfLdo = balanceOfToken(LDO);
         if (_balanceOfLdo > 0) {
             IERC20Upgradeable(LDO).safeApprove(address(SUSHIROUTER2), 0);
-            IERC20Upgradeable(LDO).safeApprove(address(SUSHIROUTER2), _balanceOfAura);
+            IERC20Upgradeable(LDO).safeApprove(address(SUSHIROUTER2), _balanceOfLdo);
             SUSHIROUTER2.swapExactTokensForTokens(
                 _balanceOfLdo,
                 0,
