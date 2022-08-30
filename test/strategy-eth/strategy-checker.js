@@ -13,7 +13,7 @@ const { send } = require('@openzeppelin/test-helpers');
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 const AccessControlProxy = hre.artifacts.require('AccessControlProxy');
 const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
-const MockVault = hre.artifacts.require('contracts/eth/mock/MockVault.sol:MockVault');
+const MockVault = hre.artifacts.require('MockETHVault');
 const Mock3rdEthPool = hre.artifacts.require('contracts/eth/mock/Mock3rdEthPool.sol:Mock3rdEthPool');
 const MockUniswapV3Router = hre.artifacts.require('contracts/eth/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
 

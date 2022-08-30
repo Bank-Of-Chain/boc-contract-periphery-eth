@@ -9,7 +9,7 @@ import "../oracle/IPriceOracleConsumer.sol";
 import "../strategies/IETHStrategy.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 
-contract MockVault is AccessControlMixin {
+contract MockETHVault is AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public priceProvider;
 
