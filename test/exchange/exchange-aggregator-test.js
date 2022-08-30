@@ -15,7 +15,7 @@ const EXCHANGE_PLATFORMS = {
     oneInchV4: {
         useHttp: true,
         network: 1,
-        protocols: 'UNISWAP_V3'
+        protocols: 'CURVE_V2,SUSHI,CURVE,UNISWAP_V2,UNISWAP_V3'
     },
     paraswap: {
         network: 1,
