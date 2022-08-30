@@ -80,21 +80,25 @@ const main = async () => {
             }
 
             const eventData = event.data;
-            switch (event.eventName) {
-                case 'Swap':
-                    await swap(eventData.sender, poolAddress, eventData.amount0, eventData.amount1);
-                    break;
-                case 'Mint':
-                    await mint(eventData.owner, poolAddress, eventData.tickLower, eventData.tickUpper, eventData.amount0, eventData.amount1, eventData.amount);
-                    break;
-                case 'Burn':
-                    await burn(eventData.owner, poolAddress, eventData.tickLower, eventData.tickUpper, eventData.amount, eventData.amount0, eventData.amount1);
-                    break;
-                case 'Collect':
-                    await collect(eventData.owner, poolAddress, eventData.tickLower, eventData.tickUpper, eventData.amount0, eventData.amount1, eventData.recipient);
-                    break;
-                default:
-                    throw new Error('Unsupported product!');
+            try {
+                switch (event.eventName) {
+                    case 'Swap':
+                        await swap(eventData.sender, poolAddress, eventData.amount0, eventData.amount1);
+                        break;
+                    case 'Mint':
+                        await mint(eventData.owner, poolAddress, eventData.tickLower, eventData.tickUpper, eventData.amount0, eventData.amount1, eventData.amount);
+                        break;
+                    case 'Burn':
+                        await burn(eventData.owner, poolAddress, eventData.tickLower, eventData.tickUpper, eventData.amount, eventData.amount0, eventData.amount1);
+                        break;
+                    case 'Collect':
+                        await collect(eventData.owner, poolAddress, eventData.tickLower, eventData.tickUpper, eventData.amount0, eventData.amount1, eventData.recipient);
+                        break;
+                    default:
+                        throw new Error('Unsupported product!');
+                }
+            } catch (e) {
+                console.log(`=== switch case error: ${e} ===`);
             }
 
             count++;
