@@ -253,12 +253,14 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
             } else {
                 amount = initialAmount.multipliedBy(assetPrecision);
             }
-
+            amount = amount.integerValue();
             let wantBalance = new BigNumber(await balanceOf(asset, investor));
             
             console.log('want:%s,balance:%d,amount:%d', asset, wantBalance, amount);
             // check balance enough
             if (wantBalance.gte(amount)) {
+                console.log('transfer amount:%s,%s',asset,amount);
+                
                 await transfer(asset, amount, investor, mockVault.address);
                 depositedAmounts.push(amount);
                 if (asset === MFC.ETH_ADDRESS) {

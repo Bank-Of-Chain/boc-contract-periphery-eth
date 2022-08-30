@@ -268,6 +268,7 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
             if (amount.gte(wantBalance)) {
                 amount = wantBalance;
             }
+            amount = amount.integerValue();
             await assetContract.transfer(mockVault.address, amount, {
                 from: investor,
             });
