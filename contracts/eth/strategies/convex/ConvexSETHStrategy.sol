@@ -4,10 +4,10 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "../../../external/curve/ICurveLiquidityPoolPayable.sol";
-import "./ConvexBaseStrategy.sol";
+import "./ETHConvexBaseStrategy.sol";
 import "../../../external/weth/IWeth.sol";
 
-contract ConvexSETHStrategy is ConvexBaseStrategy {
+contract ConvexSETHStrategy is ETHConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address private constant sETH = 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb;
 

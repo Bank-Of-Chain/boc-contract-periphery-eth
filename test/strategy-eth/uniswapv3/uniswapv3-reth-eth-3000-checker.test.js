@@ -6,10 +6,10 @@ const topUp = require('../../../utils/top-up-utils');
 const MFC = require('../../../config/mainnet-fork-test-config');
 
 const { advanceBlock } = require('../../../utils/block-utils');
-const MockUniswapV3Router = hre.artifacts.require('contracts/eth/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
+const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
 const UniswapV3RethEth3000Strategy = hre.artifacts.require("ETHUniswapV3Strategy");
 
-describe('【UniswapV3RethEth3000Strategy Strategy Checker】', function () {
+describe('uniswapv3-reth-eth-3000-checker', function () {
     checker.check('UniswapV3RethEth3000Strategy', async function (strategy) {
         const accounts = await ethers.getSigners();
         const investor = accounts[1].address;

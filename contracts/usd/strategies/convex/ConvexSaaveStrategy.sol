@@ -11,8 +11,6 @@ import "./ConvexBaseStrategy.sol";
 contract ConvexSaaveStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    address private constant CRV = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
-    address private constant CVX = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
     address private constant STKAAVE = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
 
     function initialize(

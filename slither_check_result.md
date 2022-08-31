@@ -14,7 +14,7 @@ Summary
 ## name-reused
 Impact: High
 Confidence: High
- - [ ] ID-0
+ - [x] ID-0
 MockUniswapV3Router is re-used:
 	- [MockUniswapV3Router](contracts/eth/mock/MockUniswapV3Router.sol#L16-L74)
 	- [MockUniswapV3Router](contracts/usd/mock/MockUniswapV3Router.sol#L16-L74)
@@ -22,7 +22,7 @@ MockUniswapV3Router is re-used:
 contracts/eth/mock/MockUniswapV3Router.sol#L16-L74
 
 
- - [ ] ID-1
+ - [x] ID-1
 ICurveMini is re-used:
 	- [ICurveMini](contracts/usd/strategies/convex/ib-usdc/ConvexIBUsdcStrategy.sol#L22-L60)
 	- [ICurveMini](contracts/usd/strategies/convex/ib/ConvexIBUsdtStrategy.sol#L22-L29)
@@ -30,62 +30,62 @@ ICurveMini is re-used:
 contracts/usd/strategies/convex/ib-usdc/ConvexIBUsdcStrategy.sol#L22-L60
 
 
- - [ ] ID-2
+ - [x] ID-2
 ConvexBaseStrategy is re-used:
-	- [ConvexBaseStrategy](contracts/eth/strategies/convex/ConvexBaseStrategy.sol#L11-L116)
+	- [ConvexBaseStrategy](contracts/eth/strategies/convex/ConvexBaseStrategy.sol#L11-L116)=>ETHConvexBaseStrategy
 	- [ConvexBaseStrategy](contracts/usd/strategies/convex/ConvexBaseStrategy.sol#L11-L97)
 
 contracts/eth/strategies/convex/ConvexBaseStrategy.sol#L11-L116
 
 
- - [ ] ID-3
+ - [x] ID-3
 MockVault is re-used:
-	- [MockVault](contracts/eth/mock/MockVault.sol#L12-L76)
+	- [MockVault](contracts/eth/mock/MockVault.sol#L12-L76) =>changed
 	- [MockVault](contracts/usd/mock/MockVault.sol#L10-L47)
 
 contracts/eth/mock/MockVault.sol#L12-L76
 
 
- - [ ] ID-4
+ - [x] ID-4
 AggregatorInterface is re-used:
-	- [AggregatorInterface](contracts/eth/mock/MockPriceOracleConsumer.sol#L14-L24)
+	- [AggregatorInterface](contracts/eth/mock/MockPriceOracleConsumer.sol#L14-L24)=> deleted
 	- [AggregatorInterface](contracts/eth/oracle/PriceOracleConsumer.sol#L14-L24)
 
 contracts/eth/mock/MockPriceOracleConsumer.sol#L14-L24
 
 
-## shadowing-state
+## shadowing-state => delete shadow one
 Impact: High
 Confidence: High
- - [ ] ID-5
+ - [x] ID-5
 [ConvexSusdStrategy.CVX](contracts/usd/strategies/convex/ConvexSusdStrategy.sol#L16) shadows:
 	- [ConvexBaseStrategy.CVX](contracts/usd/strategies/convex/ConvexBaseStrategy.sol#L17)
 
 contracts/usd/strategies/convex/ConvexSusdStrategy.sol#L16
 
 
- - [ ] ID-6
+ - [x] ID-6
 [ConvexSaaveStrategy.CVX](contracts/usd/strategies/convex/ConvexSaaveStrategy.sol#L15) shadows:
 	- [ConvexBaseStrategy.CVX](contracts/usd/strategies/convex/ConvexBaseStrategy.sol#L17)
 
 contracts/usd/strategies/convex/ConvexSaaveStrategy.sol#L15
 
 
- - [ ] ID-7
+ - [x] ID-7
 [ConvexSusdStrategy.CRV](contracts/usd/strategies/convex/ConvexSusdStrategy.sol#L15) shadows:
 	- [ConvexBaseStrategy.CRV](contracts/usd/strategies/convex/ConvexBaseStrategy.sol#L16)
 
 contracts/usd/strategies/convex/ConvexSusdStrategy.sol#L15
 
 
- - [ ] ID-8
+ - [x] ID-8
 [ConvexSaaveStrategy.CRV](contracts/usd/strategies/convex/ConvexSaaveStrategy.sol#L14) shadows:
 	- [ConvexBaseStrategy.CRV](contracts/usd/strategies/convex/ConvexBaseStrategy.sol#L16)
 
 contracts/usd/strategies/convex/ConvexSaaveStrategy.sol#L14
 
 
-## uninitialized-state
+## uninitialized-state 
 Impact: High
 Confidence: High
  - [ ] ID-9
@@ -235,7 +235,7 @@ contracts/eth/vault/ETHVaultStorage.sol#L144
 node_modules/boc-contract-core/contracts/vault/VaultStorage.sol#L155
 
 
-## arbitrary-send
+## arbitrary-send ==> did not deal
 Impact: High
 Confidence: Medium
  - [ ] ID-26
@@ -404,76 +404,76 @@ Reentrancy in [ETHVault.burn(uint256,uint256)](contracts/eth/vault/ETHVault.sol#
 contracts/eth/vault/ETHVault.sol#L188-L227
 
 
-## unchecked-transfer
-Impact: High
+## unchecked-transfer => use safeTransfer or xxx
+Impact: High ==> delete ETHExchanger
 Confidence: Medium
- - [ ] ID-42
+ - [x] ID-42
 [ETHExchanger.eth2wEth(address)](contracts/eth/exchanges/ETHExchanger.sol#L107-L113) ignores return value by [IERC20(wETH).transfer(_receiver,_wEthAmount)](contracts/eth/exchanges/ETHExchanger.sol#L112)
 
 contracts/eth/exchanges/ETHExchanger.sol#L107-L113
 
 
- - [ ] ID-43
+ - [x] ID-43
 [ETHExchanger.stEth2Eth(address,uint256)](contracts/eth/exchanges/ETHExchanger.sol#L38-L47) ignores return value by [IERC20(stETH).transferFrom(_receiver,address(this),_stEthAmount)](contracts/eth/exchanges/ETHExchanger.sol#L39)
 
 contracts/eth/exchanges/ETHExchanger.sol#L38-L47
 
 
- - [ ] ID-44
+ - [x] ID-44
 [ETHExchanger.eth2wstEth(address)](contracts/eth/exchanges/ETHExchanger.sol#L49-L62) ignores return value by [IERC20(wstETH).transfer(_receiver,_wstEthAmount)](contracts/eth/exchanges/ETHExchanger.sol#L61)
 
 contracts/eth/exchanges/ETHExchanger.sol#L49-L62
 
 
- - [ ] ID-45
+ - [x] ID-45
 [ETHExchanger.wstEth2Eth(address,uint256)](contracts/eth/exchanges/ETHExchanger.sol#L64-L77) ignores return value by [IERC20(wstETH).transferFrom(_receiver,address(this),_wstEthAmount)](contracts/eth/exchanges/ETHExchanger.sol#L65)
 
 contracts/eth/exchanges/ETHExchanger.sol#L64-L77
 
 
- - [ ] ID-46
+ - [x] ID-46
 [ETHExchanger.wEth2Eth(address,uint256)](contracts/eth/exchanges/ETHExchanger.sol#L115-L125) ignores return value by [IERC20(wETH).transferFrom(_receiver,address(this),_wEthAmount)](contracts/eth/exchanges/ETHExchanger.sol#L116)
 
 contracts/eth/exchanges/ETHExchanger.sol#L115-L125
 
 
- - [ ] ID-47
+ - [x] ID-47
 [Mock3rdEthPool.withdraw()](contracts/eth/mock/Mock3rdEthPool.sol#L19-L30) ignores return value by [IERC20Upgradeable(stETH).transfer(msg.sender,_amounts[1])](contracts/eth/mock/Mock3rdEthPool.sol#L29)
 
 contracts/eth/mock/Mock3rdEthPool.sol#L19-L30
 
 
- - [ ] ID-48
+ - [x] ID-48
 [Mock3rdEthPool.deposit(address[],uint256[])](contracts/eth/mock/Mock3rdEthPool.sol#L13-L17) ignores return value by [IERC20Upgradeable(stETH).transferFrom(msg.sender,address(this),_amounts[1])](contracts/eth/mock/Mock3rdEthPool.sol#L16)
 
 contracts/eth/mock/Mock3rdEthPool.sol#L13-L17
 
 
- - [ ] ID-49
+ - [x] ID-49
 [ETHExchanger.eth2stEth(address)](contracts/eth/exchanges/ETHExchanger.sol#L28-L36) ignores return value by [IERC20(stETH).transfer(_receiver,_stEthAmount)](contracts/eth/exchanges/ETHExchanger.sol#L35)
 
 contracts/eth/exchanges/ETHExchanger.sol#L28-L36
 
 
- - [ ] ID-50
+ - [x] ID-50
 [ConvexIBUsdcStrategy.harvest()](contracts/usd/strategies/convex/ib-usdc/ConvexIBUsdcStrategy.sol#L433-L483) ignores return value by [IERC20Upgradeable(RKPR).transfer(harvester,_rkprBalance)](contracts/usd/strategies/convex/ib-usdc/ConvexIBUsdcStrategy.sol#L459)
 
 contracts/usd/strategies/convex/ib-usdc/ConvexIBUsdcStrategy.sol#L433-L483
 
 
- - [ ] ID-51
+ - [x] ID-51
 [ETHExchanger.rEth2Eth(address,uint256)](contracts/eth/exchanges/ETHExchanger.sol#L90-L105) ignores return value by [IERC20(rETH).transferFrom(_receiver,address(this),_rEthAmount)](contracts/eth/exchanges/ETHExchanger.sol#L91)
 
 contracts/eth/exchanges/ETHExchanger.sol#L90-L105
 
 
- - [ ] ID-52
+ - [x] ID-52
 [ConvexIBUsdtStrategy.harvest()](contracts/usd/strategies/convex/ib/ConvexIBUsdtStrategy.sol#L315-L359) ignores return value by [IERC20Upgradeable(RKPR).transfer(harvester,_rkprBalance)](contracts/usd/strategies/convex/ib/ConvexIBUsdtStrategy.sol#L338)
 
 contracts/usd/strategies/convex/ib/ConvexIBUsdtStrategy.sol#L315-L359
 
 
-## incorrect-equality
+## incorrect-equality => did not deal
 Impact: Medium
 Confidence: High
  - [ ] ID-53
@@ -525,7 +525,7 @@ contracts/exchanges/utils/ParaSwapV5ActionsMixin.sol#L51-L60
 node_modules/boc-contract-core/contracts/vault/Vault.sol#L728-L746
 
 
- - [ ] ID-60
+ - [ ] ID-60 =>  use LT 1 or 2
 [VaultBuffer.distributeOnce()](node_modules/boc-contract-core/contracts/vault/VaultBuffer.sol#L124-L138) uses a dangerous strict equality:
 	- [require(bool,string)(IERC20Upgradeable(_asset).balanceOf(address(this)) == 0,cash remain.)](node_modules/boc-contract-core/contracts/vault/VaultBuffer.sol#L132)
 
@@ -546,7 +546,7 @@ contracts/eth/vault/ETHVault.sol#L856-L907
 contracts/eth/vault/ETHVaultAdmin.sol#L168-L192
 
 
- - [ ] ID-63
+ - [ ] ID-63 =>  use LT 1 or 2
 [VaultBuffer.distributeOnce()](node_modules/boc-contract-core/contracts/vault/VaultBuffer.sol#L124-L138) uses a dangerous strict equality:
 	- [require(bool,string)(address(this).balance == 0,cash remain.)](node_modules/boc-contract-core/contracts/vault/VaultBuffer.sol#L130)
 
@@ -619,7 +619,7 @@ contracts/eth/vault/ETHVaultAdmin.sol#L258-L290
 ## locked-ether
 Impact: Medium
 Confidence: High
- - [ ] ID-73
+ - [ ] ID-73 => No problem, ETHVault Inherited ETHVaultAdmin have a function to withdraw the ether <br>
 Contract locking ether found:
 	Contract [ETHVaultAdmin](contracts/eth/vault/ETHVaultAdmin.sol#L12-L349) has payable functions:
 	 - [ETHVaultAdmin.receive()](contracts/eth/vault/ETHVaultAdmin.sol#L17)
@@ -1009,7 +1009,7 @@ contracts/usd/strategies/convex/ib-usdc/ConvexIBUsdcStrategy.sol#L664-L683
 ## reentrancy-no-eth
 Impact: Medium
 Confidence: Medium
- - [ ] ID-121
+ - [x] ID-121 =>  add 'nonReentrant' modifier on ETHBaseStrategy.repay,baseMintInfo = MintInfo(0,0,0) => delete baseMintInfo; <br>
 Reentrancy in [UniswapV3Strategy.withdrawFrom3rdPool(uint256,uint256,uint256)](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L255-L269):
 	External calls:
 	- [harvest()](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L261)
@@ -1032,7 +1032,7 @@ Reentrancy in [UniswapV3Strategy.withdrawFrom3rdPool(uint256,uint256,uint256)](c
 contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L255-L269
 
 
- - [ ] ID-122
+ - [ ] ID-122 had 'nonReentrant' modifier,no problem
 Reentrancy in [ETHVault.endAdjustPosition()](contracts/eth/vault/ETHVault.sol#L415-L537):
 	External calls:
 	- [_totalShares = _rebase(_totalValueOfNow - _transferAssets,_totalShares)](contracts/eth/vault/ETHVault.sol#L502)
@@ -1047,7 +1047,7 @@ Reentrancy in [ETHVault.endAdjustPosition()](contracts/eth/vault/ETHVault.sol#L4
 contracts/eth/vault/ETHVault.sol#L415-L537
 
 
- - [ ] ID-123
+ - [x] ID-123  => add 'nonReentrant' modifier on function 'rebalanceByKeeper' <br>
 Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279):
 	External calls:
 	- [harvest()](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L243)
@@ -1078,10 +1078,11 @@ Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategi
 contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279
 
 
- - [ ] ID-124
+ - [ ] ID-124 => first burn ,then safeTransfer <br>
 Reentrancy in [VaultBuffer._distribute()](node_modules/boc-contract-core/contracts/vault/VaultBuffer.sol#L140-L168):
 	External calls:
 	- [_pegToken.safeTransfer(_account,_transferAmount)](node_modules/boc-contract-core/contracts/vault/VaultBuffer.sol#L161)
+
 	State variables written after the call(s):
 	- [_burn(_account,_share)](node_modules/boc-contract-core/contracts/vault/VaultBuffer.sol#L162)
 		- [mTotalSupply -= _amount](node_modules/boc-contract-core/contracts/vault/VaultBuffer.sol#L411)
@@ -1089,7 +1090,7 @@ Reentrancy in [VaultBuffer._distribute()](node_modules/boc-contract-core/contrac
 node_modules/boc-contract-core/contracts/vault/VaultBuffer.sol#L140-L168
 
 
- - [ ] ID-125
+ - [ ] ID-125 => no problem, call by function burn which has 'nonReentrant' modifier<br>
 Reentrancy in [Vault._replayToVault(uint256,uint256,address[],uint256[],uint256[])](node_modules/boc-contract-core/contracts/vault/Vault.sol#L894-L941):
 	External calls:
 	- [_totalAssetInVault = _totalAssetInVault + _repayFromVaultBuffer(_actualAsset - _totalAssetInVault,_trackedAssets,_assetPrices,_assetDecimals,_currentTotalAssets,_currentTotalShares)](node_modules/boc-contract-core/contracts/vault/Vault.sol#L925-L934)
@@ -1104,7 +1105,7 @@ Reentrancy in [Vault._replayToVault(uint256,uint256,address[],uint256[],uint256[
 node_modules/boc-contract-core/contracts/vault/Vault.sol#L894-L941
 
 
- - [ ] ID-126
+ - [x] ID-126  =>  add 'nonReentrant' modifier on function 'rebalanceByKeeper' <br>
 Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279):
 	External calls:
 	- [harvest()](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L243)
@@ -1135,7 +1136,7 @@ Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategi
 contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279
 
 
- - [ ] ID-127
+ - [x] ID-127  =>  add 'nonReentrant' modifier on function 'repay' exterbal call,baseMintInfo = MintInfo(0,0,0) => delete baseMintInfo; <br>
 Reentrancy in [ETHUniswapV3BaseStrategy.withdrawFrom3rdPool(uint256,uint256,uint256)](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L198-L205):
 	External calls:
 	- [withdraw(baseMintInfo.tokenId,_withdrawShares,_totalShares)](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L199)
@@ -1155,7 +1156,7 @@ Reentrancy in [ETHUniswapV3BaseStrategy.withdrawFrom3rdPool(uint256,uint256,uint
 contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L198-L205
 
 
- - [ ] ID-128
+ - [x] ID-128 =>  add 'nonReentrant' modifier on function 'rebalanceByKeeper',baseMintInfo = MintInfo(0,0,0) => delete baseMintInfo; <br>
 Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279):
 	External calls:
 	- [harvest()](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L243)
@@ -1175,7 +1176,7 @@ Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategi
 contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279
 
 
- - [ ] ID-129
+ - [ ] ID-129 had 'nonReentrant',no problem <br>
 Reentrancy in [ETHVault.redeem(address,uint256,uint256)](contracts/eth/vault/ETHVault.sol#L230-L258):
 	External calls:
 	- [(_assets,_amounts) = IETHStrategy(_strategy).repay(_amount,_strategyAssetValue,_outputCode)](contracts/eth/vault/ETHVault.sol#L238-L242)
@@ -1187,7 +1188,7 @@ Reentrancy in [ETHVault.redeem(address,uint256,uint256)](contracts/eth/vault/ETH
 contracts/eth/vault/ETHVault.sol#L230-L258
 
 
- - [ ] ID-130
+ - [ ] ID-130  <br>
 Reentrancy in [ETHVaultAdmin._removeStrategy(address,bool)](contracts/eth/vault/ETHVaultAdmin.sol#L258-L290):
 	External calls:
 	- [IETHStrategy(_addr).repay(MAX_BPS,MAX_BPS,0)](contracts/eth/vault/ETHVaultAdmin.sol#L261-L265)
@@ -1197,7 +1198,7 @@ Reentrancy in [ETHVaultAdmin._removeStrategy(address,bool)](contracts/eth/vault/
 contracts/eth/vault/ETHVaultAdmin.sol#L258-L290
 
 
- - [ ] ID-131
+ - [x] ID-131 =>  add 'nonReentrant' modifier on function 'rebalanceByKeeper' <br>
 Reentrancy in [UniswapV3Strategy.rebalance(int24)](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L315-L366):
 	External calls:
 	- [harvest()](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L316)
@@ -1222,7 +1223,7 @@ Reentrancy in [UniswapV3Strategy.rebalance(int24)](contracts/usd/strategies/unis
 contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L315-L366
 
 
- - [ ] ID-132
+ - [ ] ID-132 had 'nonReentrant' modifier,no problem <br>
 Reentrancy in [Vault.endAdjustPosition()](node_modules/boc-contract-core/contracts/vault/Vault.sol#L395-L511):
 	External calls:
 	- [_totalShares = _rebase(_totalValueOfNow - _transferAssets,_totalShares)](node_modules/boc-contract-core/contracts/vault/Vault.sol#L476)
@@ -1236,7 +1237,7 @@ Reentrancy in [Vault.endAdjustPosition()](node_modules/boc-contract-core/contrac
 node_modules/boc-contract-core/contracts/vault/Vault.sol#L395-L511
 
 
- - [ ] ID-133
+ - [ ] ID-133  <br>
 Reentrancy in [VaultAdmin._removeStrategy(address,bool)](node_modules/boc-contract-core/contracts/vault/VaultAdmin.sol#L233-L260):
 	External calls:
 	- [IStrategy(_addr).repay(MAX_BPS,MAX_BPS,0)](node_modules/boc-contract-core/contracts/vault/VaultAdmin.sol#L236-L240)
@@ -1246,7 +1247,7 @@ Reentrancy in [VaultAdmin._removeStrategy(address,bool)](node_modules/boc-contra
 node_modules/boc-contract-core/contracts/vault/VaultAdmin.sol#L233-L260
 
 
- - [ ] ID-134
+ - [ ] ID-134 => had 'nonReentrant' modifier,no problem <br>
 Reentrancy in [ETHVault.endAdjustPosition()](contracts/eth/vault/ETHVault.sol#L415-L537):
 	External calls:
 	- [_totalShares = _rebase(_totalValueOfNow - _transferAssets,_totalShares)](contracts/eth/vault/ETHVault.sol#L502)
@@ -1260,7 +1261,7 @@ Reentrancy in [ETHVault.endAdjustPosition()](contracts/eth/vault/ETHVault.sol#L4
 contracts/eth/vault/ETHVault.sol#L415-L537
 
 
- - [ ] ID-135
+ - [x] ID-135 =>  add 'nonReentrant' modifier on function 'rebalanceByKeeper',baseMintInfo = MintInfo(0,0,0) => delete baseMintInfo; <br>
 Reentrancy in [UniswapV3Strategy.rebalance(int24)](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L315-L366):
 	External calls:
 	- [harvest()](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L316)
@@ -1276,7 +1277,7 @@ Reentrancy in [UniswapV3Strategy.rebalance(int24)](contracts/usd/strategies/unis
 contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L315-L366
 
 
- - [ ] ID-136
+ - [ ] ID-136 => no problem, only call by function burn which has 'nonReentrant' modifier<br>
 Reentrancy in [ETHVault._replayToVault(uint256,uint256,address[],uint256[],uint256[])](contracts/eth/vault/ETHVault.sol#L856-L907):
 	External calls:
 	- [_totalAssetInVault = _totalAssetInVault + _repayFromVaultBuffer(_actualAsset - _totalAssetInVault,_trackedAssets,_assetPrices,_assetDecimals,_currentTotalAssets,_currentTotalShares)](contracts/eth/vault/ETHVault.sol#L891-L900)
@@ -1291,7 +1292,7 @@ Reentrancy in [ETHVault._replayToVault(uint256,uint256,address[],uint256[],uint2
 contracts/eth/vault/ETHVault.sol#L856-L907
 
 
- - [ ] ID-137
+ - [ ] ID-137 => no problem, only call by function _replayToVault called by function burn which has 'nonReentrant' modifier<br>
 Reentrancy in [ETHVault._repayFromWithdrawQueue(uint256)](contracts/eth/vault/ETHVault.sol#L642-L690):
 	External calls:
 	- [(_assets,_amounts) = IETHStrategy(_strategy).repay(_strategyWithdrawValue,_strategyTotalValue,0)](contracts/eth/vault/ETHVault.sol#L666-L670)
@@ -1301,7 +1302,7 @@ Reentrancy in [ETHVault._repayFromWithdrawQueue(uint256)](contracts/eth/vault/ET
 contracts/eth/vault/ETHVault.sol#L642-L690
 
 
- - [ ] ID-138
+ - [x] ID-138 =>  add 'nonReentrant' modifier on function 'rebalanceByKeeper',baseMintInfo = MintInfo(0,0,0) => delete baseMintInfo; <br>
 Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279):
 	External calls:
 	- [harvest()](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L243)
@@ -1325,7 +1326,7 @@ Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategi
 contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279
 
 
- - [ ] ID-139
+ - [ ] ID-139 => had 'nonReentrant' modifier,no problem <br>
 Reentrancy in [Vault.endAdjustPosition()](node_modules/boc-contract-core/contracts/vault/Vault.sol#L395-L511):
 	External calls:
 	- [_totalShares = _rebase(_totalValueOfNow - _transferAssets,_totalShares)](node_modules/boc-contract-core/contracts/vault/Vault.sol#L476)
@@ -1340,7 +1341,7 @@ Reentrancy in [Vault.endAdjustPosition()](node_modules/boc-contract-core/contrac
 node_modules/boc-contract-core/contracts/vault/Vault.sol#L395-L511
 
 
- - [ ] ID-140
+ - [ ] ID-140 => no problem, only called by function rebase which has 'nonReentrant' modifier<br>
 Reentrancy in [Vault._rebase(uint256,uint256)](node_modules/boc-contract-core/contracts/vault/Vault.sol#L1018-L1053):
 	External calls:
 	- [IPegToken(pegTokenAddress).mintShares(_treasuryAddress,_sharesAmount)](node_modules/boc-contract-core/contracts/vault/Vault.sol#L1041)
@@ -1350,7 +1351,7 @@ Reentrancy in [Vault._rebase(uint256,uint256)](node_modules/boc-contract-core/co
 node_modules/boc-contract-core/contracts/vault/Vault.sol#L1018-L1053
 
 
- - [ ] ID-141
+ - [x] ID-141 =>  add 'nonReentrant' modifier on function 'rebalanceByKeeper' <br>
 Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279):
 	External calls:
 	- [harvest()](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L243)
@@ -1381,7 +1382,7 @@ Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategi
 contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279
 
 
- - [ ] ID-142
+ - [x] ID-142 =>  add 'nonReentrant' modifier on function 'rebalanceByKeeper' <br>
 Reentrancy in [UniswapV3Strategy.rebalance(int24)](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L315-L366):
 	External calls:
 	- [harvest()](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L316)
@@ -1408,7 +1409,7 @@ Reentrancy in [UniswapV3Strategy.rebalance(int24)](contracts/usd/strategies/unis
 contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L315-L366
 
 
- - [ ] ID-143
+ - [x] ID-143 =>  add 'nonReentrant' modifier on function 'rebalanceByKeeper' <br>
 Reentrancy in [UniswapV3Strategy.rebalance(int24)](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L315-L366):
 	External calls:
 	- [harvest()](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L316)
@@ -1435,7 +1436,7 @@ Reentrancy in [UniswapV3Strategy.rebalance(int24)](contracts/usd/strategies/unis
 contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L315-L366
 
 
- - [ ] ID-144
+ - [ ] ID-144 had 'nonReentrant',no problem <br>
 Reentrancy in [Vault.redeem(address,uint256,uint256)](node_modules/boc-contract-core/contracts/vault/Vault.sol#L240-L267):
 	External calls:
 	- [(_assets,_amounts) = IStrategy(_strategy).repay(_amount,_strategyAssetValue,_outputCode)](node_modules/boc-contract-core/contracts/vault/Vault.sol#L248-L252)
@@ -1447,7 +1448,7 @@ Reentrancy in [Vault.redeem(address,uint256,uint256)](node_modules/boc-contract-
 node_modules/boc-contract-core/contracts/vault/Vault.sol#L240-L267
 
 
- - [ ] ID-145
+ - [x] ID-145 =>  add 'nonReentrant' modifier on function 'rebalanceByKeeper', delete limitMintInfo; <br>
 Reentrancy in [UniswapV3Strategy.rebalance(int24)](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L315-L366):
 	External calls:
 	- [harvest()](contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L316)
@@ -1467,7 +1468,7 @@ Reentrancy in [UniswapV3Strategy.rebalance(int24)](contracts/usd/strategies/unis
 contracts/usd/strategies/uniswapv3/UniswapV3Strategy.sol#L315-L366
 
 
- - [ ] ID-146
+ - [x] ID-146 =>  add 'nonReentrant' modifier on function 'rebalanceByKeeper' <br>, delete limitMintInfo; <br>
 Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279):
 	External calls:
 	- [harvest()](contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L243)
@@ -1496,7 +1497,7 @@ Reentrancy in [ETHUniswapV3BaseStrategy.rebalance(int24)](contracts/eth/strategi
 contracts/eth/strategies/uniswapv3/ETHUniswapV3BaseStrategy.sol#L242-L279
 
 
- - [ ] ID-147
+ - [ ] ID-147 => no problem, only call by function _replayToVault called by function burn which has 'nonReentrant' modifier<br>
 Reentrancy in [Vault._repayFromWithdrawQueue(uint256)](node_modules/boc-contract-core/contracts/vault/Vault.sol#L623-L671):
 	External calls:
 	- [(_assets,_amounts) = IStrategy(_strategy).repay(_strategyWithdrawValue,_strategyTotalValue,0)](node_modules/boc-contract-core/contracts/vault/Vault.sol#L648-L652)
@@ -1506,7 +1507,7 @@ Reentrancy in [Vault._repayFromWithdrawQueue(uint256)](node_modules/boc-contract
 node_modules/boc-contract-core/contracts/vault/Vault.sol#L623-L671
 
 
- - [ ] ID-148
+ - [ ] ID-148 => no problem, only called by function rebase which has 'nonReentrant' modifier<br>
 Reentrancy in [ETHVault._rebase(uint256,uint256)](contracts/eth/vault/ETHVault.sol#L977-L1015):
 	External calls:
 	- [IPegToken(pegTokenAddress).mintShares(_treasuryAddress,_sharesAmount)](contracts/eth/vault/ETHVault.sol#L1000)
@@ -1516,10 +1517,10 @@ Reentrancy in [ETHVault._rebase(uint256,uint256)](contracts/eth/vault/ETHVault.s
 contracts/eth/vault/ETHVault.sol#L977-L1015
 
 
-## uninitialized-local
+## uninitialized-local => uninitialized local variable can save gas
 Impact: Medium
 Confidence: Medium
- - [ ] ID-149
+ - [ ] ID-149 
 [AssetHelpersOldVersion.__pushFullAssetBalances(address,address[]).i](contracts/utils/AssetHelpersOldVersion.sol#L84) is a local variable never initialized
 
 contracts/utils/AssetHelpersOldVersion.sol#L84
@@ -1735,8 +1736,9 @@ contracts/eth/vault/ETHVault.sol#L1246
 node_modules/@uniswap/v3-core/contracts/libraries/SqrtPriceMath.sol#L39
 
 
-## unused-return
-Impact: Medium
+## unused-return => not need use return value
+external call may need receive return bool value,and don't receive other type value,internal call doesnot need receive return
+Impact: Medium 
 Confidence: Medium
  - [ ] ID-185
 [ConvexUsdtStrategy.curveAddLiquidity(address[],uint256[])](contracts/usd/strategies/convex/ConvexUsdtStrategy.sol#L65-L88) ignores return value by [ICToken(cDAI).mint(_amounts[0])](contracts/usd/strategies/convex/ConvexUsdtStrategy.sol#L73)

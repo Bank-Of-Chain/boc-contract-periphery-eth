@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-core/contracts/interfaces/IERC20Minimal.sol";
@@ -15,7 +16,7 @@ import "../../../external/uniswapV3/libraries/LiquidityAmounts.sol";
 import "../../../utils/actions/UniswapV3LiquidityActionsMixin.sol";
 import "./../../enums/ProtocolEnum.sol";
 
-contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
+contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     event UniV3SetBaseThreshold(int24 _baseThreshold);
@@ -263,8 +264,8 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
         withdraw(baseMintInfo.tokenId, _withdrawShares, _totalShares);
         withdraw(limitMintInfo.tokenId, _withdrawShares, _totalShares);
         if (_withdrawShares == _totalShares) {
-            baseMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
-            limitMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
+            delete baseMintInfo;
+            delete limitMintInfo;
         }
     }
 
@@ -306,7 +307,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
         return __getLiquidityForNFT(_tokenId);
     }
 
-    function rebalanceByKeeper() external isKeeper {
+    function rebalanceByKeeper() external nonReentrant isKeeper {
         (, int24 _tick, , , , , ) = pool.slot0();
         require(shouldRebalance(_tick), "cannot rebalance");
         rebalance(_tick);
@@ -318,13 +319,13 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin {
         uint128 _baseLiquidity = balanceOfLpToken(baseMintInfo.tokenId);
         if (_baseLiquidity > 0) {
             __purge(baseMintInfo.tokenId, type(uint128).max, 0, 0);
-            baseMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
+            delete baseMintInfo;
         }
 
         uint128 _limitLiquidity = balanceOfLpToken(limitMintInfo.tokenId);
         if (_limitLiquidity > 0) {
             __purge(limitMintInfo.tokenId, type(uint128).max, 0, 0);
-            limitMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
+            delete limitMintInfo;
         }
 
         if (_baseLiquidity <= 0 && _limitLiquidity <= 0) return;

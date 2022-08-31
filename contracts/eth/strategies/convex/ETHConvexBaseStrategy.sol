@@ -8,7 +8,7 @@ import "../../enums/ProtocolEnum.sol";
 import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../../../external/curve/ICurveLiquidityPoolPayable.sol";
 
-abstract contract ConvexBaseStrategy is ETHBaseClaimableStrategy {
+abstract contract ETHConvexBaseStrategy is ETHBaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     mapping(address => address[]) public uniswapRewardRoutes;
     address public constant CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;

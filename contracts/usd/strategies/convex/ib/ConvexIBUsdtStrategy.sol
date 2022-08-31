@@ -19,14 +19,7 @@ import "../../../../external/weth/IWeth.sol";
 
 import "../../../../external/uniswap/IUniswapV2Router2.sol";
 
-interface ICurveMini {
-    function exchange(
-        uint256 from,
-        uint256 to,
-        uint256 _from_amount,
-        uint256 _min_to_amount
-    ) external payable returns (uint256);
-}
+import "../../../../external/curve/ICurveMini.sol";
 
 contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -335,7 +328,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         //sell kpr
         uint256 _rkprBalance = balanceOfToken(RKPR);
         if (_rkprBalance > 0) {
-            IERC20Upgradeable(RKPR).transfer(harvester, _rkprBalance);
+            IERC20Upgradeable(RKPR).safeTransfer(harvester, _rkprBalance);
         }
         _rewardsTokens = new address[](3);
         _rewardsTokens[0] = REWARD_CRV;

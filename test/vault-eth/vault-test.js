@@ -39,7 +39,6 @@ const Vault = hre.artifacts.require('ETHVault');
 const VaultBuffer = hre.artifacts.require('VaultBuffer');
 const PegToken = hre.artifacts.require('PegToken');
 const IETHVault = hre.artifacts.require('IETHVault');
-const ETHExchanger = hre.artifacts.require('ETHExchanger');
 const ExchangeAggregator = hre.artifacts.require('ExchangeAggregator');
 const EthOneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
 const EthParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
@@ -93,7 +92,6 @@ describe("Vault", function () {
     let stethToken;
     let underlyingAddress;
     let priceOracleConsumer;
-    let ethExchanger;
     let treasuryAddress;
     let exchangePlatformAdapters;
 
@@ -136,11 +134,7 @@ describe("Vault", function () {
         // PriceOracle
         console.log('deploy PriceOracle');
         priceOracleConsumer = await PriceOracleConsumer.new();
-        // ETHExchanger
-        console.log('deploy ETHExchanger');
-        ethExchanger = await ETHExchanger.new();
 
-        
         console.log('deploy EthOneInchV4Adapter');
         const ethOneInchV4Adapter = await EthOneInchV4Adapter.new();
                 

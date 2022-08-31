@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "boc-contract-core/contracts/library/BocRoles.sol";
 import "boc-contract-core/contracts/library/StableMath.sol";
@@ -13,7 +14,7 @@ import "../oracle/IPriceOracleConsumer.sol";
 import "../vault/IETHVault.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 
-abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
+abstract contract ETHBaseStrategy is Initializable, AccessControlMixin, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using StableMath for uint256;
 
@@ -159,7 +160,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin {
         uint256 _repayShares,
         uint256 _totalShares,
         uint256 _outputCode
-    ) public virtual onlyVault returns (address[] memory _assets, uint256[] memory _amounts) {
+    ) public virtual onlyVault nonReentrant returns (address[] memory _assets, uint256[] memory _amounts) {
         require(_repayShares > 0 && _totalShares >= _repayShares, "cannot repay 0 shares");
         _assets = wants;
         uint256[] memory _balancesBefore = new uint256[](_assets.length);
