@@ -11,9 +11,6 @@ import "./ConvexBaseStrategy.sol";
 contract ConvexSusdStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-
-    address private constant CRV = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
-    address private constant CVX = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
     address private constant SNX = address(0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F);
 
     function initialize(address _vault, address _harvester,string memory _name) public {

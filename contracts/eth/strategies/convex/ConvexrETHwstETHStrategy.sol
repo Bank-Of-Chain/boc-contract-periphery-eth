@@ -5,9 +5,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "../../../external/curve/ICurveLiquidityPoolPayable.sol";
 import "../../../external/weth/IWeth.sol";
-import "./ConvexBaseStrategy.sol";
+import "./ETHConvexBaseStrategy.sol";
 
-contract ConvexrETHwstETHStrategy is ConvexBaseStrategy {
+contract ConvexrETHwstETHStrategy is ETHConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address private constant rETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
     address private constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;

@@ -134,7 +134,6 @@ describe("Vault", function () {
         // PriceOracle
         console.log('deploy PriceOracle');
         priceOracleConsumer = await PriceOracleConsumer.new();
-        
         console.log('deploy EthOneInchV4Adapter');
         const ethOneInchV4Adapter = await EthOneInchV4Adapter.new();
                 

@@ -8,7 +8,7 @@ const {send} = require('@openzeppelin/test-helpers');
 const MFC = require('../../../config/mainnet-fork-test-config');
 
 const {advanceBlock} = require('../../../utils/block-utils');
-const MockUniswapV3Router = hre.artifacts.require('contracts/eth/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
+const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
 const StakeWiseReth2Seth2500Strategy = hre.artifacts.require("StakeWiseReth2Seth2500Strategy");
 
 describe('【StakeWiseReth2Seth2500Strategy Strategy Checker】', function () {

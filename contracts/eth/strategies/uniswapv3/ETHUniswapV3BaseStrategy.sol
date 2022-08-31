@@ -13,7 +13,7 @@ import "./../../../external/uniswapV3/libraries/LiquidityAmounts.sol";
 import "../../../utils/actions/UniswapV3LiquidityActionsMixin.sol";
 import "./../../enums/ProtocolEnum.sol";
 
-abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3LiquidityActionsMixin {
+abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV3LiquidityActionsMixin{
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     event UniV3SetBaseThreshold(int24 _baseThreshold);
@@ -199,8 +199,8 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         withdraw(baseMintInfo.tokenId, _withdrawShares, _totalShares);
         withdraw(limitMintInfo.tokenId, _withdrawShares, _totalShares);
         if (_withdrawShares == _totalShares) {
-            baseMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
-            limitMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
+            delete baseMintInfo;
+            delete limitMintInfo;
         }
     }
 
@@ -233,7 +233,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         return __getLiquidityForNFT(_tokenId);
     }
 
-    function rebalanceByKeeper() external isKeeper {
+    function rebalanceByKeeper() external nonReentrant isKeeper {
         (, int24 _tick,,,,,) = pool.slot0();
         require(shouldRebalance(_tick), "NR");
         rebalance(_tick);
@@ -245,13 +245,13 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         uint128 _baseLiquidity = balanceOfLpToken(baseMintInfo.tokenId);
         if (_baseLiquidity > 0) {
             __purge(baseMintInfo.tokenId, type(uint128).max, 0, 0);
-            baseMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
+            delete baseMintInfo;
         }
 
         uint128 _limitLiquidity = balanceOfLpToken(limitMintInfo.tokenId);
         if (_limitLiquidity > 0) {
             __purge(limitMintInfo.tokenId, type(uint128).max, 0, 0);
-            limitMintInfo = MintInfo({tokenId: 0, tickLower: 0, tickUpper: 0});
+            delete limitMintInfo;
         }
 
         if (_baseLiquidity <= 0 && _limitLiquidity <= 0) return;

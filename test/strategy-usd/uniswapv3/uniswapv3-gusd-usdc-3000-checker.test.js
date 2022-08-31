@@ -4,7 +4,7 @@ const { default: BigNumber } = require('bignumber.js');
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 const topUp = require('../../../utils/top-up-utils');
 const { advanceBlock } = require('../../../utils/block-utils');
-const MockUniswapV3Router = hre.artifacts.require('contracts/usd/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
+const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
 const UniswapV3GusdUsdc3000Strategy = hre.artifacts.require("UniswapV3Strategy");
 
 describe('【UniswapV3GusdUsdc3000Strategy Strategy Checker】', function () {

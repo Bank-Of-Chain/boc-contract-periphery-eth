@@ -16,7 +16,7 @@ const ChainlinkPriceFeed = hre.artifacts.require('ChainlinkPriceFeed');
 const AggregatedDerivativePriceFeed = hre.artifacts.require('AggregatedDerivativePriceFeed');
 const ValueInterpreter = hre.artifacts.require('ValueInterpreter');
 const MockVault = hre.artifacts.require('contracts/usd/mock/MockVault.sol:MockVault');
-const MockUniswapV3Router = hre.artifacts.require('contracts/usd/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
+const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
 
 
 let accessControlProxy;

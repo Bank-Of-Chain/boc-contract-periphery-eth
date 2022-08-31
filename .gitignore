@@ -29,6 +29,7 @@ contracts/eth/.DS_Store
 contracts/eth/exchanges/.DS_Store
 contracts/eth/strategies/.DS_Store
 contracts/usd/.DS_Store
+test/strategy-eth/.DS_Store
 
 
 # OVM artifacts
