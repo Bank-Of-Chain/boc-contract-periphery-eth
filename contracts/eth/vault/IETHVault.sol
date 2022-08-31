@@ -138,6 +138,9 @@ interface IETHVault {
     /// @notice Return underlying token per share token
     function underlyingUnitsPerShare() external view returns (uint256);
 
+    /// @notice Get pegToken price in USD(1e18)
+    function getPegTokenPrice() external view returns (uint256);
+
     /**
      * @dev Internal to calculate total value of all assets held in Vault.
      * @return _value Total value(by chainlink price) in USD (1e18)
