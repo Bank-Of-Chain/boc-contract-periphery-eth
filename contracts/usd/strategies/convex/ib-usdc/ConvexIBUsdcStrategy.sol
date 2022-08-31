@@ -418,7 +418,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             //sell kpr
             uint256 _rkprBalance = balanceOfToken(RKPR);
             if (_rkprBalance > 0) {
-                IERC20Upgradeable(RKPR).transfer(harvester, _rkprBalance);
+                IERC20Upgradeable(RKPR).safeTransfer(harvester, _rkprBalance);
             }
             //reinvest
             _invest(0, balanceOfToken(COLLATERAL_TOKEN));
