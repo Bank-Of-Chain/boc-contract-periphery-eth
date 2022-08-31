@@ -356,7 +356,5 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         _wantAmounts[0] = _wethBalanceAfterSellBAL - _wethBalanceInit;
         _wantAmounts[1] = _wethBalanceAfterSellBalAndAura - _wethBalanceAfterSellBAL;
         _wantAmounts[2] = _wethBalanceAfterSellTotal - _wethBalanceAfterSellBalAndAura;
-
-        console.log("_balanceOfAura,_wantAmounts[1]=",_balanceOfAura,_wantAmounts[1]);
     }
 }
