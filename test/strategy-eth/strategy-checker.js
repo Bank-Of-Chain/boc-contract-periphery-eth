@@ -13,7 +13,7 @@ const { send } = require('@openzeppelin/test-helpers');
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 const AccessControlProxy = hre.artifacts.require('AccessControlProxy');
 const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
-const MockVault = hre.artifacts.require('contracts/eth/mock/MockVault.sol:MockVault');
+const MockVault = hre.artifacts.require('MockETHVault');
 const Mock3rdEthPool = hre.artifacts.require('contracts/eth/mock/Mock3rdEthPool.sol:Mock3rdEthPool');
 const MockUniswapV3Router = hre.artifacts.require('contracts/eth/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
 
@@ -112,7 +112,7 @@ async function transfer(asset, amount, from, to) {
     } else {
         const tokenContract = await ERC20.at(asset);
         await tokenContract.transfer(to, amount, {
-            from
+            from: from
         });
     }
 }
@@ -249,16 +249,18 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
                 // ratios: [100, 200]
                 // we assume that ETH amount is 20
                 // then, USDT amount = ETH amount * 200 / 100 = 40
-                amount = initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio);
+                amount = new BigNumber(initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0,1));
             } else {
                 amount = initialAmount.multipliedBy(assetPrecision);
             }
-
+            amount = amount.integerValue();
             let wantBalance = new BigNumber(await balanceOf(asset, investor));
             
             console.log('want:%s,balance:%d,amount:%d', asset, wantBalance, amount);
             // check balance enough
             if (wantBalance.gte(amount)) {
+                console.log('transfer amount:%s,%s',asset,amount);
+                
                 await transfer(asset, amount, investor, mockVault.address);
                 depositedAmounts.push(amount);
                 if (asset === MFC.ETH_ADDRESS) {

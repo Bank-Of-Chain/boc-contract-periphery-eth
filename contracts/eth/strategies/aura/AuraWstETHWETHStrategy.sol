@@ -48,7 +48,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
     mapping(address => address[]) public swapRewardRoutes;
 
-    function initialize(address _vault,string memory _name) external initializer {
+    function initialize(address _vault, string memory _name) external initializer {
         address[] memory _wants = new address[](2);
         _wants[0] = WSTETH; //wstETH
         _wants[1] = WETH; //wETH
@@ -78,7 +78,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
         isWantRatioIgnorable = true;
 
-        super._initialize(_vault, uint16(ProtocolEnum.Aura), _name,_wants);
+        super._initialize(_vault, uint16(ProtocolEnum.Aura), _name, _wants);
     }
 
     function setRewardSwapPath(address _token, address[] memory _uniswapRouteToToken)
@@ -276,31 +276,32 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         )
     {
         address _rewardPool = getRewardPool();
-        uint256 _earn = IRewardPool(_rewardPool).earned(address(this));
-        if (_earn > 0) {
-            _claimIsWorth = true;
-            IRewardPool(_rewardPool).getReward();
-            uint256 _extraRewardsLen = IRewardPool(_rewardPool).extraRewardsLength();
-            // _extraRewardsLen = 0;
-            _rewardsTokens = new address[](2 + _extraRewardsLen);
-            _rewardsTokens[0] = BAL;
-            _rewardsTokens[1] = AURA_TOKEN;
-            _claimAmounts = new uint256[](2 + _extraRewardsLen);
-            _claimAmounts[0] = balanceOfToken(BAL);
-            _claimAmounts[1] = balanceOfToken(AURA_TOKEN);
-            if (_extraRewardsLen > 0) {
-                for (uint256 i = 0; i < _extraRewardsLen; i++) {
-                    address _extraReward = IRewardPool(_rewardPool).extraRewards(i);
-                    address _rewardToken = IRewardPool(_extraReward).rewardToken();
-                    // IRewardPool(_extraReward).getReward();
-                    _rewardsTokens[2 + i] = _rewardToken;
-                    _claimAmounts[2 + i] = balanceOfToken(_rewardToken);
-                }
+        _claimIsWorth = true;
+        IRewardPool(_rewardPool).getReward();
+        uint256 _extraRewardsLen = IRewardPool(_rewardPool).extraRewardsLength();
+        // _extraRewardsLen = 0;
+        _rewardsTokens = new address[](2 + _extraRewardsLen);
+        _rewardsTokens[0] = BAL;
+        _rewardsTokens[1] = AURA_TOKEN;
+        _claimAmounts = new uint256[](2 + _extraRewardsLen);
+        _claimAmounts[0] = balanceOfToken(BAL);
+        _claimAmounts[1] = balanceOfToken(AURA_TOKEN);
+        if (_extraRewardsLen > 0) {
+            for (uint256 i = 0; i < _extraRewardsLen; i++) {
+                address _extraReward = IRewardPool(_rewardPool).extraRewards(i);
+                address _rewardToken = IRewardPool(_extraReward).rewardToken();
+                // IRewardPool(_extraReward).getReward();
+                _rewardsTokens[2 + i] = _rewardToken;
+                _claimAmounts[2 + i] = balanceOfToken(_rewardToken);
             }
         }
     }
 
-    function swapRewardsToWants() internal override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){
+    function swapRewardsToWants()
+        internal
+        override
+        returns (address[] memory _wantTokens, uint256[] memory _wantAmounts)
+    {
         uint256 _wethBalanceInit = balanceOfToken(WETH);
 
         uint256 _balanceOfBal = balanceOfToken(BAL);
@@ -334,7 +335,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         uint256 _balanceOfLdo = balanceOfToken(LDO);
         if (_balanceOfLdo > 0) {
             IERC20Upgradeable(LDO).safeApprove(address(SUSHIROUTER2), 0);
-            IERC20Upgradeable(LDO).safeApprove(address(SUSHIROUTER2), _balanceOfAura);
+            IERC20Upgradeable(LDO).safeApprove(address(SUSHIROUTER2), _balanceOfLdo);
             SUSHIROUTER2.swapExactTokensForTokens(
                 _balanceOfLdo,
                 0,
@@ -354,6 +355,5 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         _wantAmounts[0] = _wethBalanceAfterSellBAL - _wethBalanceInit;
         _wantAmounts[1] = _wethBalanceAfterSellBalAndAura - _wethBalanceAfterSellBAL;
         _wantAmounts[2] = _wethBalanceAfterSellTotal - _wethBalanceAfterSellBalAndAura;
-        
     }
 }
