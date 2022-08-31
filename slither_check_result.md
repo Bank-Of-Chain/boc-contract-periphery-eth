@@ -54,7 +54,8 @@ AggregatorInterface is re-used:
 contracts/eth/mock/MockPriceOracleConsumer.sol#L14-L24
 
 
-## shadowing-state => delete shadow one
+## shadowing-state 
+=> delete shadow one <br>
 Impact: High
 Confidence: High
  - [x] ID-5
@@ -235,7 +236,8 @@ contracts/eth/vault/ETHVaultStorage.sol#L144
 node_modules/boc-contract-core/contracts/vault/VaultStorage.sol#L155
 
 
-## arbitrary-send ==> did not deal
+## arbitrary-send 
+did not deal
 Impact: High
 Confidence: Medium
  - [ ] ID-26
@@ -404,7 +406,7 @@ Reentrancy in [ETHVault.burn(uint256,uint256)](contracts/eth/vault/ETHVault.sol#
 contracts/eth/vault/ETHVault.sol#L188-L227
 
 
-## unchecked-transfer => use safeTransfer or xxx
+## unchecked-transfer
 Impact: High ==> delete ETHExchanger
 Confidence: Medium
  - [x] ID-42
@@ -473,7 +475,8 @@ contracts/eth/exchanges/ETHExchanger.sol#L90-L105
 contracts/usd/strategies/convex/ib/ConvexIBUsdtStrategy.sol#L315-L359
 
 
-## incorrect-equality => did not deal
+## incorrect-equality
+ => did not deal <br>
 Impact: Medium
 Confidence: High
  - [ ] ID-53
@@ -1517,7 +1520,8 @@ Reentrancy in [ETHVault._rebase(uint256,uint256)](contracts/eth/vault/ETHVault.s
 contracts/eth/vault/ETHVault.sol#L977-L1015
 
 
-## uninitialized-local => uninitialized local variable can save gas
+## uninitialized-local 
+=> uninitialized local variable can save gas<br>
 Impact: Medium
 Confidence: Medium
  - [ ] ID-149 
@@ -1736,7 +1740,8 @@ contracts/eth/vault/ETHVault.sol#L1246
 node_modules/@uniswap/v3-core/contracts/libraries/SqrtPriceMath.sol#L39
 
 
-## unused-return => not need use return value
+## unused-return 
+=> not need use return value<br>
 external call may need receive return bool value,and don't receive other type value,internal call doesnot need receive return
 Impact: Medium 
 Confidence: Medium
