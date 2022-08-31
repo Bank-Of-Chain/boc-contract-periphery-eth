@@ -15,6 +15,7 @@ import "../../../external/uniswap/IUniswapV2Router2.sol";
 
 import "../ETHBaseClaimableStrategy.sol";
 import "../../enums/ProtocolEnum.sol";
+import 'hardhat/console.sol';
 
 contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -34,6 +35,9 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
     IBalancerVault internal constant BALANCER_VAULT =
         IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+
+    bytes32 internal constant BALANCER_POOL_ID =
+        bytes32(0xcfca23ca9ca720b6e98e3eb9b6aa0ffc4a5c08b9000200000000000000000274);
 
     IUniswapV2Router2 public constant UNIROUTER2 =
         IUniswapV2Router2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
@@ -320,15 +324,13 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
         uint256 _balanceOfAura = balanceOfToken(AURA_TOKEN);
         if (_balanceOfAura > 0) {
-            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(UNIROUTER2), 0);
-            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(UNIROUTER2), _balanceOfAura);
-            UNIROUTER2.swapExactTokensForTokens(
-                _balanceOfAura,
-                0,
-                swapRewardRoutes[AURA_TOKEN],
-                address(this),
-                block.timestamp
-            );
+            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(BALANCER_VAULT), 0);
+            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(BALANCER_VAULT), _balanceOfAura);
+
+            IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap(BALANCER_POOL_ID, IBalancerVault.SwapKind.GIVEN_IN,  IAsset(AURA_TOKEN), IAsset(WETH), _balanceOfAura, "");
+            IBalancerVault.FundManagement memory funds = IBalancerVault.FundManagement(address(this), false, payable(address(this)), false);
+
+            BALANCER_VAULT.swap(singleSwap, funds, 0, block.timestamp);
         }
         uint256 _wethBalanceAfterSellBalAndAura = balanceOfToken(WETH);
 
@@ -355,5 +357,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         _wantAmounts[0] = _wethBalanceAfterSellBAL - _wethBalanceInit;
         _wantAmounts[1] = _wethBalanceAfterSellBalAndAura - _wethBalanceAfterSellBAL;
         _wantAmounts[2] = _wethBalanceAfterSellTotal - _wethBalanceAfterSellBalAndAura;
+
+        console.log("_balanceOfAura,_wantAmounts[1]=",_balanceOfAura,_wantAmounts[1]);
     }
 }
