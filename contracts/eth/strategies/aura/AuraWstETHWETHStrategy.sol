@@ -15,7 +15,6 @@ import "../../../external/uniswap/IUniswapV2Router2.sol";
 
 import "../ETHBaseClaimableStrategy.sol";
 import "../../enums/ProtocolEnum.sol";
-import 'hardhat/console.sol';
 
 contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
