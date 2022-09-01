@@ -304,13 +304,10 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         if (_balanceOfBal > 0) {
             IERC20Upgradeable(BAL).safeApprove(address(BALANCER_VAULT), 0);
             IERC20Upgradeable(BAL).safeApprove(address(BALANCER_VAULT), _balanceOfBal);
-            UNIROUTER2.swapExactTokensForTokens(
-                _balanceOfBal,
-                0,
-                swapRewardRoutes[BAL],
-                address(this),
-                block.timestamp
-            );
+            IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap(swapRewardPoolId[BAL], IBalancerVault.SwapKind.GIVEN_IN,  IAsset(BAL), IAsset(WETH), _balanceOfBal, "");
+            IBalancerVault.FundManagement memory funds = IBalancerVault.FundManagement(address(this), false, payable(address(this)), false);
+
+            BALANCER_VAULT.swap(singleSwap, funds, 0, block.timestamp);
         }
         uint256 _wethBalanceAfterSellBAL = balanceOfToken(WETH);
 
