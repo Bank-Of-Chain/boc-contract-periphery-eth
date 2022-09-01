@@ -15,7 +15,7 @@ const MFC_TEST = require('../../../config/mainnet-fork-test-config');
 const MFC_PRODUCTION = require('../../../config/mainnet-fork-config');
 const {
 	strategiesList
-} = require('../../../config/strategy-config-usd.js');
+} = require('../../../config/strategy-usd/strategy-config-usd.js');
 
 const {
 	deploy,
@@ -421,9 +421,9 @@ describe('Vault deploy gas Test', function () {
 		await pegToken.deployed();
 		addressMap[PegToken] = pegToken.address;
 		await cVault.setPegTokenAddress(addressMap[PegToken]);
-		await cVault.setRebaseThreshold(1);
-		await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
-		await cVault.setMaxTimestampBetweenTwoReported(604800);
+		// await cVault.setRebaseThreshold(1);
+		// await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+		// await cVault.setMaxTimestampBetweenTwoReported(604800);
 		console.log("maxTimestampBetweenTwoReported:",new BigNumber(await cVault.maxTimestampBetweenTwoReported()).toFixed());
 	}
 

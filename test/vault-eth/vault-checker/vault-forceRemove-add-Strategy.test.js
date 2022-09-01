@@ -23,7 +23,7 @@ const {
 
 // === Constants === //
 const MFC = require('../../../config/mainnet-fork-test-config');
-const {strategiesList} = require('../../../config/strategy-config-eth');
+const {strategiesList} = require('../../../config/strategy-eth/strategy-config-eth');
 const IStrategy = hre.artifacts.require('IETHStrategy');
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 
@@ -40,7 +40,7 @@ describe('【Vault unit test-add/remove strategy】', function () {
     // Core protocol contracts
     let vault;
     let underlying;
-    let priceOracle;
+    let priceOracleConsumer;
     let exchangePlatformAdapters;
     let addToVaultStrategies;
     let farmer1Lp
@@ -57,7 +57,7 @@ describe('【Vault unit test-add/remove strategy】', function () {
         await topUpEthByAddress(depositAmount, farmer1);
         await setupCoreProtocol(MFC.ETH_ADDRESS, governance, keeper).then((resp) => {
             vault = resp.vault;
-            priceOracle = resp.priceOracle;
+            priceOracleConsumer = resp.priceOracleConsumer;
             exchangePlatformAdapters = resp.exchangePlatformAdapters;
             addToVaultStrategies = resp.addToVaultStrategies;
         });

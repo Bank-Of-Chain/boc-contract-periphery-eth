@@ -6,6 +6,7 @@ const addresses = require("./../config/address-config")
 // === Utils === //
 const BigNumber = require("bignumber.js")
 const { isEmpty, isArray } = require("lodash")
+const { balance } = require("@openzeppelin/test-helpers")
 
 // === Contracts === //
 const IERC20_DAI = artifacts.require("IERC20_DAI")
@@ -13,7 +14,12 @@ const IERC20_USDT = artifacts.require("IERC20_USDT")
 const IERC20_USDC = artifacts.require("IERC20_USDC")
 const IERC20_TUSD = artifacts.require("IERC20_TUSD")
 const IERC20_LUSD = artifacts.require("IERC20_LUSD")
+const IERC20_SUSD = artifacts.require("IERC20_SUSD")
 const IEREC20Mint = artifacts.require("IEREC20Mint")
+const IERC20_STETH = artifacts.require("IERC20_STETH")
+const IERC20_WETH = artifacts.require("IERC20_WETH")
+const IERC20_WSTETH = artifacts.require("IERC20_WSTETH")
+const IERC20_ROCKET_POOL_ETH = artifacts.require("IERC20_ROCKET_POOL_ETH")
 
 /**
  * impersonates
@@ -42,6 +48,15 @@ async function impersonates (targetAccounts) {
 const sendEthers = async (reviver, amount = new BigNumber(10 * 10 ** 18)) => {
     if (!BigNumber.isBigNumber(amount)) return new Error("must be a bignumber.js object")
     await network.provider.send("hardhat_setBalance", [reviver, `0x${amount.toString(16)}`])
+}
+
+const removeSTETHStakeLimit = async () => {
+    const TOKEN = await IERC20_STETH.at(addresses.stETH_ADDRESS)
+    const masterMinter = "0x2e59A20f205bB85a89C53f1936454680651E618e"
+    await sendEthers(masterMinter)
+    const callback = await impersonates([masterMinter])
+    await TOKEN.removeStakingLimit({ from: masterMinter })
+    await callback()
 }
 
 /**
@@ -379,10 +394,14 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
  *  Top up a certain amount of ETH for a certain address(default 10 ** 18)
  */
  async function topUpEthByAddress(amount = new BigNumber(10 * 18), to) {
-    if (isEmpty(to)) return 0;
-    const accounts = await ethers.getSigners();
-    // send ETH to the account
-    await send.ether(accounts[0].address, to, 100 * (10 ** 18));
+    if (isEmpty(to)) return 0
+    const tokenName = "ETH"
+    const nextAmount = new BigNumber(amount)
+    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+    const beforeBalance = await balance.current(to)
+    await sendEthers(to, nextAmount.plus(beforeBalance))
+    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await await balance.current(to)).toFormat())
+    console.log(`${tokenName} recharge completed`)
 }
 
 
@@ -390,59 +409,177 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
  * Top up a certain amount of WETH for a certain address(default 10 ** 18)
  */
  async function topUpWETHByAddress(amount = new BigNumber(10 ** 18), to) {
-    if (isEmpty(to)) return 0;
-    const accounts = await ethers.getSigners();
-    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
-    await send.ether(accounts[0].address, addresses.WETH_WHALE_ADDRESS, 10 ** 18);
-    await impersonates([addresses.WETH_WHALE_ADDRESS]);
+    if (isEmpty(to)) return 0
+    const TOKEN = await IERC20_WETH.at(addresses.WETH_ADDRESS)
+    const tokenName = await TOKEN.name()
+    const accounts = await ethers.getSigners()
+    const account0 = accounts[0].address
 
-    return topUpMain(addresses.WETH_ADDRESS, addresses.WETH_WHALE_ADDRESS, to, amount);
+    const nextAmount = new BigNumber(amount)
+
+    await topUpEthByAddress(nextAmount, account0)
+
+    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+
+    await TOKEN.deposit({ from: account0, value: nextAmount })
+
+    await TOKEN.transfer(to, nextAmount, {
+        from: account0,
+    })
+
+    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    console.log(`${tokenName} recharge completed`)
+    return amount
 }
 
 /**
  * Top up a certain amount of stETH for a certain address(default 10 ** 18)
  */
  async function topUpSTETHByAddress(amount = new BigNumber(10 ** 18), to) {
-    if (isEmpty(to)) return 0;
-    const accounts = await ethers.getSigners();
-    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
-    await send.ether(accounts[0].address, addresses.stETH_WHALE_ADDRESS, 10 ** 18);
-    await impersonates([addresses.stETH_WHALE_ADDRESS]);
+    if (isEmpty(to)) return 0
+    const TOKEN = await IERC20_STETH.at(addresses.stETH_ADDRESS)
+    const tokenName = await TOKEN.name()
+    const accounts = await ethers.getSigners()
+    const account0 = accounts[0].address
 
-    return topUpMain(addresses.stETH_ADDRESS, addresses.stETH_WHALE_ADDRESS, to, amount);
+    // mint more
+    const nextAmount = new BigNumber(amount).multipliedBy(101).div(100)
+
+    await topUpEthByAddress(nextAmount, account0)
+
+    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+
+    await removeSTETHStakeLimit()
+
+    await TOKEN.submit(account0, { from: account0, value: nextAmount })
+    await TOKEN.transfer(to, nextAmount, {
+        from: account0,
+    })
+
+    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    console.log(`${tokenName} recharge completed`)
+    return amount
 }
 
 /**
  * Top up a certain amount of wstETH for a certain address(default 10 ** 18)
  */
 async function topUpWstEthByAddress(amount = new BigNumber(10 ** 18), to) {
-    if (isEmpty(to)) return 0;
-    const accounts = await ethers.getSigners();
-    await send.ether(accounts[0].address, addresses.wstETH_WHALE_ADDRESS, 10 ** 18);
-    await impersonates([addresses.wstETH_WHALE_ADDRESS]);
-    return topUpMain(addresses.wstETH_ADDRESS, addresses.wstETH_WHALE_ADDRESS, to, amount);
+    if (isEmpty(to)) return 0
+    const TOKEN = await IERC20_WSTETH.at(addresses.wstETH_ADDRESS)
+    const tokenName = await TOKEN.name()
+    const stEthPerToken = await TOKEN.stEthPerToken()
+    const accounts = await ethers.getSigners()
+    const account0 = accounts[0].address
+    const nextAmount = new BigNumber(amount)
+    const stEthAmount = nextAmount.multipliedBy(stEthPerToken).div(1e18)
+
+    await topUpSTETHByAddress(stEthAmount, account0)
+
+    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+
+    const stETHTOKEN = await IERC20_STETH.at(addresses.stETH_ADDRESS)
+    const balanceOfSTETH = await stETHTOKEN.balanceOf(account0)
+    await stETHTOKEN.approve(addresses.wstETH_ADDRESS, 0, { from: account0 })
+    await stETHTOKEN.approve(addresses.wstETH_ADDRESS, balanceOfSTETH, { from: account0 })
+    await TOKEN.wrap(balanceOfSTETH, { from: account0 })
+
+    await TOKEN.transfer(to, nextAmount, {
+        from: account0,
+    })
+
+    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    console.log(`${tokenName} recharge completed`)
+    return amount
 }
 
 /**
  * Top up a certain amount of rocketPoolETH for a certain address(default 10 ** 18)
  */
 async function topUpRocketPoolEthByAddress(amount = new BigNumber(10 ** 18), to) {
-    if (isEmpty(to)) return 0;
-    const accounts = await ethers.getSigners();
-    await send.ether(accounts[0].address, addresses.rocketPoolETH_WHALE_ADDRESS, 10 ** 18);
-    await impersonates([addresses.rocketPoolETH_WHALE_ADDRESS]);
-    return topUpMain(addresses.rocketPoolETH_ADDRESS, addresses.rocketPoolETH_WHALE_ADDRESS, to, amount);
+    if (isEmpty(to)) return 0
+
+    const TOKEN = await IERC20_ROCKET_POOL_ETH.at(addresses.rocketPoolETH_ADDRESS)
+    const decimal = new BigNumber(10).pow(18)
+    const tokenName = await TOKEN.name()
+    const rethValue = await TOKEN.getExchangeRate()
+    const tokenOwner = "0x4D05E3d48a938db4b7a9A59A802D5b45011BDe58"
+
+    const nextAmount = new BigNumber(amount)
+    const rethAmount = nextAmount.multipliedBy(rethValue).div(decimal).multipliedBy(101).div(100)
+    await topUpEthByAddress(decimal, tokenOwner)
+    await topUpEthByAddress(rethAmount, tokenOwner)
+    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
+
+    impersonates([tokenOwner])
+
+    await TOKEN.mint(rethAmount, to, {
+        from: tokenOwner,
+    })
+
+    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    console.log(`${tokenName} recharge completed`)
+    return amount
 }
 
 /**
  * Top up a certain amount of sETH for a certain address(default 10 ** 18)
  */
 async function topUpSEthByAddress(amount = new BigNumber(10 ** 18), to) {
+    if (isEmpty(to)) return 0
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(addresses.sETH_WHALE_ADDRESS, 10 ** 18)
+    await impersonates([addresses.sETH_WHALE_ADDRESS])
+    return topUpMain(addresses.sETH_ADDRESS, addresses.sETH_WHALE_ADDRESS, to, amount)
+}
+
+/**
+ * Top up a certain amount of sETH2 for a certain address(default 10 ** 18)
+ */
+async function topUpSEth2ByAddress(amount = new BigNumber(10 ** 18), to) {
+    if (isEmpty(to)) return 0
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(addresses.sETH2_WHALE_ADDRESS, 10 ** 18)
+    await impersonates([addresses.sETH2_WHALE_ADDRESS])
+    return topUpMain(addresses.sETH2_ADDRESS, addresses.sETH2_WHALE_ADDRESS, to, amount)
+}
+
+/**
+ * Top up a certain amount of rETH2 for a certain address(default 10 ** 18)
+ */
+async function topUpREth2ByAddress(amount = new BigNumber(10 ** 18), to) {
+    if (isEmpty(to)) return 0
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(addresses.rETH2_WHALE_ADDRESS, 10 ** 18)
+    await impersonates([addresses.rETH2_WHALE_ADDRESS])
+    return topUpMain(addresses.rETH2_ADDRESS, addresses.rETH2_WHALE_ADDRESS, to, amount)
+}
+
+/**
+ * Top up a certain amount of swise for a certain address(default 10 ** 18)
+ */
+async function topUpSwiseByAddress(amount = new BigNumber(10 ** 18), to) {
     if (isEmpty(to)) return 0;
     const accounts = await ethers.getSigners();
-    await send.ether(accounts[0].address, addresses.sETH_WHALE_ADDRESS, 10 ** 18);
-    await impersonates([addresses.sETH_WHALE_ADDRESS]);
-    return topUpMain(addresses.sETH_ADDRESS, addresses.sETH_WHALE_ADDRESS, to, amount);
+    await send.ether(accounts[0].address, addresses.SWISE_WHALE_ADDRESS, 10 ** 18);
+    await impersonates([addresses.SWISE_WHALE_ADDRESS]);
+    return topUpMain(addresses.SWISE_ADDRESS, addresses.SWISE_WHALE_ADDRESS, to, amount);
+}
+
+async function topUpGusdByAddress(amount = new BigNumber(10 ** 2), to) {
+    if (isEmpty(to)) return 0
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(addresses.GUSD_WHALE_ADDRESS, 10 ** 18)
+    await impersonates([addresses.GUSD_WHALE_ADDRESS])
+    return topUpMain(addresses.GUSD_ADDRESS, addresses.GUSD_WHALE_ADDRESS, to, amount)
+}
+
+async function topUpSusdByAddress(amount = new BigNumber(10 ** 18), to) {
+    if (isEmpty(to)) return 0
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(addresses.SUSD_WHALE_ADDRESS, 10 ** 18)
+    await impersonates([addresses.SUSD_WHALE_ADDRESS])
+    return topUpMain(addresses.SUSD_ADDRESS, addresses.SUSD_WHALE_ADDRESS, to, amount)
 }
 
 /**
@@ -524,6 +661,11 @@ module.exports = {
     topUpWstEthByAddress,
     topUpRocketPoolEthByAddress,
     topUpSEthByAddress,
+    topUpSEth2ByAddress,
+    topUpREth2ByAddress,
+    topUpSwiseByAddress,
+    topUpGusdByAddress,
+    topUpSusdByAddress,
     tranferBackUsdc,
     tranferBackDai,
     tranferBackUsdt,

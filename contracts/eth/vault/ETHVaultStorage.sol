@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 pragma solidity ^0.8.0;
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "boc-contract-core/contracts/library/IterableIntMap.sol";
 import "boc-contract-core/contracts/library/StableMath.sol";
 import "boc-contract-core/contracts/token/IPegToken.sol";
 import "boc-contract-core/contracts/vault/IVaultBuffer.sol";
 import "boc-contract-core/contracts/library/BocRoles.sol";
-import "../token/ETHi.sol";
 import "../strategies/IETHStrategy.sol";
-import "../../library/ETHToken.sol";
-import "../exchanges/IETHExchangeAggregator.sol";
-import "../oracle/IPriceOracle.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
+import "boc-contract-core/contracts/exchanges/IExchangeAggregator.sol";
+import "../oracle/IPriceOracleConsumer.sol";
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -51,7 +48,6 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     event Mint(address _account, address _asset, uint256 _amount, uint256 _mintAmount);
     event Burn(
         address _account,
-        address _asset,
         uint256 _amount,
         uint256 _actualAmount,
         uint256 _shareAmount,
@@ -65,21 +61,33 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
         address _distAsset,
         uint256 _distAmount
     );
-    event Redeem(address _strategy, uint256 _debtChangeAmount, address[] _assets, uint256[] _amounts);
-    event LendToStrategy(address indexed strategy, address[] wants, uint256[] amounts, uint256 lendValue);
+    event Redeem(
+        address _strategy,
+        uint256 _debtChangeAmount,
+        address[] _assets,
+        uint256[] _amounts
+    );
+    event LendToStrategy(
+        address indexed _strategy,
+        address[] _wants,
+        uint256[] _amounts,
+        uint256 _lendValue
+    );
     event RepayFromStrategy(
-        address indexed strategy,
-        uint256 strategyWithdrawValue,
-        uint256 strategyTotalValue,
+        address indexed _strategy,
+        uint256 _strategyWithdrawValue,
+        uint256 _strategyTotalValue,
         address[] _assets,
         uint256[] _amounts
     );
     event StrategyReported(
-        address indexed strategy,
-        uint256 gain,
-        uint256 loss,
-        uint256 lastStrategyTotalDebt,
-        uint256 nowStrategyTotalDebt,
+        address indexed _strategy,
+        uint256 _gain,
+        uint256 _loss,
+        uint256 _lastStrategyTotalDebt,
+        uint256 _nowStrategyTotalDebt,
+        address[] _rewardTokens,
+        uint256[] _claimAmounts,
         uint256 _type
     );
     event RemoveStrategyFromQueue(address[] _strategies);
@@ -89,11 +97,13 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     event RebaseThresholdUpdated(uint256 _threshold);
     event TrusteeFeeBpsChanged(uint256 _basis);
     event MaxTimestampBetweenTwoReportedChanged(uint256 _maxTimestampBetweenTwoReported);
+    event MinCheckedStrategyTotalDebtChanged(uint256 _minCheckedStrategyTotalDebt);
     event MinimumInvestmentAmountChanged(uint256 _minimumInvestmentAmount);
     event TreasuryAddressChanged(address _address);
+    event ExchangeManagerAddressChanged(address _address);
     event SetAdjustPositionPeriod(bool _adjustPositionPeriod);
     event RedeemFeeUpdated(uint256 _redeemFeeBps);
-    event SetWithdrawalQueue(address[] queues);
+    event SetWithdrawalQueue(address[] _queues);
     event Rebase(uint256 _totalShares, uint256 _totalValue, uint256 _newUnderlyingUnitsPerShare);
     event StartAdjustPosition(
         uint256 _totalDebtOfBeforeAdjustPosition,
@@ -114,9 +124,6 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
 
     //max percentage 100%
     uint256 internal constant MAX_BPS = 10000;
-
-    // ETHi
-    ETHi internal ethi;
 
     // all strategy
     EnumerableSet.AddressSet internal strategySet;
@@ -149,7 +156,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     //withdraw strategy set
     address[] public withdrawQueue;
     //keccak256("ETHi.vault.governor.admin.impl");
-    bytes32 constant adminImplPosition =
+    bytes32 internal constant ADMIN_IMPL_POSITION =
         0xfa89c25d41afc3612e6438675f8ecd0190711981b04c08aa14be180784e299e7;
 
     // Pausing bools
@@ -173,6 +180,8 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     uint256 public underlyingUnitsPerShare;
     //Maximum timestamp between two reported
     uint256 public maxTimestampBetweenTwoReported;
+    //Minimum strategy total debt that will be checked for the strategy reporting
+    uint256 public minCheckedStrategyTotalDebt;
     //Minimum investment amount
     uint256 public minimumInvestmentAmount;
 
@@ -181,13 +190,13 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
 
     /**
      * @dev set the implementation for the admin, this needs to be in a base class else we cannot set it
-     * @param newImpl address of the implementation
+     * @param _newImpl address of the implementation
      */
-    function setAdminImpl(address newImpl) external onlyGovOrDelegate {
-        require(AddressUpgradeable.isContract(newImpl), "new implementation is not a contract");
-        bytes32 position = adminImplPosition;
+    function setAdminImpl(address _newImpl) external onlyGovOrDelegate {
+        require(AddressUpgradeable.isContract(_newImpl), "new implementation is not a contract");
+        bytes32 _position = ADMIN_IMPL_POSITION;
         assembly {
-            sstore(position, newImpl)
+            sstore(_position, _newImpl)
         }
     }
 }

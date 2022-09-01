@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 /**
- * @title USDI Vault Admin Contract
+ * @title ETHi Vault Admin Contract
  * @notice The VaultAdmin contract makes configuration and admin calls on the vault.
  * @author Bank OF CHAIN Protocol Inc
  */
@@ -14,10 +14,14 @@ contract ETHVaultAdmin is ETHVaultStorage {
     using EnumerableSet for EnumerableSet.AddressSet;
     using IterableIntMap for IterableIntMap.AddressToIntMap;
 
+    receive() external payable {}
+
+    fallback() external payable {}
+
     /// @notice Shutdown the vault when an emergency occurs, cannot mint/burn.
-    function setEmergencyShutdown(bool active) external isVaultManager {
-        emergencyShutdown = active;
-        emit SetEmergencyShutdown(active);
+    function setEmergencyShutdown(bool _active) external isVaultManager {
+        emergencyShutdown = _active;
+        emit SetEmergencyShutdown(_active);
     }
 
     /// @notice set adjustPositionPeriod true when adjust position occurs, cannot remove add asset/strategy and cannot mint/burn.
@@ -47,14 +51,25 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     /**
-     * @dev Sets the Maximum timestamp between two reported
+     * @dev Set the Maximum timestamp between two reported
      */
     function setMaxTimestampBetweenTwoReported(uint256 _maxTimestampBetweenTwoReported)
-    external
-    isVaultManager
+        external
+        isVaultManager
     {
         maxTimestampBetweenTwoReported = _maxTimestampBetweenTwoReported;
         emit MaxTimestampBetweenTwoReportedChanged(_maxTimestampBetweenTwoReported);
+    }
+
+    /**
+     * @dev Set the minimum strategy total debt that will be checked for the strategy reporting
+     */
+    function setMinCheckedStrategyTotalDebt(uint256 _minCheckedStrategyTotalDebt)
+    external
+    isVaultManager
+    {
+        minCheckedStrategyTotalDebt = _minCheckedStrategyTotalDebt;
+        emit MinCheckedStrategyTotalDebtChanged(_minCheckedStrategyTotalDebt);
     }
 
     /**
@@ -66,21 +81,6 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     /**
-     * @dev init underlyingUnitsPerShare only once
-     *      Setting to the zero disables this feature.
-     */
-    function setUnderlyingUnitsPerShare(uint256 _underlyingUnitsPerShare)
-    external
-    onlyRole(BocRoles.GOV_ROLE)
-    {
-        require(
-            underlyingUnitsPerShare == 0 && _underlyingUnitsPerShare > 0,
-            "init only once and must above 0"
-        );
-        underlyingUnitsPerShare = _underlyingUnitsPerShare;
-    }
-
-    /**
      * @dev Sets the treasuryAddress that can receive a portion of yield.
      *      Setting to the zero address disables this feature.
      */
@@ -89,12 +89,17 @@ contract ETHVaultAdmin is ETHVaultStorage {
         emit TreasuryAddressChanged(_address);
     }
 
-    //
-    //    function setETHiAddress(address _address) external onlyRole(BocRoles.GOV_ROLE) {
-    //        require(address(ethi) == ZERO_ADDRESS, "ETHi has been set");
-    //        require(_address != ZERO_ADDRESS, "ETHi ad is 0");
-    //        ethi = ETHi(_address);
-    //    }
+    /**
+     * @dev Sets the exchangeManagerAddress that can receive a portion of yield.
+     */
+    function setExchangeManagerAddress(address _exchangeManagerAddress)
+        external
+        onlyRole(BocRoles.GOV_ROLE)
+    {
+        require(_exchangeManagerAddress != address(0), "exchangeManager ad is 0");
+        exchangeManager = _exchangeManagerAddress;
+        emit ExchangeManagerAddressChanged(_exchangeManagerAddress);
+    }
 
     function setVaultBufferAddress(address _address) external onlyRole(BocRoles.GOV_ROLE) {
         require(_address != address(0), "vaultBuffer ad is 0");
@@ -116,7 +121,10 @@ contract ETHVaultAdmin is ETHVaultStorage {
         emit TrusteeFeeBpsChanged(_basis);
     }
 
-    function setStrategyEnforceChangeLimit(address _strategy, bool _enabled) external isVaultManager {
+    function setStrategyEnforceChangeLimit(address _strategy, bool _enabled)
+        external
+        isVaultManager
+    {
         strategies[_strategy].enforceChangeLimit = _enabled;
     }
 
@@ -151,14 +159,14 @@ contract ETHVaultAdmin is ETHVaultStorage {
         assetSet.add(_asset);
         // Verify that our oracle supports the asset
         // slither-disable-next-line unused-return
-        IPriceOracle(priceProvider).priceInUSD(_asset);
+        IPriceOracleConsumer(priceProvider).priceInUSD(_asset);
         trackedAssetsMap.plus(_asset, 1);
         emit AddAsset(_asset);
     }
 
     /// @notice Remove support for specific asset.
     function removeAsset(address _asset) external isVaultManager {
-        if (_asset == ETHToken.NATIVE_TOKEN) {
+        if (_asset == NativeToken.NATIVE_TOKEN) {
             require(address(vaultBufferAddress).balance == 0, "vaultBuffer exist this asset");
         } else {
             require(
@@ -171,7 +179,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
         trackedAssetsMap.minus(_asset, 1);
         if (trackedAssetsMap.get(_asset) <= 0) {
             uint256 _balance;
-            if (_asset == ETHToken.NATIVE_TOKEN) {
+            if (_asset == NativeToken.NATIVE_TOKEN) {
                 _balance = address(this).balance;
             } else {
                 _balance = IERC20Upgradeable(_asset).balanceOf(address(this));
@@ -190,16 +198,16 @@ contract ETHVaultAdmin is ETHVaultStorage {
     function addStrategy(StrategyAdd[] memory strategyAdds) external isVaultManager {
         address[] memory _strategies = new address[](strategyAdds.length);
         for (uint256 i = 0; i < strategyAdds.length; i++) {
-            StrategyAdd memory strategyAdd = strategyAdds[i];
-            address _strategy = strategyAdd.strategy;
+            StrategyAdd memory _strategyAdd = strategyAdds[i];
+            address _strategy = _strategyAdd.strategy;
             require(
                 (_strategy != ZERO_ADDRESS) &&
-                (!strategySet.contains(_strategy)) &&
-                (IETHStrategy(_strategy).vault() == address(this)),
+                    (!strategySet.contains(_strategy)) &&
+                    (IETHStrategy(_strategy).vault() == address(this)),
                 "Strategy is invalid"
             );
             _strategies[i] = _strategy;
-            _addStrategy(_strategy, strategyAdd.profitLimitRatio, strategyAdd.lossLimitRatio);
+            _addStrategy(_strategy, _strategyAdd.profitLimitRatio, _strategyAdd.lossLimitRatio);
             address[] memory _wants = IETHStrategy(_strategy).getWants();
             for (uint256 j = 0; j < _wants.length; j++) {
                 trackedAssetsMap.plus(_wants[j], 1);
@@ -219,11 +227,11 @@ contract ETHVaultAdmin is ETHVaultStorage {
     ) internal {
         //Add strategy to approved strategies
         strategies[strategy] = StrategyParams({
-        lastReport : block.timestamp,
-        totalDebt : 0,
-        profitLimitRatio : _profitLimitRatio,
-        lossLimitRatio : _lossLimitRatio,
-        enforceChangeLimit : true
+            lastReport: block.timestamp,
+            totalDebt: 0,
+            profitLimitRatio: _profitLimitRatio,
+            lossLimitRatio: _lossLimitRatio,
+            enforceChangeLimit: true
         });
         strategySet.add(strategy);
     }
@@ -248,30 +256,34 @@ contract ETHVaultAdmin is ETHVaultStorage {
      * @param _addr Address of the strategy to remove
      */
     function _removeStrategy(address _addr, bool _force) internal {
-        // Withdraw all assets
-        try IETHStrategy(_addr).repay(MAX_BPS, MAX_BPS) {} catch {
-            if (!_force) {
-                revert();
+        if (strategies[_addr].totalDebt > 0) {
+            // Withdraw all assets
+            try IETHStrategy(_addr).repay(MAX_BPS, MAX_BPS, 0) {} catch {
+                if (!_force) {
+                    revert();
+                }
             }
         }
 
         address[] memory _wants = IETHStrategy(_addr).getWants();
         for (uint256 i = 0; i < _wants.length; i++) {
-            address wantToken = _wants[i];
-            trackedAssetsMap.minus(wantToken, 1);
-            if (trackedAssetsMap.get(wantToken) <= 0) {
+            address _wantToken = _wants[i];
+            trackedAssetsMap.minus(_wantToken, 1);
+            if (trackedAssetsMap.get(_wantToken) <= 0) {
                 uint256 _balance;
-                if (wantToken == ETHToken.NATIVE_TOKEN) {
+                if (_wantToken == NativeToken.NATIVE_TOKEN) {
                     _balance = address(this).balance;
                 } else {
-                    _balance = IERC20Upgradeable(wantToken).balanceOf(address(this));
+                    _balance = IERC20Upgradeable(_wantToken).balanceOf(address(this));
                 }
                 if (_balance == 0) {
-                    trackedAssetsMap.remove(wantToken);
+                    trackedAssetsMap.remove(_wantToken);
                 }
             }
         }
-        totalDebt -= strategies[_addr].totalDebt;
+        if (strategies[_addr].totalDebt > 0) {
+            totalDebt -= strategies[_addr].totalDebt;
+        }
         delete strategies[_addr];
         strategySet.remove(_addr);
         _removeStrategyFromQueue(_addr);
@@ -285,21 +297,21 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     //advance queue
-    function setWithdrawalQueue(address[] memory queues) external isKeeper {
-        for (uint256 i = 0; i < queues.length; i++) {
-            address strategy = queues[i];
-            require(strategySet.contains(strategy), "strategy not exist");
+    function setWithdrawalQueue(address[] memory _queues) external isKeeper {
+        for (uint256 i = 0; i < _queues.length; i++) {
+            address _strategy = _queues[i];
+            require(strategySet.contains(_strategy), "strategy not exist");
             if (i < withdrawQueue.length) {
-                withdrawQueue[i] = strategy;
+                withdrawQueue[i] = _strategy;
             } else {
-                withdrawQueue.push(strategy);
+                withdrawQueue.push(_strategy);
             }
         }
-        for (uint256 i = queues.length; i < withdrawQueue.length; i++) {
+        for (uint256 i = _queues.length; i < withdrawQueue.length; i++) {
             if (withdrawQueue[i] == ZERO_ADDRESS) break;
             withdrawQueue[i] = ZERO_ADDRESS;
         }
-        emit SetWithdrawalQueue(queues);
+        emit SetWithdrawalQueue(_queues);
     }
 
     function removeStrategyFromQueue(address[] memory _strategies) external isKeeper {
@@ -311,29 +323,27 @@ contract ETHVaultAdmin is ETHVaultStorage {
 
     function _removeStrategyFromQueue(address _strategy) internal {
         for (uint256 i = 0; i < withdrawQueue.length; i++) {
-            address curStrategy = withdrawQueue[i];
-            if (curStrategy == ZERO_ADDRESS) break;
-            if (curStrategy == _strategy) {
+            address _curStrategy = withdrawQueue[i];
+            if (_curStrategy == ZERO_ADDRESS) break;
+            if (_curStrategy == _strategy) {
                 withdrawQueue[i] = ZERO_ADDRESS;
                 _organizeWithdrawalQueue();
-                //                emit RemoveStrategyFromQueue(_strategy);
+
                 return;
             }
         }
     }
 
     function _organizeWithdrawalQueue() internal {
-        uint256 offset = 0;
+        uint256 _offset = 0;
         for (uint256 i = 0; i < withdrawQueue.length; i++) {
-            address strategy = withdrawQueue[i];
-            if (strategy == ZERO_ADDRESS) {
-                offset += 1;
-            } else if (offset > 0) {
-                withdrawQueue[i - offset] = strategy;
+            address _strategy = withdrawQueue[i];
+            if (_strategy == ZERO_ADDRESS) {
+                _offset += 1;
+            } else if (_offset > 0) {
+                withdrawQueue[i - _offset] = _strategy;
                 withdrawQueue[i] = ZERO_ADDRESS;
             }
         }
     }
-
-    fallback() external payable {}
 }

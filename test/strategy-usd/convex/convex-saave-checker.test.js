@@ -2,5 +2,5 @@
 const checker = require('../strategy-checker');
 
 describe('【ConvexSaaveStrategy Strategy Checker】', function() {
-    checker.check('ConvexSaaveStrategy');
+    checker.check('ConvexSaaveStrategy',null,null,2);
 });

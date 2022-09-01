@@ -10,7 +10,7 @@ interface IETHStrategy {
         address[] _assets,
         uint256[] _amounts
     );
-    event SetIsWantRatioIgnorable(bool oldValue, bool newValue);
+    event SetIsWantRatioIgnorable(bool _oldValue, bool _newValue);
 
     /// @notice Version of strategy
     function getVersion() external pure returns (string memory);
@@ -40,8 +40,8 @@ interface IETHStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isETH,
-            uint256 ethValue
+            bool _isETH,
+            uint256 _ethValue
         );
 
     /// @notice Total assets of strategy in ETH.
@@ -51,7 +51,7 @@ interface IETHStrategy {
     function get3rdPoolAssets() external view returns (uint256);
 
     /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
-    function harvest() external;
+    function harvest() external returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts);
 
     /// @notice Strategy borrow funds from vault, enable payable because it needs to receive ETH from vault
     /// @param _assets borrow token address
@@ -61,9 +61,11 @@ interface IETHStrategy {
     /// @notice Strategy repay the funds to vault
     /// @param _withdrawShares Numerator
     /// @param _totalShares Denominator
-    function repay(uint256 _withdrawShares, uint256 _totalShares)
-        external
-        returns (address[] memory _assets, uint256[] memory _amounts);
+    function repay(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _ouputCode
+    ) external returns (address[] memory _assets, uint256[] memory _amounts);
 
     /// @notice getter isWantRatioIgnorable
     function isWantRatioIgnorable() external view returns (bool);

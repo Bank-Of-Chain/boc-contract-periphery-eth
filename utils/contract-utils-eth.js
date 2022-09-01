@@ -11,7 +11,7 @@ const {
 const MFC = require("../config/mainnet-fork-test-config");
 const {
     strategiesList
-} = require('../config/strategy-config-eth');
+} = require('../config/strategy-eth/strategy-config-eth');
 
 const {
     getStrategiesWants
@@ -27,8 +27,8 @@ const {
     // topUpPaxByAddress,
     // topUpLusdByAddress,
     topUpMimByAddress,
-    topUpETHByAddress,
-    topUpStEthByAddress,
+    topUpEthByAddress,
+    topUpSTETHByAddress,
     topUpWETHByAddress,
     topUpRocketPoolEthByAddress,
     topUpWstEthByAddress,
@@ -39,18 +39,20 @@ const {
 // Access Control Proxy
 const AccessControlProxy = hre.artifacts.require("AccessControlProxy");
 const Vault = hre.artifacts.require("ETHVault");
+const VaultBuffer = hre.artifacts.require("VaultBuffer");
+const IVaultBuffer = hre.artifacts.require("IVaultBuffer");
+const PegToken = hre.artifacts.require("PegToken");
 const VaultAdmin = hre.artifacts.require("ETHVaultAdmin");
 const IVault = hre.artifacts.require("IETHVault");
 // Treasury
 const Treasury = hre.artifacts.require('Treasury');
-const ETHi = hre.artifacts.require("ETHi");
 const ExchangeAggregator = hre.artifacts.require('ExchangeAggregator');
-const EthOneInchV4Adapter = hre.artifacts.require('EthOneInchV4Adapter');
-const EthParaSwapV5Adapter = hre.artifacts.require('EthParaSwapV5Adapter');
+const EthOneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
+const EthParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
 
-const IExchangeAdapter = hre.artifacts.require('IExchangeAdapter');
-const PriceOracle = hre.artifacts.require('PriceOracle');
-const TestAdapter = hre.artifacts.require("contracts/eth/exchanges/adapters/TestAdapter.sol:TestAdapter");
+const MockValueInterpreter = hre.artifacts.require('MockValueInterpreter');
+const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
+const TestAdapter = hre.artifacts.require("TestAdapter");
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 
 /**
@@ -67,9 +69,15 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
 
     // 预言机
     console.log('deploy PriceOracle');
-    const priceOracle = await PriceOracle.new();
+    const priceOracleConsumer = await PriceOracleConsumer.new();
 
-    const testAdapter = await TestAdapter.new(priceOracle.address);
+    const  valueInterpreter = await MockValueInterpreter.new(
+        accessControlProxy.address,
+        accessControlProxy.address,
+        accessControlProxy.address
+    );
+
+    const testAdapter = await TestAdapter.new(valueInterpreter.address);
 
     console.log('deploy EthOneInchV4Adapter');
     const ethOneInchV4Adapter = await EthOneInchV4Adapter.new();
@@ -80,14 +88,14 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
     console.log('deploy ExchangeAggregator');
     let exchangeAggregator;
     if (mock) {
-        exchangeAggregator = await ExchangeAggregator.new([testAdapter.address], accessControlProxy.address);
+       exchangeAggregator = await ExchangeAggregator.new([testAdapter.address], accessControlProxy.address);
     } else {
         exchangeAggregator = await ExchangeAggregator.new([ethOneInchV4Adapter.address,ethParaSwapV5Adapter.address], accessControlProxy.address);
     }
     const adapters = await exchangeAggregator.getExchangeAdapters();
     let exchangePlatformAdapters = {};
-    for (let i = 0; i < adapters.identifiers_.length; i++) {
-        exchangePlatformAdapters[adapters.identifiers_[i]] = adapters.exchangeAdapters_[i];
+    for (let i = 0; i < adapters._identifiers.length; i++) {
+        exchangePlatformAdapters[adapters._identifiers[i]] = adapters._exchangeAdapters[i];
     }
 
     const pegToken = await PegToken.new();
@@ -101,7 +109,7 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
     const vaultBuffer = await VaultBuffer.new();
     await vaultBuffer.initialize('ETH Peg Token Ticket', 'tETHi',vault.address,pegToken.address,accessControlProxy.address);
 
-    await vault.initialize(accessControlProxy.address, treasury.address, exchangeAggregator.address, priceOracle.address);
+    await vault.initialize(accessControlProxy.address, treasury.address, exchangeAggregator.address, priceOracleConsumer.address);
 
     const vaultAdmin = await VaultAdmin.new();
     await vault.setAdminImpl(vaultAdmin.address, {from: governance});
@@ -119,9 +127,11 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
     let withdrawQueque = new Array();
     for (let i = 0; i < strategiesList.length; i++) {
         let strategyItem = strategiesList[i];
-        let contractArtifact = hre.artifacts.require(strategyItem.name);
+        let contractArtifact = hre.artifacts.require(strategyItem.contract);
         let strategy = await contractArtifact.new();
-        await strategy.initialize(vault.address);
+        let params = [vault.address,strategyItem.name,...strategyItem.customParams]
+        await strategy.initialize(...params)
+        
         withdrawQueque.push(strategy.address);
         addToVaultStrategies.push({
             strategy: strategy.address,
@@ -154,9 +164,9 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
 
         const amount = new BigNumber(10).pow(decimals).multipliedBy(4000);
         if (want === MFC.ETH_ADDRESS) {
-            await topUpETHByAddress(amount, testAdapter.address);
+            await topUpEthByAddress(amount, testAdapter.address);
         } else if (want === MFC.stETH_ADDRESS) {
-            await topUpStEthByAddress(amount, testAdapter.address);
+            await topUpSTETHByAddress(amount, testAdapter.address);
         } else if (want === MFC.WETH_ADDRESS) {
             await topUpWETHByAddress(amount, testAdapter.address);
         } else if (want === MFC.rocketPoolETH_ADDRESS) {
@@ -173,7 +183,7 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
         vaultBuffer,
         pegToken,
         treasury,
-        priceOracle,
+        priceOracleConsumer: priceOracleConsumer,
         exchangePlatformAdapters,
         addToVaultStrategies,
         exchangeAggregator
@@ -202,8 +212,8 @@ const getTokenBalance = async (contractAddress, tokenArray) => {
 const getExchangePlatformAdapters = async (exchangeAggregator) => {
     const adapters = await exchangeAggregator.getExchangeAdapters();
     const exchangePlatformAdapters = {};
-    for (let i = 0; i < adapters.identifiers_.length; i++) {
-        exchangePlatformAdapters[adapters.identifiers_[i]] = adapters.exchangeAdapters_[i];
+    for (let i = 0; i < adapters._identifiers.length; i++) {
+        exchangePlatformAdapters[adapters._identifiers[i]] = adapters._exchangeAdapters[i];
     }
     return exchangePlatformAdapters;
 }

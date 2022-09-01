@@ -33,18 +33,15 @@ chai.use(solidity);
 const expect = chai.expect;
 
 const AccessControlProxy = hre.artifacts.require('AccessControlProxy');
-// const Treasury = hre.artifacts.require('Treasury');
-const PriceOracle = hre.artifacts.require('PriceOracle');
-const ETHi = hre.artifacts.require("ETHi");
-const WETHi = hre.artifacts.require("WETHi");
+const Treasury = hre.artifacts.require('Treasury');
+const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
 const Vault = hre.artifacts.require('ETHVault');
 const VaultBuffer = hre.artifacts.require('VaultBuffer');
 const PegToken = hre.artifacts.require('PegToken');
 const IETHVault = hre.artifacts.require('IETHVault');
-const ETHExchanger = hre.artifacts.require('ETHExchanger');
 const ExchangeAggregator = hre.artifacts.require('ExchangeAggregator');
-const EthOneInchV4Adapter = hre.artifacts.require('EthOneInchV4Adapter');
-const EthParaSwapV5Adapter = hre.artifacts.require('EthParaSwapV5Adapter');
+const EthOneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
+const EthParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
 
 const VaultAdmin = hre.artifacts.require('ETHVaultAdmin');
 const MockS3CoinStrategy = hre.artifacts.require('MockS3CoinStrategy');
@@ -54,11 +51,11 @@ const EXCHANGE_EXTRA_PARAMS = {
     oneInchV4: {
         useHttp: true,
         network: 1,
-        protocols: 'CURVE_V2,SUSHI,CURVE,UNISWAP_V2,UNISWAP_V3'
+        // protocols: 'CURVE_V2,SUSHI,CURVE,UNISWAP_V2,UNISWAP_V3'
     },
     paraswap: {
         network: 1,
-        includeDEXS: 'UniswapV2,UniswapV3,SushiSwap,mStable,DODOV2,DODOV1,Curve,CurveV2,Compound,Bancor,BalancerV2,Aave2',
+        // includeDEXS: 'UniswapV2,UniswapV3,SushiSwap,mStable,DODOV2,DODOV1,Curve,CurveV2,Compound,Bancor,BalancerV2,Aave2',
         excludeContractMethods: ['swapOnZeroXv2', 'swapOnZeroXv4']
     }
 }
@@ -84,7 +81,7 @@ describe("Vault", function () {
     let mockS3CoinStrategy;
 
     // Core protocol contracts
-    let ethi;
+    let treasury;
     let pegToken;
     let vault;
     let vaultBuffer;
@@ -94,8 +91,7 @@ describe("Vault", function () {
     let usdcToken;
     let stethToken;
     let underlyingAddress;
-    let priceOracle;
-    let ethExchanger;
+    let priceOracleConsumer;
     let treasuryAddress;
     let exchangePlatformAdapters;
 
@@ -137,12 +133,7 @@ describe("Vault", function () {
         
         // PriceOracle
         console.log('deploy PriceOracle');
-        priceOracle = await PriceOracle.new();
-        // ETHExchanger
-        console.log('deploy ETHExchanger');
-        ethExchanger = await ETHExchanger.new();
-
-        
+        priceOracleConsumer = await PriceOracleConsumer.new();
         console.log('deploy EthOneInchV4Adapter');
         const ethOneInchV4Adapter = await EthOneInchV4Adapter.new();
                 
@@ -153,15 +144,16 @@ describe("Vault", function () {
         exchangeAggregator = await ExchangeAggregator.new([ethOneInchV4Adapter.address,ethParaSwapV5Adapter.address], accessControlProxy.address);
         const adapters = await exchangeAggregator.getExchangeAdapters();
         exchangePlatformAdapters = {};
-        for (let i = 0; i < adapters.identifiers_.length; i++) {
-            exchangePlatformAdapters[adapters.identifiers_[i]] = adapters.exchangeAdapters_[i];
+        for (let i = 0; i < adapters._identifiers.length; i++) {
+            exchangePlatformAdapters[adapters._identifiers[i]] = adapters._exchangeAdapters[i];
         }
 
-        // console.log(exchangePlatformAdapters);
+        treasury = await Treasury.new();
+        await treasury.initialize(accessControlProxy.address);
 
-        treasuryAddress = ethExchanger.address;    
+        treasuryAddress = treasury.address;
              
-        await vault.initialize(accessControlProxy.address, treasuryAddress, exchangeAggregator.address, priceOracle.address);
+        await vault.initialize(accessControlProxy.address, treasuryAddress, exchangeAggregator.address, priceOracleConsumer.address);
         vaultAdmin = await VaultAdmin.new();
         await vault.setAdminImpl(vaultAdmin.address, {from: governance});
 
@@ -182,8 +174,8 @@ describe("Vault", function () {
         iVault = await IETHVault.at(vault.address);
         await iVault.setVaultBufferAddress(vaultBuffer.address);
         await iVault.setPegTokenAddress(pegToken.address);
-        await iVault.setRebaseThreshold(1);
-        await iVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
+        // await iVault.setRebaseThreshold(1);
+        // await iVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
         //20%
         await iVault.setTrusteeFeeBps(2000, {from: governance});
         await iVault.setRedeemFeeBps(0, {from: governance});
@@ -275,10 +267,17 @@ describe("Vault", function () {
 
         console.log('rebaseThreshold: %s', (await iVault.rebaseThreshold()).toString());
 
+        console.log("before startAdjustPosition PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
+        console.log("before startAdjustPosition totalAssets:%s", new BigNumber(await iVault.totalAssets()).toFixed());
+        console.log("before startAdjustPosition pegToken totalSupply:%s", new BigNumber(await pegToken.totalSupply()).toFixed());
+
         //startAdjustPosition
         const tx = await iVault.startAdjustPosition({from: keeper});
         const gasUsed = tx.receipt.gasUsed;
         console.log('startAdjustPosition gasUsed: %d', gasUsed);
+        console.log("after startAdjustPosition PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
+        console.log("after startAdjustPosition totalAssets:%s", new BigNumber(await iVault.totalAssets()).toFixed());
+        console.log("after startAdjustPosition pegToken totalSupply:%s", new BigNumber(await pegToken.totalSupply()).toFixed());
 
         console.log("Balance of stETH of vault after start adjust position:%s", new BigNumber(await stethToken.balanceOf(iVault.address)).toFixed());
         console.log("Balance of ETH of vault after start adjust position:%s", new BigNumber(await balance.current(iVault.address)).toFixed());
@@ -321,24 +320,24 @@ describe("Vault", function () {
                     paraswap: exchangePlatformAdapters.paraswap,
                     oneInchV4: exchangePlatformAdapters.oneInchV4
                 };
-                const SWAP_INFO = await getBestSwapInfo({
-                    address: tokenItem,
-                    symbol: 'ETH',
-                    decimals: 18
-                }, {
-                    address: tokenItem,
-                    symbol: 'ETH',
-                    decimals: 18
-                }, exchangeAmounts, 100, 500, platformAdapter, EXCHANGE_EXTRA_PARAMS);
+                // const SWAP_INFO = await getBestSwapInfo({
+                //     address: tokenItem,
+                //     symbol: 'ETH',
+                //     decimals: 18
+                // }, {
+                //     address: tokenItem,
+                //     symbol: 'ETH',
+                //     decimals: 18
+                // }, exchangeAmounts, 100, 500, platformAdapter, EXCHANGE_EXTRA_PARAMS);
 
                 return {
                     fromToken: tokenItem,
                     toToken: tokenItem,
                     fromAmount: exchangeAmounts,
                     exchangeParam: {                        
-                        platform: SWAP_INFO.platform,
-                        method: SWAP_INFO.method,
-                        encodeExchangeArgs: SWAP_INFO.encodeExchangeArgs,
+                        platform: exchangePlatformAdapters.paraswap,
+                        method: 0,
+                        encodeExchangeArgs: '0x',
                         slippage: 100,
                         oracleAdditionalSlippage: 0
                     }
@@ -358,9 +357,11 @@ describe("Vault", function () {
 
         Utils.assertBNGt(beforestETH, afterstETH);
 
+        console.log("before endAdjustPosition PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
         const tx = await iVault.endAdjustPosition({from: keeper});
         const gasUsed = tx.receipt.gasUsed;
         console.log('endAdjustPosition gasUsed: %d', gasUsed);
+        console.log("after endAdjustPosition PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
 
         console.log('start distributeWhenDistributing');
         await vaultBuffer.distributeWhenDistributing({from: keeper});
@@ -375,60 +376,9 @@ describe("Vault", function () {
         const _toAsset = MFC.ETH_ADDRESS;
         console.log("withdraw asset:ETH");
         console.log("Number of ETHi withdraw:%s", new BigNumber(_amount).toFixed());
-        const resp = await iVault.burn.call(_amount, _toAsset, 0, false, [], {
-            from: farmer1
-        });
 
-        tokens = resp[0];
-        amounts = resp[1];
-
-        console.log("---------tokens------amounts--------------");
-        console.log(tokens);
-        console.log(amounts[0].toString(),amounts[1].toString());
-        exchangeArray = await Promise.all(
-            map(tokens, async (tokenItem, index) => {
-                const exchangeAmounts = amounts[index].toString();
-                if (tokenItem === _toAsset) {
-                    return;
-                }
-                let platformAdapter = {
-                    paraswap: exchangePlatformAdapters.paraswap,
-                    oneInchV4: exchangePlatformAdapters.oneInchV4
-                };
-                const SWAP_INFO = await getBestSwapInfo({
-                    // platform: exchangePlatformAdapters.paraswap,
-                    address: tokenItem,
-                    symbol: 'ETH',
-                    decimals: 18
-                }, {
-                    // platform: exchangePlatformAdapters.oneInchV4,
-                    address: _toAsset,
-                    symbol: 'stETH',
-                    decimals: 18
-                }, exchangeAmounts, 500, 500, platformAdapter, EXCHANGE_EXTRA_PARAMS);
-
-                console.log("SWAP_INFO");
-                console.log(SWAP_INFO);
-
-                return {
-                    fromToken: tokenItem,
-                    toToken: _toAsset,
-                    fromAmount: exchangeAmounts,
-                    exchangeParam: {
-                        platform: SWAP_INFO.platform,
-                        method: SWAP_INFO.method,
-                        encodeExchangeArgs: SWAP_INFO.encodeExchangeArgs,
-                        slippage: 4999,
-                        oracleAdditionalSlippage: 4999
-                    }
-                }
-            })
-        );
-
-        const exchangeArrayNext = filter(exchangeArray, i => !isEmpty(i));
         const beforeBalance = new BigNumber(await balance.current(farmer1)).toFixed();
-        await iVault.burn(_amount, _toAsset, 0, true, exchangeArrayNext, {from: farmer1});
-        // await iVault.burn(_amount, _toAsset, 0, true, [], {from: farmer1});
+        await iVault.burn(_amount, 0, {from: farmer1});
         const afterBalance = new BigNumber(await balance.current(farmer1)).toFixed();
 
         console.log("Balance of stETH of vault after withdraw:%s", new BigNumber(await stethToken.balanceOf(iVault.address)).toFixed());
@@ -455,7 +405,9 @@ describe("Vault", function () {
         const beforeETHI = new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed();
         console.log("Balance of ETHi of treasury before report", new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed());
         await mockS3CoinStrategy.harvest({from:keeper,value:2*(10**18)});
+        console.log("before rebase PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
         await iVault.rebase({from:keeper});
+        console.log("after rebase PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
         const afterETHI = new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed();
         console.log("Balance of ETHi of treasury after report:", new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed());
         Utils.assertBNGt(afterETHI, beforeETHI);
@@ -490,15 +442,21 @@ describe("Vault", function () {
 
         //startAdjustPosition
         console.log("start Adjust Position");
+        console.log("before startAdjustPosition PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
+        console.log("before startAdjustPosition totalAssets:%s", new BigNumber(await iVault.totalAssets()).toFixed());
+        console.log("before startAdjustPosition pegToken totalSupply:%s", new BigNumber(await pegToken.totalSupply()).toFixed());
          tx =  await iVault.startAdjustPosition({from: keeper});
          gasUsed = tx.receipt.gasUsed;
         console.log('startAdjustPosition gasUsed: %d', gasUsed);
+        console.log("after startAdjustPosition PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
+        console.log("after startAdjustPosition totalAssets:%s", new BigNumber(await iVault.totalAssets()).toFixed());
+        console.log("after startAdjustPosition pegToken totalSupply:%s", new BigNumber(await pegToken.totalSupply()).toFixed());
         console.log("Balance of ETH of vault before redeem:%s", new BigNumber(await balance.current(iVault.address)).toFixed());
         console.log("Balance of stETH of vault before redeem:%s", new BigNumber(await stethToken.balanceOf(iVault.address)).toFixed());
         console.log("(amount,totalDebt)=(%s,%s)", new BigNumber(await iVault.totalDebt()).div(5).toFixed(),new BigNumber(await iVault.totalDebt()).toFixed());
         let beforeETH = new BigNumber(await balance.current(iVault.address)).toFixed();
         console.log("redeem amount: %s",new BigNumber(await iVault.totalDebt()).div(5).toFixed())
-        tx =  await iVault.redeem(mockS3CoinStrategy.address, new BigNumber(await iVault.totalDebt()).div(5).toFixed());
+        tx =  await iVault.redeem(mockS3CoinStrategy.address, new BigNumber(await iVault.totalDebt()).div(5).toFixed(), 0);
         gasUsed = tx.receipt.gasUsed;
         console.log('redeem gasUsed: %d', gasUsed);
         let afterETH = new BigNumber(await balance.current(iVault.address)).toFixed();
@@ -543,9 +501,11 @@ describe("Vault", function () {
         console.log(" Balance of stETH of vault after lend:%s", new BigNumber(await stethToken.balanceOf(iVault.address)).toFixed());
         Utils.assertBNGt(beforeETH, afterETH);
 
+        console.log("before endAdjustPosition PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
         tx = await iVault.endAdjustPosition({from: keeper});
         gasUsed = tx.receipt.gasUsed;
         console.log('endAdjustPosition gasUsed: %d', gasUsed);
+        console.log("after endAdjustPosition PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
 
         console.log('start distributeWhenDistributing');
         await vaultBuffer.distributeWhenDistributing({from: keeper});
@@ -554,5 +514,33 @@ describe("Vault", function () {
         console.log("Balance of ETHi of farmer1 after end Adjust Position:%s", new BigNumber(await pegToken.balanceOf(farmer1)).toFixed());
         console.log("Balance of ETHi of farmer2 after end Adjust Position:%s", new BigNumber(await pegToken.balanceOf(farmer2)).toFixed());
         console.log("valueOfTrackedTokensIncludeVaultBuffer after end Adjust Position:%s,totalAssetsIncludeVaultBuffer：%s", new BigNumber(await iVault.valueOfTrackedTokensIncludeVaultBuffer()).toFixed(), new BigNumber(await iVault.totalAssetsIncludeVaultBuffer()).toFixed());
+    });
+
+    it('Verify：burn from strategy', async function (){
+        await iVault.rebase();
+        const treasuryLp =  new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed();
+        await treasury.withdraw(pegToken.address, governance, new BigNumber(treasuryLp).toFixed(), {from: governance});
+
+        console.log("totalValueInStrategies before withdraw: %s",new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed());
+        console.log("totalAssets before withdraw: %s",new BigNumber(await iVault.totalAssets()).toFixed());
+        console.log("Balance of ETHi of farmer1 before withdraw: %s", new BigNumber(await pegToken.balanceOf(farmer1)).toFixed());
+        console.log("Balance of ETHi of farmer2 before withdraw: %s", new BigNumber(await pegToken.balanceOf(farmer2)).toFixed());
+        console.log("Balance of ETHi of governance before withdraw: %s", new BigNumber(await pegToken.balanceOf(governance)).toFixed());
+        let _amount =  new BigNumber(await pegToken.balanceOf(farmer1)).toFixed();
+        await iVault.burn(_amount, 0, {from: farmer1});
+        console.log("totalValueInStrategies after farmer1 withdraw: %s",new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed());
+        _amount =  new BigNumber(await pegToken.balanceOf(governance)).toFixed();
+        await iVault.burn(_amount, 0, {from: governance});
+        console.log("totalValueInStrategies after governance withdraw: %s",new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed());
+        _amount =  new BigNumber(await pegToken.balanceOf(farmer2)).minus(new BigNumber(10).pow(15)).plus(10).toFixed();
+        await iVault.burn(_amount, 0, {from: farmer2});
+        const totalValueInStrategies = new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed();
+        console.log("totalValueInStrategies after withdraw: %s",totalValueInStrategies);
+        console.log("totalAssets after withdraw: %s",new BigNumber(await iVault.totalAssets()).toFixed());
+        console.log("Balance of ETHi of farmer1 after withdraw: %s", new BigNumber(await pegToken.balanceOf(farmer1)).toFixed());
+        console.log("Balance of ETHi of farmer2 after withdraw: %s", new BigNumber(await pegToken.balanceOf(farmer2)).toFixed());
+        console.log("Balance of ETHi of governance after withdraw: %s", new BigNumber(await pegToken.balanceOf(governance)).toFixed());
+
+        Utils.assertBNEq(totalValueInStrategies, 0);
     });
 });

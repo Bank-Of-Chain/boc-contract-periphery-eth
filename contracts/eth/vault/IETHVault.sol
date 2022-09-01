@@ -3,19 +3,25 @@
 pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "../exchanges/IETHExchangeAggregator.sol";
+import "boc-contract-core/contracts/exchanges/IExchangeAggregator.sol";
 
 interface IETHVault {
+    /// @param lastReport The last report timestamp
+    /// @param totalDebt The total asset of this strategy
+    /// @param profitLimitRatio The limited ratio of profit
+    /// @param lossLimitRatio The limited ratio for loss
+    /// @param enforceChangeLimit The switch of enforce change Limit
     struct StrategyParams {
-        //last report timestamp
         uint256 lastReport;
-        //total asset
         uint256 totalDebt;
         uint256 profitLimitRatio;
         uint256 lossLimitRatio;
         bool enforceChangeLimit;
     }
 
+    /// @param strategy The new strategy to add
+    /// @param profitLimitRatio The limited ratio of profit
+    /// @param lossLimitRatio The limited ratio for loss
     struct StrategyAdd {
         address strategy;
         uint256 profitLimitRatio;
@@ -30,7 +36,6 @@ interface IETHVault {
     event Mint(address _account, address _asset, uint256 _amount, uint256 _mintAmount);
     event Burn(
         address _account,
-        address _asset,
         uint256 _amount,
         uint256 _actualAmount,
         uint256 _shareAmount,
@@ -44,26 +49,41 @@ interface IETHVault {
         address _distAsset,
         uint256 _distAmount
     );
-    event Redeem(address _strategy, uint256 _debtChangeAmount, address[] _assets, uint256[] _amounts);
-    event LendToStrategy(address indexed strategy, address[] wants, uint256[] amounts, uint256 lendValue);
+    event Redeem(
+        address _strategy,
+        uint256 _debtChangeAmount,
+        address[] _assets,
+        uint256[] _amounts
+    );
+    event LendToStrategy(
+        address indexed _strategy,
+        address[] _wants,
+        uint256[] _amounts,
+        uint256 _lendValue
+    );
     event RemoveStrategyFromQueue(address[] _strategies);
     event SetEmergencyShutdown(bool _shutdown);
     event RebasePaused();
     event RebaseUnpaused();
     event RebaseThresholdUpdated(uint256 _threshold);
     event TrusteeFeeBpsChanged(uint256 _basis);
+    event MaxTimestampBetweenTwoReportedChanged(uint256 _maxTimestampBetweenTwoReported);
+    event MinCheckedStrategyTotalDebtChanged(uint256 _minCheckedStrategyTotalDebt);
     event MinimumInvestmentAmountChanged(uint256 _minimumInvestmentAmount);
     event TreasuryAddressChanged(address _address);
+    event ExchangeManagerAddressChanged(address _address);
     event SetAdjustPositionPeriod(bool _adjustPositionPeriod);
     event RedeemFeeUpdated(uint256 _redeemFeeBps);
-    event SetWithdrawalQueue(address[] queues);
+    event SetWithdrawalQueue(address[] _queues);
     event Rebase(uint256 _totalShares, uint256 _totalValue, uint256 _newUnderlyingUnitsPerShare);
     event StrategyReported(
-        address indexed strategy,
-        uint256 gain,
-        uint256 loss,
-        uint256 lastStrategyTotalDebt,
-        uint256 nowStrategyTotalDebt,
+        address indexed _strategy,
+        uint256 _gain,
+        uint256 _loss,
+        uint256 _lastStrategyTotalDebt,
+        uint256 _nowStrategyTotalDebt,
+        address[] _rewardTokens,
+        uint256[] _claimAmounts,
         uint256 _type
     );
 
@@ -85,13 +105,14 @@ interface IETHVault {
     /// @notice Version of vault
     function getVersion() external pure returns (string memory);
 
-    /// @notice Minting USDi supported assets
-    function getSupportAssets() external view returns (address[] memory assets);
+    /// @notice Minting ETHi supported assets
+    function getSupportAssets() external view returns (address[] memory _assets);
 
-    function checkIsSupportAsset(address asset) external view;
+    /// @notice Check '_asset' is supported or not
+    function checkIsSupportAsset(address _asset) external view;
 
     /// @notice Assets held by Vault
-    function getTrackedAssets() external view returns (address[] memory assets);
+    function getTrackedAssets() external view returns (address[] memory _assets);
 
     /// @notice Vault holds asset value directly in ETH (1e18)
     function valueOfTrackedTokens() external view returns (uint256 _totalValue);
@@ -108,13 +129,17 @@ interface IETHVault {
     /// @notice Vault total value(by chainlink price) in USD(1e18)
     function totalValue() external view returns (uint256);
 
-    /// @notice start  Adjust  Position
+    /// @notice Start adjust position
     function startAdjustPosition() external;
 
-    /// @notice end  Adjust Position
+    /// @notice End adjust position
     function endAdjustPosition() external;
 
+    /// @notice Return underlying token per share token
     function underlyingUnitsPerShare() external view returns (uint256);
+
+    /// @notice Get pegToken price in USD(1e18)
+    function getPegTokenPrice() external view returns (uint256);
 
     /**
      * @dev Internal to calculate total value of all assets held in Vault.
@@ -128,15 +153,19 @@ interface IETHVault {
      */
     function totalValueInStrategies() external view returns (uint256 _value);
 
-    /// @notice All strategies
+    /// @notice Return all strategy addresses
     function getStrategies() external view returns (address[] memory _strategies);
 
-    function checkActiveStrategy(address strategy) external view;
+    /// @notice Check '_strategy' is active or not
+    function checkActiveStrategy(address _strategy) external view;
 
     /// @notice estimate Minting ETHi
     /// @param _amount Amount of the asset being deposited
     /// @return _sharesAmount  wethi amount
-    function estimateMint(address _asset, uint256 _amount) external view returns (uint256 _sharesAmount);
+    function estimateMint(address _asset, uint256 _amount)
+        external
+        view
+        returns (uint256 _sharesAmount);
 
     /// @notice Minting ETHi with ETH
     /// @return _sharesAmount  wethi amount
@@ -146,39 +175,53 @@ interface IETHVault {
         uint256 _minimumAmount
     ) external payable returns (uint256 _sharesAmount);
 
-    /// @notice burn USDi,return stablecoins
-    /// @param _amount Amount of USDi to burn
-    /// @param _asset one of StableCoin asset
+    /// @notice burn ETHi,return stablecoins
+    /// @param _amount Amount of ETHi to burn
     /// @param _minimumAmount Minimum stablecoin units to receive in return
-    function burn(
-        uint256 _amount,
-        address _asset,
-        uint256 _minimumAmount,
-        bool _needExchange,
-        IETHExchangeAggregator.ExchangeToken[] memory _exchangeTokens
-    ) external returns (address[] memory _assets, uint256[] memory _amounts);
+    function burn(uint256 _amount, uint256 _minimumAmount)
+        external
+        returns (address[] memory _assets, uint256[] memory _amounts);
 
     /// @notice Change ETHi supply with Vault total assets.
     function rebase() external;
 
     /// @notice Allocate funds in Vault to strategies.
-    function lend(address _strategy, IETHExchangeAggregator.ExchangeToken[] calldata _exchangeTokens)
-    external;
+    function lend(address _strategy, IExchangeAggregator.ExchangeToken[] calldata _exchangeTokens)
+        external;
 
     /// @notice Withdraw the funds from specified strategy.
-    function redeem(address _strategy, uint256 _amount) external;
+    function redeem(
+        address _strategy,
+        uint256 _amount,
+        uint256 _outputCode
+    ) external;
 
+    /**
+     * @dev Exchange from '_fromToken' to '_toToken'
+     * @param _fromToken The token swap from
+     * @param _toToken The token swap to
+     * @param _amount The amount to swap
+     * @param _exchangeParam The struct of ExchangeParam, see {ExchangeParam} struct
+     * @return _exchangeAmount The real amount to exchange
+     * Emits a {Exchange} event.
+     */
     function exchange(
         address _fromToken,
         address _toToken,
         uint256 _amount,
-        IETHExchangeAggregator.ExchangeParam memory exchangeParam
+        IExchangeAggregator.ExchangeParam memory _exchangeParam
     ) external returns (uint256);
 
-    function report() external;
+    /**
+     * @dev Report the current asset of strategy caller
+     * @param _rewardTokens The reward token list
+     * @param _claimAmounts The claim amount list
+     * Emits a {StrategyReported} event.
+     */
+    function report(address[] memory _rewardTokens, uint256[] memory _claimAmounts) external;
 
     /// @notice Shutdown the vault when an emergency occurs, cannot mint/burn.
-    function setEmergencyShutdown(bool active) external;
+    function setEmergencyShutdown(bool _active) external;
 
     /// @notice set adjustPositionPeriod true when adjust position occurs, cannot remove add asset/strategy and cannot mint/burn.
     function setAdjustPositionPeriod(bool _adjustPositionPeriod) external;
@@ -202,10 +245,10 @@ interface IETHVault {
      */
     function setTreasuryAddress(address _address) external;
 
-    //    /**
-    //     * @dev Set the EHTi address after initialization(only once)
-    //     */
-    //    function setETHiAddress(address _address) external;
+    /**
+     * @dev Sets the exchangeManagerAddress that can receive a portion of yield.
+     */
+    function setExchangeManagerAddress(address _exchangeManagerAddress) external;
 
     /**
      * @dev Sets the TrusteeFeeBps to the percentage of yield that should be
@@ -213,8 +256,8 @@ interface IETHVault {
      */
     function setTrusteeFeeBps(uint256 _basis) external;
 
-    //advance queue
-    function setWithdrawalQueue(address[] memory queues) external;
+    /// @notice set '_queues' as advance withdrawal queue
+    function setWithdrawalQueue(address[] memory _queues) external;
 
     function setStrategyEnforceChangeLimit(address _strategy, bool _enabled) external;
 
@@ -244,7 +287,7 @@ interface IETHVault {
     /// @dev The strategy added to the strategy list,
     ///      Vault may invest funds into the strategy,
     ///      and the strategy will invest the funds in the 3rd protocol
-    function addStrategy(StrategyAdd[] memory strategyAdds) external;
+    function addStrategy(StrategyAdd[] memory _strategyAdds) external;
 
     /// @notice Remove strategy from strategy list
     /// @dev The removed policy withdraws funds from the 3rd protocol and returns to the Vault
@@ -259,34 +302,36 @@ interface IETHVault {
 
     function removeStrategyFromQueue(address[] memory _strategies) external;
 
-    //adjust Position Period
+    /// @notice Return the period of adjust position
     function adjustPositionPeriod() external view returns (bool);
 
-    // emergency shutdown
+    /// @notice Return the status of emergency shutdown switch
     function emergencyShutdown() external view returns (bool);
 
-    // Pausing bools
+    /// @notice Return the status of rebase paused switch
     function rebasePaused() external view returns (bool);
 
-    // over this difference ratio automatically rebase. rebaseThreshold is the numerator and the denominator is 10000000 x/10000000.
+    //// @notice Return the rebaseThreshold value,
+    /// over this difference ratio automatically rebase.
+    /// rebaseThreshold is the numerator and the denominator is 10000000 x/10000000.
     function rebaseThreshold() external view returns (uint256);
 
-    // Amount of yield collected in basis points
+    /// @notice Return the Amount of yield collected in basis points
     function trusteeFeeBps() external view returns (uint256);
 
     // Redemption fee in basis points
     function redeemFeeBps() external view returns (uint256);
 
-    //all strategy asset
+    /// @notice Return the total assetof all strategy
     function totalDebt() external view returns (uint256);
 
-    //exchangeManager
+    /// @notice Return the exchange manager address
     function exchangeManager() external view returns (address);
 
     // strategy info
     function strategies(address _strategy) external view returns (StrategyParams memory);
 
-    //withdraw strategy set
+    /// @notice Return withdraw strategy address list
     function withdrawQueue() external view returns (address[] memory);
 
     /// @notice Address of treasury
@@ -295,31 +340,41 @@ interface IETHVault {
     /// @notice Address of price oracle
     function priceProvider() external view returns (address);
 
+    /// @notice Return the address of access control proxy contract
     function accessControlProxy() external view returns (address);
+
+    /// @notice Set the minimum strategy total debt that will be checked for the strategy reporting
+    function setMinCheckedStrategyTotalDebt(uint256 _minCheckedStrategyTotalDebt) external;
+
+    /// @notice Return the minimum strategy total debt that will be checked for the strategy reporting
+    function minCheckedStrategyTotalDebt() external view returns (uint256);
 
     /**
      * @dev Sets the Maximum timestamp between two reported
      */
     function setMaxTimestampBetweenTwoReported(uint256 _maxTimestampBetweenTwoReported) external;
 
-    // Maximum timestamp between two reported
+    // Return the max timestamp between two reported
     function maxTimestampBetweenTwoReported() external view returns (uint256);
 
-    // Minimum investment amount
+    //// @notice Set the minimum investment amount
     function setMinimumInvestmentAmount(uint256 _minimumInvestmentAmount) external;
 
-    // Minimum investment amount
+    /// @notice Return the minimum investment amount
     function minimumInvestmentAmount() external view returns (uint256);
 
+    /// @notice Set the address of vault buffer contract
     function setVaultBufferAddress(address _address) external;
 
-    function setUnderlyingUnitsPerShare(uint256 _underlyingUnitsPerShare) external;
-
+    /// @notice Return the address of vault buffer contract
     function vaultBufferAddress() external view returns (address);
 
+    /// @notice Set the address of PegToken contract
     function setPegTokenAddress(address _address) external;
 
+    /// @notice Return the address of PegToken contract
     function pegTokenAddress() external view returns (address);
 
+    /// @notice Set the new implement contract address
     function setAdminImpl(address newImpl) external;
 }

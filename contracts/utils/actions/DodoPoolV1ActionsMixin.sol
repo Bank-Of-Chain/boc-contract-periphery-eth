@@ -32,16 +32,16 @@ contract DodoPoolV1ActionsMixin {
         DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).withdraw(_lpToken, _amount);
     }
 
-    function balanceOfBaseLpToken() internal view returns (uint256 lpAmount) {
-        lpAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getUserLpBalance(BASE_LP_TOKEN, address(this));
+    function balanceOfBaseLpToken() internal view returns (uint256 _lpAmount) {
+        _lpAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getUserLpBalance(BASE_LP_TOKEN, address(this));
     }
 
-    function balanceOfQuoteLpToken() internal view returns (uint256 lpAmount) {
-        lpAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getUserLpBalance(QUOTE_LP_TOKEN, address(this));
+    function balanceOfQuoteLpToken() internal view returns (uint256 _lpAmount) {
+        _lpAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getUserLpBalance(QUOTE_LP_TOKEN, address(this));
     }
 
-    function getPendingReward() internal view returns(uint256 rewardAmount) {
-        rewardAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getPendingReward(BASE_LP_TOKEN, address(this));
-        rewardAmount += DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getPendingReward(QUOTE_LP_TOKEN, address(this));
+    function getPendingReward() internal view returns(uint256 _rewardAmount) {
+        _rewardAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getPendingReward(BASE_LP_TOKEN, address(this));
+        _rewardAmount += DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getPendingReward(QUOTE_LP_TOKEN, address(this));
     }
 }

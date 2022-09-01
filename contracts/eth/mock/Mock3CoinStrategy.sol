@@ -8,19 +8,17 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "boc-contract-core/contracts/library/BocRoles.sol";
-import "../../library/ETHToken.sol";
+import "boc-contract-core/contracts/library/NativeToken.sol";
 import "boc-contract-core/contracts/library/StableMath.sol";
-import "../oracle/IPriceOracle.sol";
+import "../oracle/IPriceOracleConsumer.sol";
 import "../vault/IETHVault.sol";
-
-import "hardhat/console.sol";
 
 contract MockS3CoinStrategy is Initializable, AccessControlMixin {
     
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IETHVault public vault;
-    IPriceOracle public valueInterpreter;
+    IPriceOracleConsumer public valueInterpreter;
     uint16 public protocol;
     address[] public wants;
     bool public isWantRatioIgnorable;
@@ -35,10 +33,10 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         // stETH
         _wants[0] = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
         // ETH
-        _wants[1] = ETHToken.NATIVE_TOKEN;
+        _wants[1] = NativeToken.NATIVE_TOKEN;
         protocol = 32;
         vault = IETHVault(_vault);
-        valueInterpreter = IPriceOracle(vault.priceProvider());
+        valueInterpreter = IPriceOracleConsumer(vault.priceProvider());
 
         _initAccessControl(vault.accessControlProxy());
 
@@ -84,8 +82,8 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = new address[](wants.length);
@@ -112,7 +110,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
 
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal virtual {}
 
-    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares) internal virtual {
+    function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal virtual {
         // _assets = new address[](wants.length);
         // _amounts = new uint256[](_assets.length);
         // for (uint256 i = 0; i < _assets.length; i++) {
@@ -130,25 +128,25 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
 
     /// @notice Total assets of strategy in USD.
     function estimatedTotalAssets() external view virtual returns (uint256) {
-        (address[] memory tokens, uint256[] memory amounts, bool isETH, uint256 ethValue) = getPositionDetail();
-        if (isETH) {
-            return ethValue;
+        (address[] memory _tokens, uint256[] memory _amounts, bool _isETH, uint256 _ethValue) = getPositionDetail();
+        if (_isETH) {
+            return _ethValue;
         } else {
-            uint256 totalETHValue = 0;
-            for (uint256 i = 0; i < tokens.length; i++) {
-                uint256 amount = amounts[i];
-                if (amount > 0) {
-                    totalETHValue += valueInterpreter.valueInEth(tokens[i], amount);
+            uint256 _totalETHValue = 0;
+            for (uint256 i = 0; i < _tokens.length; i++) {
+                uint256 _amount = _amounts[i];
+                if (_amount > 0) {
+                    _totalETHValue += valueInterpreter.valueInEth(_tokens[i], _amount);
                 }
             }
-            return totalETHValue;
+            return _totalETHValue;
         }
     }
 
     /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
     function harvest() external payable virtual returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts) {
         claimRewards();
-        vault.report();
+        vault.report(_rewardsTokens,_claimAmounts);
     }
 
     /// @notice Strategy borrow funds from vault
@@ -162,19 +160,19 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
     /// @notice Strategy repay the funds to vault
     /// @param _repayShares Numerator
     /// @param _totalShares Denominator
-    function repay(uint256 _repayShares, uint256 _totalShares) public virtual onlyVault returns (address[] memory _assets, uint256[] memory _amounts) {
+    function repay(uint256 _repayShares, uint256 _totalShares, uint256 _outputCode) public virtual onlyVault returns (address[] memory _assets, uint256[] memory _amounts) {
         require(_repayShares > 0 && _totalShares >= _repayShares, "cannot repay 0 shares");
         _assets = wants;
-        uint256[] memory balancesBefore = new uint256[](_assets.length);
+        uint256[] memory _balancesBefore = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
-            balancesBefore[i] = balanceOfToken(_assets[i]);
+            _balancesBefore[i] = balanceOfToken(_assets[i]);
         }
 
-        withdrawFrom3rdPool(_repayShares, _totalShares);
+        withdrawFrom3rdPool(_repayShares, _totalShares, _outputCode);
         _amounts = new uint256[](_assets.length);
         for (uint256 i = 0; i < _assets.length; i++) {
-            uint256 balanceAfter = balanceOfToken(_assets[i]);
-            _amounts[i] = balanceAfter - balancesBefore[i] + (balancesBefore[i] * _repayShares) / _totalShares;
+            uint256 _balanceAfter = balanceOfToken(_assets[i]);
+            _amounts[i] = _balanceAfter - _balancesBefore[i] + (_balancesBefore[i] * _repayShares) / _totalShares;
         }
 
         transferTokensToTarget(address(vault), _assets, _amounts);
@@ -182,11 +180,11 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         // emit Repay(_repayShares, _totalShares, _assets, _amounts);
     }
 
-    function balanceOfToken(address tokenAddress) internal view returns (uint256) {
-        if (tokenAddress == ETHToken.NATIVE_TOKEN) {
+    function balanceOfToken(address _tokenAddress) internal view returns (uint256) {
+        if (_tokenAddress == NativeToken.NATIVE_TOKEN) {
             return address(this).balance;
         }
-        return IERC20Upgradeable(tokenAddress).balanceOf(address(this));
+        return IERC20Upgradeable(_tokenAddress).balanceOf(address(this));
     }
 
     /// @notice Investable amount of strategy in USD
@@ -202,8 +200,8 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
     }
 
     /// @notice Query the value of Token.
-    function queryTokenValue(address _token, uint256 _amount) internal view returns (uint256 valueInUSD) {
-        valueInUSD = valueInterpreter.valueInUsd(_token, _amount);
+    function queryTokenValue(address _token, uint256 _amount) internal view returns (uint256 _valueInUSD) {
+        _valueInUSD = valueInterpreter.valueInUsd(_token, _amount);
     }
 
     function decimalUnitOfToken(address _token) internal view returns (uint256) {
@@ -216,21 +214,21 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         uint256[] memory _amounts
     ) internal {
         for (uint256 i = 0; i < _assets.length; i++) {
-            uint256 amount = _amounts[i];
+            uint256 _amount = _amounts[i];
             address _asset = _assets[i];
-            if (amount > 0) {
-                if (_asset == ETHToken.NATIVE_TOKEN) {
-                    payable(_target).transfer(amount);
+            if (_amount > 0) {
+                if (_asset == NativeToken.NATIVE_TOKEN) {
+                    payable(_target).transfer(_amount);
                 } else {
-                    IERC20Upgradeable(_asset).safeTransfer(_target, amount);
+                    IERC20Upgradeable(_asset).safeTransfer(_target, _amount);
                 }
             }
         }
     }
 
-    function arrayContains(address[] memory array, address key) internal pure returns (bool) {
-        for (uint256 i = 0; i < array.length; i++) {
-            if (array[i] == key) {
+    function arrayContains(address[] memory _array, address _key) internal pure returns (bool) {
+        for (uint256 i = 0; i < _array.length; i++) {
+            if (_array[i] == _key) {
                 return true;
             }
         }

@@ -147,3 +147,9 @@ npm ERR! fatal: unable to access 'https://github.com/web3-js/WebSocket-Node.git/
 // After the console performs the following configuration, install it again.
 git config --global url."https://".insteadOf git://
 ````
+
+## Security plugin
+use [Slither](https://github.com/crytic/slither).
+````
+slither . --detect abiencoderv2-array,array-by-reference,incorrect-shift,multiple-constructors,name-reused,public-mappings-nested,rtlo,shadowing-state,suicidal,uninitialized-state,uninitialized-storage,unprotected-upgrade,arbitrary-send,controlled-array-length,controlled-delegatecall,delegatecall-loop,msg-value-loop,reentrancy-eth,storage-array,unchecked-transfer,weak-prng,enum-conversion,erc20-interface,erc721-interface,incorrect-equality,locked-ether,mapping-deletion,shadowing-abstract,tautology,write-after-write,boolean-cst,constant-function-asm,constant-function-state,divide-before-multiply,reentrancy-no-eth,reused-constructor,tx-origin,unchecked-lowlevel,unchecked-send,uninitialized-local,unused-return --checklist >./slither_check_result.md
+````
