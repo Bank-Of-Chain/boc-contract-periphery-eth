@@ -467,11 +467,17 @@ const deploy_common = async () => {
     console.log('\n\n 📡 Deploying... At %s Network \n', network);
     const accounts = await ethers.getSigners();
     assert(accounts.length > 0, 'Need a Signer!');
-    const management = accounts[0].address;
+    const governor = accounts[0].address;
+    const delegator = process.env.DELEGATOR_ADDRESS || get(accounts, '17.address', '');
+    const vaultManager = process.env.VAULT_MANAGER_ADDRESS || get(accounts, '18.address', '');
     const keeper = process.env.KEEPER_ACCOUNT_ADDRESS || get(accounts, '19.address', '');
-
+    console.log('governor address:%s',governor);
+    console.log('delegator address:%s',delegator);
+    console.log('vaultManager address:%s',vaultManager);
+    console.log('keeper address:%s',keeper);
+    
     if (isEmpty(addressMap[AccessControlProxy])) {
-        await deployProxyBase(AccessControlProxy, [management, management, management, keeper]);
+        await deployProxyBase(AccessControlProxy, [governor, delegator, vaultManager, keeper]);
     }
 
     if (isEmpty(addressMap[Treasury])) {
