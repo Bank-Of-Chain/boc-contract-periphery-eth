@@ -35,9 +35,6 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     IBalancerVault internal constant BALANCER_VAULT =
         IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
-    bytes32 internal balancerAURAPoolId;
-    bytes32 internal balancerBALPoolId;
-
     IUniswapV2Router2 public constant UNIROUTER2 =
         IUniswapV2Router2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     IUniswapV2Router2 public constant SUSHIROUTER2 =

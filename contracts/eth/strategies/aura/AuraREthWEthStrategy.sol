@@ -45,9 +45,6 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
 
-    mapping(address => address[]) public swapRewardRoutes;
-    mapping(address => bytes32) public swapRewardPoolId;
-
     function initialize(address _vault,string memory _name) external initializer {
 
         address[] memory _wants = new address[](2);
