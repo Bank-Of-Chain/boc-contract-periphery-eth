@@ -47,6 +47,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     address public constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;
 
     mapping(address => address[]) public swapRewardRoutes;
+    mapping(address => bytes32) public swapRewardPoolId;
 
     function initialize(address _vault, string memory _name) external initializer {
         address[] memory _wants = new address[](2);
@@ -77,6 +78,10 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         swapRewardRoutes[AURA_TOKEN] = _auraSellPath;
 
         isWantRatioIgnorable = true;
+        swapRewardPoolId[BAL] =
+        bytes32(0x5c6ee304399dbdb9c8ef030ab642b10820db8f56000200000000000000000014);
+        swapRewardPoolId[AURA_TOKEN] =
+        bytes32(0xcfca23ca9ca720b6e98e3eb9b6aa0ffc4a5c08b9000200000000000000000274);
 
         super._initialize(_vault, uint16(ProtocolEnum.Aura), _name, _wants);
     }
@@ -86,6 +91,13 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
         isVaultManager
     {
         swapRewardRoutes[_token] = _uniswapRouteToToken;
+    }
+
+    function setRewardSwapPoolId(address _token, bytes32 _poolId)
+    external
+    isVaultManager
+    {
+        swapRewardPoolId[_token] = _poolId;
     }
 
     function getVersion() external pure override returns (string memory) {
@@ -306,29 +318,25 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
         uint256 _balanceOfBal = balanceOfToken(BAL);
         if (_balanceOfBal > 0) {
-            IERC20Upgradeable(BAL).safeApprove(address(UNIROUTER2), 0);
-            IERC20Upgradeable(BAL).safeApprove(address(UNIROUTER2), _balanceOfBal);
-            UNIROUTER2.swapExactTokensForTokens(
-                _balanceOfBal,
-                0,
-                swapRewardRoutes[BAL],
-                address(this),
-                block.timestamp
-            );
+            IERC20Upgradeable(BAL).safeApprove(address(BALANCER_VAULT), 0);
+            IERC20Upgradeable(BAL).safeApprove(address(BALANCER_VAULT), _balanceOfBal);
+
+            IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap(swapRewardPoolId[BAL], IBalancerVault.SwapKind.GIVEN_IN,  IAsset(BAL), IAsset(WETH), _balanceOfBal, "");
+            IBalancerVault.FundManagement memory funds = IBalancerVault.FundManagement(address(this), false, payable(address(this)), false);
+
+            BALANCER_VAULT.swap(singleSwap, funds, 0, block.timestamp);
         }
         uint256 _wethBalanceAfterSellBAL = balanceOfToken(WETH);
 
         uint256 _balanceOfAura = balanceOfToken(AURA_TOKEN);
         if (_balanceOfAura > 0) {
-            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(UNIROUTER2), 0);
-            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(UNIROUTER2), _balanceOfAura);
-            UNIROUTER2.swapExactTokensForTokens(
-                _balanceOfAura,
-                0,
-                swapRewardRoutes[AURA_TOKEN],
-                address(this),
-                block.timestamp
-            );
+            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(BALANCER_VAULT), 0);
+            IERC20Upgradeable(AURA_TOKEN).safeApprove(address(BALANCER_VAULT), _balanceOfAura);
+
+            IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap(swapRewardPoolId[AURA_TOKEN], IBalancerVault.SwapKind.GIVEN_IN,  IAsset(AURA_TOKEN), IAsset(WETH), _balanceOfAura, "");
+            IBalancerVault.FundManagement memory funds = IBalancerVault.FundManagement(address(this), false, payable(address(this)), false);
+
+            BALANCER_VAULT.swap(singleSwap, funds, 0, block.timestamp);
         }
         uint256 _wethBalanceAfterSellBalAndAura = balanceOfToken(WETH);
 
