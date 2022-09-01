@@ -92,7 +92,7 @@ const uniswapStrategies = [
         addToVault: true,
         customParams: [
             "0x39529E96c28807655B5856b3d342c6225111770e",
-            10,
+            5,
             2,
             41400,
             0,
@@ -109,7 +109,7 @@ const uniswapStrategies = [
         addToVault: true,
         customParams: [
             "0x3416cF6C708Da44DB2624D63ea0AAef7113527C6",
-            10,
+            5,
             2,
             41400,
             0,
@@ -126,7 +126,7 @@ const uniswapStrategies = [
         addToVault: true,
         customParams: [
             "0x7858E59e0C01EA06Df3aF3D20aC7B0003275D4Bf",
-            10,
+            0,
             10,
             41400,
             0,

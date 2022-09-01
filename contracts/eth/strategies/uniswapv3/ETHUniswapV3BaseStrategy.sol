@@ -271,6 +271,9 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
             if (getLiquidityForAmounts(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1) > getLiquidityForAmounts(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1)) {
                 mintNewPosition(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1, false);
             } else {
+                if (_tick == _tickFloor) {
+                    _tickCeil = _tickFloor;
+                }
                 mintNewPosition(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1, false);
             }
         }
@@ -350,36 +353,36 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         require(_threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0, "TE");
     }
 
-    function setBaseThreshold(int24 _baseThreshold) external onlyGovOrDelegate {
+    function setBaseThreshold(int24 _baseThreshold) external isVaultManager {
         _checkThreshold(_baseThreshold);
         baseThreshold = _baseThreshold;
         emit UniV3SetBaseThreshold(_baseThreshold);
     }
 
-    function setLimitThreshold(int24 _limitThreshold) external onlyGovOrDelegate {
+    function setLimitThreshold(int24 _limitThreshold) external isVaultManager {
         _checkThreshold(_limitThreshold);
         limitThreshold = _limitThreshold;
         emit UniV3SetLimitThreshold(_limitThreshold);
     }
 
-    function setPeriod(uint256 _period) external onlyGovOrDelegate {
+    function setPeriod(uint256 _period) external isVaultManager {
         period = _period;
         emit UniV3SetPeriod(_period);
     }
 
-    function setMinTickMove(int24 _minTickMove) external onlyGovOrDelegate {
+    function setMinTickMove(int24 _minTickMove) external isVaultManager {
         require(_minTickMove >= 0, "MINE");
         minTickMove = _minTickMove;
         emit UniV3SetMinTickMove(_minTickMove);
     }
 
-    function setMaxTwapDeviation(int24 _maxTwapDeviation) external onlyGovOrDelegate {
+    function setMaxTwapDeviation(int24 _maxTwapDeviation) external isVaultManager {
         require(_maxTwapDeviation >= 0, "MAXE");
         maxTwapDeviation = _maxTwapDeviation;
         emit UniV3SetMaxTwapDeviation(_maxTwapDeviation);
     }
 
-    function setTwapDuration(uint32 _twapDuration) external onlyGovOrDelegate {
+    function setTwapDuration(uint32 _twapDuration) external isVaultManager {
         require(_twapDuration > 0, "TWAPE");
         twapDuration = _twapDuration;
         emit UniV3SetTwapDuration(_twapDuration);
