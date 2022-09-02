@@ -39,6 +39,8 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     // borrow factor
     uint256 public borrowFactor;
 
+    // minimum amount to be liquidation
+    uint256 public constant SELL_FLOOR = 1e16;
     uint256 public constant BPS = 10000;
     address public constant BOOSTER = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
     address public constant REWARD_CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
@@ -311,33 +313,41 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         override
         returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
-        IConvexReward(rewardPool).getReward();
-        uint256 _crvBalance = balanceOfToken(REWARD_CRV);
-        uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
-        (
-            address[] memory _rewardTokens,
-            uint256[] memory _rewardAmounts,
-            address[] memory _wantTokens,
-            uint256[] memory _wantAmounts
-        ) = _sellCrvAndCvx(_crvBalance, _cvxBalance);
-
-        uint256 _ibForexAmount = balanceOfToken(getIronBankForex());
-        if (_ibForexAmount > 0) {
-            _invest(_ibForexAmount);
-        }
-        //sell kpr
-        uint256 _rkprBalance = balanceOfToken(RKPR);
-        if (_rkprBalance > 0) {
-            IERC20Upgradeable(RKPR).safeTransfer(harvester, _rkprBalance);
-        }
+        // for report
         _rewardsTokens = new address[](3);
         _rewardsTokens[0] = REWARD_CRV;
         _rewardsTokens[1] = REWARD_CVX;
         _rewardsTokens[2] = RKPR;
         _claimAmounts = new uint256[](3);
-        _claimAmounts[0] = _crvBalance;
-        _claimAmounts[1] = _cvxBalance;
-        _claimAmounts[2] = _rkprBalance;
+        // for event
+        address[] memory _rewardTokens;
+        uint256[] memory _rewardAmounts;
+        address[] memory _wantTokens;
+        uint256[] memory _wantAmounts;
+        IConvexReward _convexReward = IConvexReward(rewardPool);
+        if (_convexReward.earned(address(this)) > SELL_FLOOR) {
+            _convexReward.getReward();
+            uint256 _crvBalance = balanceOfToken(REWARD_CRV);
+            uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
+            (_rewardTokens, _rewardAmounts, _wantTokens, _wantAmounts) = _sellCrvAndCvx(
+                _crvBalance,
+                _cvxBalance
+            );
+
+            uint256 _ibForexAmount = balanceOfToken(getIronBankForex());
+            if (_ibForexAmount > 0) {
+                _invest(_ibForexAmount);
+            }
+            //sell kpr
+            uint256 _rkprBalance = balanceOfToken(RKPR);
+            if (_rkprBalance > 0) {
+                IERC20Upgradeable(RKPR).safeTransfer(harvester, _rkprBalance);
+            }
+
+            _claimAmounts[0] = _crvBalance;
+            _claimAmounts[1] = _cvxBalance;
+            _claimAmounts[2] = _rkprBalance;
+        }
         // report empty array for _profit
         vault.report(_rewardsTokens, _claimAmounts);
 
@@ -373,7 +383,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         if (_convexAmount > 0) {
             ICurveFi(CVX_ETH_POOL).exchange(1, 0, _convexAmount, 0, true);
         }
-        
 
         // fulfill 'SwapRewardsToWants' event data
         _rewardTokens = new address[](2);
@@ -396,7 +405,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         if (_ethBalanceAfterSellTotal > 0) {
             //ETH wrap to WETH
             IWeth(WETH).deposit{value: _ethBalanceAfterSellTotal}();
-
             //swap from WETH to USDC
             IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(
                 balanceOfToken(WETH),
