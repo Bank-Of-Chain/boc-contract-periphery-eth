@@ -19,7 +19,10 @@ const IEREC20Mint = artifacts.require("IEREC20Mint")
 const IERC20_STETH = artifacts.require("IERC20_STETH")
 const IERC20_WETH = artifacts.require("IERC20_WETH")
 const IERC20_WSTETH = artifacts.require("IERC20_WSTETH")
+const IPool = artifacts.require("IPool")
 const IERC20_ROCKET_POOL_ETH = artifacts.require("IERC20_ROCKET_POOL_ETH")
+const RocketDepositPoolInterface = artifacts.require("RocketDepositPoolInterface")
+const IRewardEthToken = artifacts.require("IRewardEthToken")
 
 /**
  * impersonates
@@ -84,6 +87,7 @@ const setUsdcMinter = async (nextMinter, minterAmount) => {
 async function topUpMain (token, tokenHolder, toAddress, amount) {
     const TOKEN = await IEREC20Mint.at(token)
     const tokenName = await TOKEN.name()
+    const tokenSymbol = await TOKEN.symbol()
     const farmerBalance = await TOKEN.balanceOf(tokenHolder)
     console.log(
         `[Transfer]Start recharge ${tokenName}，Balance of token holder：%s`,
@@ -96,7 +100,7 @@ async function topUpMain (token, tokenHolder, toAddress, amount) {
     await TOKEN.transfer(toAddress, nextAmount, {
         from: tokenHolder,
     })
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    console.log(`${tokenName},${tokenSymbol} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
     console.log(`${tokenName} recharge completed`)
     return nextAmount
 }
@@ -107,6 +111,7 @@ async function topUpMain (token, tokenHolder, toAddress, amount) {
 async function topUpMainV2 (token, toAddress, amount) {
     const TOKEN = await IEREC20Mint.at(token)
     const tokenName = await TOKEN.name()
+    const tokenSymbol = await TOKEN.symbol()
     const tokenOwner = await TOKEN.owner()
 
     // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
@@ -122,7 +127,7 @@ async function topUpMainV2 (token, toAddress, amount) {
     await TOKEN.transfer(toAddress, nextAmount, {
         from: tokenOwner,
     })
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    console.log(`${tokenName},${tokenSymbol} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
     console.log(`${tokenName} recharge completed`)
     return amount
 }
@@ -133,6 +138,7 @@ async function topUpMainV2 (token, toAddress, amount) {
 async function topUpMainV2_1 (token, toAddress, amount) {
     const TOKEN = await IEREC20Mint.at(token)
     const tokenName = await TOKEN.name()
+    const tokenSymbol = await TOKEN.symbol()
     const tokenOwner = await TOKEN.owner()
     // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
     const accounts = await ethers.getSigners()
@@ -143,7 +149,7 @@ async function topUpMainV2_1 (token, toAddress, amount) {
     await TOKEN.mint(toAddress, nextAmount, {
         from: tokenOwner,
     })
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    console.log(`${tokenName},${tokenSymbol} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
     console.log(`${tokenName} recharge completed`)
     return amount
 }
@@ -154,6 +160,7 @@ async function topUpMainV2_1 (token, toAddress, amount) {
 async function topUpMainV2_2 (token, toAddress, amount) {
     const TOKEN = await IEREC20Mint.at(token)
     const tokenName = await TOKEN.name()
+    const tokenSymbol = await TOKEN.symbol()
     const tokenOwner = await TOKEN.supplyController()
     // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
     const accounts = await ethers.getSigners()
@@ -169,7 +176,7 @@ async function topUpMainV2_2 (token, toAddress, amount) {
     await TOKEN.transfer(toAddress, nextAmount, {
         from: tokenOwner,
     })
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
+    console.log(`${tokenName},${tokenSymbol} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(toAddress)).toFormat())
     console.log(`${tokenName} recharge completed`)
     return amount
 }
@@ -399,7 +406,7 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
     const nextAmount = new BigNumber(amount)
     console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
     const beforeBalance = await balance.current(to)
-    await sendEthers(to, nextAmount.plus(beforeBalance))
+    await sendEthers(to, nextAmount.plus(beforeBalance).toFormat())
     console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await await balance.current(to)).toFormat())
     console.log(`${tokenName} recharge completed`)
 }
@@ -412,6 +419,7 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
     if (isEmpty(to)) return 0
     const TOKEN = await IERC20_WETH.at(addresses.WETH_ADDRESS)
     const tokenName = await TOKEN.name()
+    const tokenSymbol = await TOKEN.symbol()
     const accounts = await ethers.getSigners()
     const account0 = accounts[0].address
 
@@ -427,7 +435,7 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
         from: account0,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    console.log(`${tokenName},${tokenSymbol} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
     console.log(`${tokenName} recharge completed`)
     return amount
 }
@@ -439,11 +447,12 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
     if (isEmpty(to)) return 0
     const TOKEN = await IERC20_STETH.at(addresses.stETH_ADDRESS)
     const tokenName = await TOKEN.name()
+    const tokenSymbol = await TOKEN.symbol()
     const accounts = await ethers.getSigners()
     const account0 = accounts[0].address
 
     // mint more
-    const nextAmount = new BigNumber(amount).multipliedBy(101).div(100)
+    const nextAmount = new BigNumber(new BigNumber(amount).multipliedBy(101).div(100).toFixed(0,1));
 
     await topUpEthByAddress(nextAmount, account0)
 
@@ -452,11 +461,11 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
     await removeSTETHStakeLimit()
 
     await TOKEN.submit(account0, { from: account0, value: nextAmount })
-    await TOKEN.transfer(to, nextAmount, {
+    await TOKEN.transfer(to, amount, {
         from: account0,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    console.log(`${tokenName},${tokenSymbol} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
     console.log(`${tokenName} recharge completed`)
     return amount
 }
@@ -468,6 +477,7 @@ async function topUpWstEthByAddress(amount = new BigNumber(10 ** 18), to) {
     if (isEmpty(to)) return 0
     const TOKEN = await IERC20_WSTETH.at(addresses.wstETH_ADDRESS)
     const tokenName = await TOKEN.name()
+    const tokenSymbol = await TOKEN.symbol()
     const stEthPerToken = await TOKEN.stEthPerToken()
     const accounts = await ethers.getSigners()
     const account0 = accounts[0].address
@@ -484,11 +494,11 @@ async function topUpWstEthByAddress(amount = new BigNumber(10 ** 18), to) {
     await stETHTOKEN.approve(addresses.wstETH_ADDRESS, balanceOfSTETH, { from: account0 })
     await TOKEN.wrap(balanceOfSTETH, { from: account0 })
 
-    await TOKEN.transfer(to, nextAmount, {
+    await TOKEN.transfer(to, amount, {
         from: account0,
     })
 
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    console.log(`${tokenName},${tokenSymbol} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
     console.log(`${tokenName} recharge completed`)
     return amount
 }
@@ -500,26 +510,23 @@ async function topUpRocketPoolEthByAddress(amount = new BigNumber(10 ** 18), to)
     if (isEmpty(to)) return 0
 
     const TOKEN = await IERC20_ROCKET_POOL_ETH.at(addresses.rocketPoolETH_ADDRESS)
-    const decimal = new BigNumber(10).pow(18)
     const tokenName = await TOKEN.name()
-    const rethValue = await TOKEN.getExchangeRate()
-    const tokenOwner = "0x4D05E3d48a938db4b7a9A59A802D5b45011BDe58"
+    const tokenSymbol = await TOKEN.symbol()
+    const accounts = await ethers.getSigners()
+    const account0 = accounts[0].address
+    const nextAmount = new BigNumber(new BigNumber(amount).multipliedBy(12).dividedBy(10).toFixed(0,1));
 
-    const nextAmount = new BigNumber(amount)
-    const rethAmount = nextAmount.multipliedBy(rethValue).div(decimal).multipliedBy(101).div(100)
-    await topUpEthByAddress(decimal, tokenOwner)
-    await topUpEthByAddress(rethAmount, tokenOwner)
-    console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
-
-    impersonates([tokenOwner])
-
-    await TOKEN.mint(rethAmount, to, {
-        from: tokenOwner,
+    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
+    await topUpEthByAddress(nextAmount, account0);
+    console.log(`[Stake] Start recharge ${tokenSymbol}，recharge amount：%s`, amount.toString())
+    const rocketPool  = await RocketDepositPoolInterface.at('0x2cac916b2A963Bf162f076C0a8a4a8200BCFBfb4');
+    await rocketPool.deposit({value: nextAmount,from:account0});
+    await TOKEN.transfer(to, amount, {
+        from: account0,
     })
-
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    console.log(`${tokenName},${tokenSymbol} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
     console.log(`${tokenName} recharge completed`)
-    return amount
+    return amount;
 }
 
 /**
@@ -538,10 +545,25 @@ async function topUpSEthByAddress(amount = new BigNumber(10 ** 18), to) {
  */
 async function topUpSEth2ByAddress(amount = new BigNumber(10 ** 18), to) {
     if (isEmpty(to)) return 0
-    // Send 10 ETH to the wallet account to make sure the transaction of withdrawing money from it works.
-    await topUpEthByAddress(addresses.sETH2_WHALE_ADDRESS, 10 ** 18)
-    await impersonates([addresses.sETH2_WHALE_ADDRESS])
-    return topUpMain(addresses.sETH2_ADDRESS, addresses.sETH2_WHALE_ADDRESS, to, amount)
+    const TOKEN = await IEREC20Mint.at(addresses.sETH2_ADDRESS)
+    const tokenName = await TOKEN.name()
+    const tokenSymbol = await TOKEN.symbol()
+
+    const accounts = await ethers.getSigners()
+    const account0 = accounts[0].address
+    const nextAmount = new BigNumber(new BigNumber(amount).multipliedBy(12).dividedBy(10).toFixed(0,1));
+    await topUpEthByAddress(nextAmount, account0);
+
+    console.log(`[Stake] Start recharge ${tokenSymbol}，recharge amount：%s`, amount.toString())
+    const stakePool = await IPool.at('0xC874b064f465bdD6411D45734b56fac750Cda29A');
+    await stakePool.stake({value: nextAmount,from:account0});
+    await TOKEN.transfer(to, amount, {
+        from: account0,
+    });
+
+    console.log(`${tokenName},${tokenSymbol} Balance of toAddress：` + new BigNumber(await TOKEN.balanceOf(to)).toFormat())
+    console.log(`${tokenName} recharge completed`)
+    return amount
 }
 
 /**
