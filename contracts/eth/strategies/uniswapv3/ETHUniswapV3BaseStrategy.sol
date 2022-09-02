@@ -271,9 +271,6 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
             if (getLiquidityForAmounts(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1) > getLiquidityForAmounts(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1)) {
                 mintNewPosition(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1, false);
             } else {
-                if (_tick == _tickFloor) {
-                    _tickCeil = _tickFloor;
-                }
                 mintNewPosition(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1, false);
             }
         }

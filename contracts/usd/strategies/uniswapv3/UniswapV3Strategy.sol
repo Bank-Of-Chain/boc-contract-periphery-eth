@@ -359,9 +359,6 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
             ) {
                 mintNewPosition(_tickFloor - limitThreshold, _tickFloor, _balance0, _balance1, false);
             } else {
-                if (_tick == _tickFloor) {
-                    _tickCeil = _tickFloor;
-                }
                 mintNewPosition(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1, false);
             }
         }
