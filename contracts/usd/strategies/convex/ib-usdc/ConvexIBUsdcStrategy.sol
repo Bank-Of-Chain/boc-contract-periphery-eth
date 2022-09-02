@@ -710,14 +710,14 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
             uint256 _repayAmount = (_currentBorrow * _withdrawShares) / _totalShares;
             // _repayAmount = MathUpgradeable.min(_repayAmount, _borrowTokenBalance);
             address _curvePool = curvePool;
-            //资不抵债时，将USDC换成债务token
+            //when not enough forex,swap usdc to forex
             if (_borrowTokenBalance < _repayAmount) {
                 uint256 _underlyingBalance = balanceOfToken(COLLATERAL_TOKEN);
                 uint256 _reserve = ICurveMini(_curvePool).get_dy(1, 0, _underlyingBalance);
                 uint256 _forSwap = (_underlyingBalance * (_repayAmount - _borrowTokenBalance)) /
                     _reserve;
                 uint256 _swapUse = MathUpgradeable.min(_forSwap, _underlyingBalance);
-                uint256 _extra = ICurveMini(_curvePool).exchange(1, 0, _swapUse, 0);
+                ICurveMini(_curvePool).exchange(1, 0, _swapUse, 0);
             }
             _repayAmount = MathUpgradeable.min(_repayAmount, balanceOfToken(_borrowToken));
             _repayForex(_repayAmount);
