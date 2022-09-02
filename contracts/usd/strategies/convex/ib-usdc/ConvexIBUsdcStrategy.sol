@@ -49,6 +49,8 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
     // Percentage of single reduction in foreign exchange holdings
     uint256 public forexReduceStep;
 
+    // minimum amount to be liquidation
+    uint256 public constant SELL_FLOOR = 1e16;
     uint256 public constant BPS = 10000;
     address public constant BOOSTER = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
     address public constant REWARD_CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
@@ -399,15 +401,15 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
         returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
         // claim and invest
-        address _rewardPool = rewardPool;
-        uint256 _rewardCRVAmount = IConvexReward(_rewardPool).earned(address(this));
+        IConvexReward _convexReward = IConvexReward(rewardPool);
+        uint256 _rewardCRVAmount = _convexReward.earned(address(this));
 
         address[] memory _rewardTokens;
         uint256[] memory _rewardAmounts;
         address[] memory _wantTokens;
         uint256[] memory _wantAmounts;
-        if (_rewardCRVAmount > 0) {
-            IConvexReward(_rewardPool).getReward();
+        if (_rewardCRVAmount > SELL_FLOOR) {
+            _convexReward.getReward();
             uint256 _crvBalance = balanceOfToken(REWARD_CRV);
             uint256 _cvxBalance = balanceOfToken(REWARD_CVX);
 
