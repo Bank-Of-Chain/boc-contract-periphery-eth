@@ -19,7 +19,8 @@ abstract contract AssetHelpers {
         uint256 _neededAmount
     ) internal {
         if (IERC20Upgradeable(_asset).allowance(address(this), _target) < _neededAmount) {
-            IERC20Upgradeable(_asset).safeApprove(_target, type(uint256).max);
+            IERC20Upgradeable(_asset).safeApprove(_target, 0);
+            IERC20Upgradeable(_asset).safeApprove(_target, _neededAmount);
         }
     }
 

@@ -1126,6 +1126,7 @@ contract ETHVault is ETHVaultStorage {
                 _swapDescription
             );
         } else {
+            IERC20Upgradeable(_fromToken).safeApprove(exchangeManager, 0);
             IERC20Upgradeable(_fromToken).safeApprove(exchangeManager, _amount);
             _exchangeAmount = IExchangeAggregator(exchangeManager).swap(
                 _exchangeParam.platform,
