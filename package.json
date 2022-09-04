@@ -50,7 +50,7 @@
     "bignumber.js": "^9.0.1",
     "boc-contract-core": "1.6.0-beta3",
     "eslint-plugin-mocha": "^9.0.0",
-    "piggy-finance-utils": "^1.0.57"
+    "piggy-finance-utils": "^1.0.58"
   },
   "scripts": {
     "chain": "hardhat node --hostname 0.0.0.0",

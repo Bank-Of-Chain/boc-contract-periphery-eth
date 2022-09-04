@@ -1,0 +1,71 @@
+
+
+
+┌───────────────────────────────┬──────────────────────────────────────────────┐
+│            (index)            │                    Values                    │
+├───────────────────────────────┼──────────────────────────────────────────────┤
+│       Aura3PoolStrategy       │ '0xA51ED1D803B09f4d08226F9F91e6Dcc79ec0fEB7' │
+│    ConvexIBUsdtAudStrategy    │ '0x59b8149C11678392874d79c076f497dE9D522D0C' │
+│    ConvexIBUsdtChfStrategy    │ '0x18d9eFb0e5d4FB27f3c35C55801877b2143d44CF' │
+│    ConvexIBUsdtEurStrategy    │ '0x2e7967F36bd5E73705F2DCB8c338e53127003cF0' │
+│    ConvexIBUsdtGbpStrategy    │ '0x76b639Ad828AeE35ff219e73adD6aB4D6C0d233d' │
+│    ConvexIBUsdtJpyStrategy    │ '0x47141933B82B5472c1129CF07fb74007a75666B6' │
+│    ConvexIBUsdtKrwStrategy    │ '0x990572d68e6576c19FCc35E4cf30324320372D13' │
+│    ConvexIBUsdcAudStrategy    │ '0x49aF86fCDA1895C77eF0a3e39c29af4Ac841a5e3' │
+│    ConvexIBUsdcChfStrategy    │ '0x7b7d845e46bDE07C10b0A543fF6A7bD17D8d0577' │
+│    ConvexIBUsdcEurStrategy    │ '0x2c64AAFd25F2cB8e5832d4191a58ee19CD6fcE95' │
+│    ConvexIBUsdcGbpStrategy    │ '0x4aa733bEdD747a89d8BE7Ee6c3943277642fe884' │
+│    ConvexIBUsdcJpyStrategy    │ '0xCC4A905AC343153f1a7547d2408EB77B38434d93' │
+│    ConvexIBUsdcKrwStrategy    │ '0x030f605f21dAEc472e99Bfea86DA459d1d86dc3b' │
+│    ConvexMetaBusdStrategy     │ '0x6900369c8B5fA4928DaB85003De3113D13d0cF54' │
+│    ConvexMetaGusdStrategy     │ '0xb047e89a5184d69Ca2C3E8BA554cDc52f7B1Ce3A' │
+│    ConvexMetaLusdStrategy     │ '0xb6Ae3176eF152b064a0B89141e31689A40c28936' │
+│    ConvexMetaUsdpStrategy     │ '0x91590e0C62739Be6F37fF5bb23F5f7aE5cbc1a5B' │
+│      Convex3CrvStrategy       │ '0xfd9d2C615b340A75365b2Bb918502D7596656564' │
+│      ConvexAaveStrategy       │ '0xD7c85C0f771fd768EcC38957788Fbe6f0aaB7013' │
+│    ConvexCompoundStrategy     │ '0x3205a9004d27374512f1ABe7203F007ADf08fDF0' │
+│      ConvexSaaveStrategy      │ '0x5D88cDF916A21B2C7d8f63e73302695e538adB87' │
+│      ConvexSusdStrategy       │ '0xe88E3d6D3982BA0b60DDE7E72649df60548cd92a' │
+│     DForceLendDaiStrategy     │ '0x26b98C61658625Af4a0F4965bf3676d4D66e03d0' │
+│    DForceLendUsdcStrategy     │ '0xC348591EaB025B2ec421dBB9efF0C1F173E296c0' │
+│    DForceLendUsdtStrategy     │ '0xe6FF2785bf41143e4179d1DEAd2E775088374ede' │
+│      DodoDaiUsdtStrategy      │ '0xD3Fc8F66CAde1003b2d40F647D3EcB5a0c2331f3' │
+│     DodoUsdtUsdcStrategy      │ '0x365b28e3d04018A116Ecc087D03ad86e0e4f44Db' │
+│ UniswapV3BusdUsdc500Strategy  │ '0xBB470de15a5433557F9348C807258a762301E313' │
+│  UniswapV3DaiUsdc100Strategy  │ '0x0760e5A243c780f3Bd728AA02CdF2Cc1a5D18C8e' │
+│  UniswapV3DaiUsdc500Strategy  │ '0x11e419023b1E5ea1D8F39b797C7Fe16F81958435' │
+│  UniswapV3DaiUsdt500Strategy  │ '0x328cE902198aDc5B332363bBb33b37E0c7D71F1d' │
+│ UniswapV3GusdUsdc3000Strategy │ '0x525Ed827c849857898A4774D5fB55ca2c4812E73' │
+│ UniswapV3TusdUsdc100Strategy  │ '0x013FDa6c5e93A6fED6f35F2CEb1c0c3Be6AcEc9b' │
+│ UniswapV3UsdcUsdt100Strategy  │ '0x22674Ea1a299d3Ff2E93A917f91f2Ecf07e01D5c' │
+│ UniswapV3UsdcUsdt500Strategy  │ '0x10225A8e2D89841FF0B65c295D5a6627Bb736a05' │
+│         Verification          │ '0x3eBd354DF4134951a5AFde008E63BfC93D2b6F59' │
+│      AccessControlProxy       │ '0x94c0AA94Ef3aD19E3947e58a855636b38aDe53e0' │
+│       OneInchV4Adapter        │ '0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5' │
+│       ParaSwapV5Adapter       │ '0x9a020e23814be9980D64357aE9aEa44Fc3f6A51f' │
+│      ExchangeAggregator       │ '0x921FE3dF4F2073f0d4d0B839B6068460397a04f9' │
+│           Treasury            │ '0xc156E56402D0A2C8924e87ff8195A4635B44BD6a' │
+│      ChainlinkPriceFeed       │ '0xA92C91Fe965D7497A423d951fCDFA221fC354B5a' │
+│ AggregatedDerivativePriceFeed │ '0xFee7b64EB3A80B80D22193BA317a39D7F40c55F3' │
+│       ValueInterpreter        │ '0xE4153088577C2D634CB4b3451Aa4ab7E7281ef1f' │
+│             Vault             │ '0x30D120f80D60E7b58CA9fFaf1aaB1815f000B7c3' │
+│           Harvester           │ '0x238ECCBf7532B9e622372981e6707B7e88392e60' │
+│            Dripper            │                      ''                      │
+│         USDT_ADDRESS          │ '0xdAC17F958D2ee523a2206206994597C13D831ec7' │
+│          VaultAdmin           │ '0x2D90Cb03031a45773E95eAdd49465A636C547631' │
+│          USDPegToken          │ '0x83131242843257bc6C43771762ba467346Efb2CF' │
+│        USDVaultBuffer         │ '0x0b8D3634a05cc6b50E4D026c0eaFa8469cA98480' │
+│    AuraWstETHWETHStrategy     │ '0xc3C283aCc2Cf4F2917d80D496bab373f7b97D0fd' │
+│     AuraREthWEthStrategy      │ '0x34152B0eEf70423B51556e0DCA1b8d142b6EB0f9' │
+│   ConvexrETHwstETHStrategy    │ '0x1B9DeB21E39062d4Af7670719F5743909762cD09' │
+│      ConvexStETHStrategy      │ '0x36566097A321D3D90c04Dfa31920e94137e4555E' │
+│  UniswapV2StEthWEthStrategy   │ '0x6f72c9fD9d50524716DdDC55fDD41942e37D47CC' │
+│ UniswapV3RethEth3000Strategy  │ '0x3c1A3bf0A77460985a797011F46CbF2521E1793F' │
+│      YearnV2YETHStrategy      │ '0x8A4AE6dE0164D6E7D5154A88Ae004c8298bb8d71' │
+│      PriceOracleConsumer      │ '0xc542b8c1b38BD87D6aFc0346f041b2FAC8301467' │
+│           ETHVault            │ '0x8f0Cb368C63fbEDF7a90E43fE50F7eb8B9411746' │
+│         ETHVaultAdmin         │ '0x78eE089276194a8C3D278ca46B29ce40Ea62613b' │
+│         HarvestHelper         │ '0xdcE94fDbAB4a65FEC92C69a4b78e0d8476ADE040' │
+│          ETHPegToken          │ '0x1A597356E7064D4401110FAa2242bD0B51D1E4Fa' │
+│        ETHVaultBuffer         │ '0xC8915157b36ed6D0F36827a1Bb5E9b0cDd1e87Cd' │
+└───────────────────────────────┴──────────────────────────────────────────────┘
