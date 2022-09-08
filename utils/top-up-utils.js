@@ -400,7 +400,7 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
 /**
  *  Top up a certain amount of ETH for a certain address(default 10 ** 18)
  */
- async function topUpEthByAddress(amount = new BigNumber(10 * 18), to) {
+async function topUpEthByAddress(amount = new BigNumber(10 * 18), to) {
     if (isEmpty(to)) return 0
     const tokenName = "ETH"
     const nextAmount = new BigNumber(amount)
@@ -415,7 +415,7 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
 /**
  * Top up a certain amount of WETH for a certain address(default 10 ** 18)
  */
- async function topUpWETHByAddress(amount = new BigNumber(10 ** 18), to) {
+async function topUpWETHByAddress(amount = new BigNumber(10 ** 18), to) {
     if (isEmpty(to)) return 0
     const TOKEN = await IERC20_WETH.at(addresses.WETH_ADDRESS)
     const tokenName = await TOKEN.name()
@@ -443,13 +443,14 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
 /**
  * Top up a certain amount of stETH for a certain address(default 10 ** 18)
  */
- async function topUpSTETHByAddress(amount = new BigNumber(10 ** 18), to) {
+async function topUpSTETHByAddress(amount = new BigNumber(10 ** 18), to) {
     if (isEmpty(to)) return 0
     const TOKEN = await IERC20_STETH.at(addresses.stETH_ADDRESS)
     const tokenName = await TOKEN.name()
     const tokenSymbol = await TOKEN.symbol()
     const accounts = await ethers.getSigners()
     const account0 = accounts[0].address
+    amount = new BigNumber(amount).toFixed(0,1);
 
     // mint more
     const nextAmount = new BigNumber(new BigNumber(amount).multipliedBy(101).div(100).toFixed(0,1));
@@ -619,7 +620,7 @@ const tranferBackDai = async address => {
     })
     console.log(
         `${tokenName} balance of the whale：` +
-            new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
+        new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
     )
 }
 
@@ -638,7 +639,7 @@ const tranferBackUsdc = async address => {
     })
     console.log(
         `${tokenName} balance of the whale：` +
-            new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
+        new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
     )
 }
 
@@ -657,7 +658,7 @@ const tranferBackUsdt = async address => {
     })
     console.log(
         `${tokenName} balance of the whale：` +
-            new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
+        new BigNumber(await underlying.balanceOf(underlyingWhale)).toFormat(),
     )
 }
 

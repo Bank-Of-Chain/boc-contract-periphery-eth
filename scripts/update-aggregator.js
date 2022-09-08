@@ -12,8 +12,8 @@ const Vault = hre.artifacts.require('Vault')
 const ValueInterpreter = hre.artifacts.require('ValueInterpreter')
 const ChainlinkPriceFeed = hre.artifacts.require('ChainlinkPriceFeed')
 
-const admin = '0xc791B4A9B10b1bDb5FBE2614d389f0FE92105279'
-const vaultAddr = '0xd5C7A01E49ab534e31ABcf63bA5a394fF1E5EfAC'
+// const admin = '0x4fd4c98babee5e22219c573713308329da40649d'
+const vaultAddr = '0x30D120f80D60E7b58CA9fFaf1aaB1815f000B7c3'
 
 const main = async () => {
     let vault
@@ -27,10 +27,10 @@ const main = async () => {
 
     chainlinkPriceFeed = await ChainlinkPriceFeed.at(chainlinkPriceFeedAddr)
     
-    await impersonates([admin])
+    // await impersonates([admin])
     const accounts = await ethers.getSigners()
     const nextManagement = accounts[0].address
-    await send.ether(nextManagement, admin, 10 * (10 ** 18))
+    // await send.ether(nextManagement, admin, 10 * (10 ** 18))
     
     let primitives = []
     let aggregators = []
@@ -49,11 +49,11 @@ const main = async () => {
     }
     
     await chainlinkPriceFeed.updatePrimitives(primitives, aggregators, heartbeats, {
-        from: admin
+        from: nextManagement
     })
 
     await chainlinkPriceFeed.setEthUsdAggregator('0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', 60 * 60 * 24 * 365, {
-        from: admin
+        from: nextManagement
     })
     
     console.log('update aggregator successfully')

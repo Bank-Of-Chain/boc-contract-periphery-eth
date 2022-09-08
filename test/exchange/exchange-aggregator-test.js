@@ -20,15 +20,17 @@ const{BigNumber} =ethers;
 
 const EXCHANGE_PLATFORMS = {
     oneInchV4: {
-        useHttp: true,
         network: 1,
-        // protocols: 'CURVE_V2,SUSHI,CURVE,UNISWAP_V2,UNISWAP_V3'
-        // excludeProtocols: ['SHELL']
+        useHttp: true,
+        // protocols: ['PMM1','PMM2','PMM3','PMM4','UNISWAP_V1','UNISWAP_V2','UNISWAP_V3'],
+        // excludeProtocols: ['ONE_INCH_LIMIT_ORDER', 'ONE_INCH_LIMIT_ORDER_V2','PMM1','PMM2','PMM3','PMM4','UNISWAP_V1','UNISWAP_V2','UNISWAP_V3']
+        excludeProtocols: ['ONE_INCH_LIMIT_ORDER', 'ONE_INCH_LIMIT_ORDER_V2','ZEROX_LIMIT_ORDER','PMM1','PMM2','PMM3','PMM4'],
     },
     paraswap: {
         network: 1,
-        // includeDEXS: 'UniswapV2,UniswapV3,SushiSwap,mStable,DODOV2,DODOV1,Curve,CurveV2,Compound,Bancor,BalancerV2,Aave2',
-        excludeContractMethods: ['swapOnZeroXv2', 'swapOnZeroXv4']
+        excludeContractMethods: ['swapOnZeroXv2','swapOnZeroXv4'],
+        excludeDEXS: 'acryptos',
+        includeDEXS: 'Uniswap,Kyber,Bancor,Oasis,Compound,Fulcrum,0x,MakerDAO,Chai,Aave,Aave2,MultiPath,MegaPath,Curve,Curve3,Saddle,IronV2,BDai,idle,Weth,Beth,UniswapV2,Balancer,0xRFQt,SushiSwap,LINKSWAP,Synthetix,DefiSwap,Swerve,CoFiX,Shell,DODOV1,DODOV2,OnChainPricing,PancakeSwap,PancakeSwapV2,ApeSwap,Wbnb,streetswap,bakeryswap,julswap,vswap,vpegswap,beltfi,ellipsis,QuickSwap,COMETH,Wmatic,Nerve,Dfyn,UniswapV3,Smoothy,PantherSwap,OMM1,OneInchLP,CurveV2,mStable,WaultFinance,MDEX,ShibaSwap,CoinSwap,SakeSwap,JetSwap,Biswap,BProtocol'
     }
 }
 
@@ -63,27 +65,30 @@ describe('ExchangeAggregator test.', function () {
     let vault;
     let farmer1
     let exchangeAggregator;
-    let amount = BigNumber.from(10**2);
+    let ethiAmount = BigNumber.from(100000);
+    let usdiAmount = BigNumber.from(100000);
     let snapshotId;
 
-    let tokenList = [
+    let ethiTokenList = [
         MFC.ETH_ADDRESS,
         MFC.rocketPoolETH_ADDRESS,
         MFC.stETH_ADDRESS,
         MFC.WETH_ADDRESS,
         MFC.wstETH_ADDRESS,
-        MFC.rETH2_ADDRESS,
-        MFC.sETH2_ADDRESS,
+        // MFC.rETH2_ADDRESS,
+        // MFC.sETH2_ADDRESS,
+    ];
 
-        // MFC.USDT_ADDRESS,
-        // MFC.USDC_ADDRESS,
-        // MFC.DAI_ADDRESS,
-        // MFC.BUSD_ADDRESS,
-        // MFC.LUSD_ADDRESS,
-        // MFC.USDP_ADDRESS,
-        // MFC.SUSD_ADDRESS,
-        // MFC.TUSD_ADDRESS,
-        // MFC.GUSD_ADDRESS,
+    let usdiTokenList = [
+        MFC.USDT_ADDRESS,
+        MFC.USDC_ADDRESS,
+        MFC.DAI_ADDRESS,
+        MFC.BUSD_ADDRESS,
+        MFC.LUSD_ADDRESS,
+        MFC.USDP_ADDRESS,
+        MFC.SUSD_ADDRESS,
+        MFC.TUSD_ADDRESS,
+        MFC.GUSD_ADDRESS,
     ];
 
     async function swap(srcTokenAddr, dstTokenAddr, srcAmount = BigNumber.from(10).pow(18).toString()) {
@@ -93,8 +98,11 @@ describe('ExchangeAggregator test.', function () {
         };
         const srcTokenDetail = await getTokenDetail(srcTokenAddr);
         const dstTokenDetail = await getTokenDetail(dstTokenAddr);
+        // if (srcTokenAddr != NativeToken){
+        //     srcAmount = BigNumber.from('99623559194942650').toString();
+        // }
 
-        console.log('getBestSwapInfo## from:%s to:%s,amount:%s,balance:%s',srcTokenDetail.symbol,dstTokenDetail.symbol,srcAmount, (await balanceOfToken(farmer1,srcTokenAddr)));
+        // console.log('getBestSwapInfo## from:%s to:%s,amount:%s,balance:%s',srcTokenDetail.symbol,dstTokenDetail.symbol,srcAmount, (await balanceOfToken(farmer1,srcTokenAddr)));
         const SWAP_INFO = await getBestSwapInfo(srcTokenDetail,
             dstTokenDetail, srcAmount, 500, 500, platformAdapter, EXCHANGE_PLATFORMS);
 
@@ -109,9 +117,9 @@ describe('ExchangeAggregator test.', function () {
         };
         let tx;
         let dstTokenBalanceBeforeSwap = BigNumber.from((await balanceOfToken(farmer1,dstTokenAddr)).toString());
-        if(dstTokenAddr == MFC.stETH_ADDRESS){
-            dstTokenBalanceBeforeSwap.sub(1);
-        }
+        // if(dstTokenAddr == MFC.stETH_ADDRESS){
+        //     dstTokenBalanceBeforeSwap = dstTokenBalanceBeforeSwap.sub(1);
+        // }
 
         let gasUsed = BigNumber.from(0);
         console.log('start exchange aggregator swap');
@@ -119,15 +127,18 @@ describe('ExchangeAggregator test.', function () {
             tx = await exchangeAggregator.swap(SWAP_INFO.platform, SWAP_INFO.method, SWAP_INFO.encodeExchangeArgs, swapDesc, { from: farmer1, value: srcAmount});
         } else {
             const token = await ERC20.at(swapDesc.srcToken);
+            await token.approve(exchangeAggregator.address, 0, { from: farmer1 });
             await token.approve(exchangeAggregator.address, srcAmount, { from: farmer1 });
+            // console.log(SWAP_INFO.platform, SWAP_INFO.method, SWAP_INFO.encodeExchangeArgs, swapDesc);
             tx = await exchangeAggregator.swap(SWAP_INFO.platform, SWAP_INFO.method, SWAP_INFO.encodeExchangeArgs, swapDesc, { from: farmer1,gasPrice:10* (10**9) });
             if (dstTokenAddr == NativeToken){
                 gasUsed = BigNumber.from(tx.receipt.gasUsed.toString()).mul(BigNumber.from(tx.receipt.effectiveGasPrice.toString()));
-                console.log('tx',tx);
+                // console.log('tx',tx);
                 console.log('gasUsed',gasUsed.toString());
                 gasUsed = 0;
             }
         }
+        // console.log('tx',tx);
         console.log('end exchange aggregator swap');
 
         expectEvent(tx, 'Swap', {
@@ -160,42 +171,35 @@ describe('ExchangeAggregator test.', function () {
         console.log('deploy ExchangeAggregator');
         exchangeAggregator = await ExchangeAggregator.new([oneInchV4Adapter.address, paraSwapV5Adapter.address], accessControlProxy.address);
         exchangePlatformAdapters = await getExchangePlatformAdapters(exchangeAggregator);
-        // await topUpUsdtByAddress((BigNumber.from(10).pow(6-1)).mul(2).mul(amount).toString(),farmer1);
-        // await topUpUsdcByAddress((BigNumber.from(10).pow(6-1)).mul(2).mul(amount).toString(),farmer1);
-        // await topUpDaiByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        // await topUpBusdByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        // await topUpLusdByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        // await topUpUsdpByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        // await topUpSusdByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        // await topUpTusdByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        // await topUpGusdByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
 
-        await topUpEthByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        await topUpRocketPoolEthByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        await topUpSTETHByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        await topUpWETHByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        await topUpWstEthByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        await topUpREth2ByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        await topUpSEth2ByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
 
+        await topUpUsdtByAddress((BigNumber.from(10).pow(6-1)).mul(2).mul(usdiAmount).toString(),farmer1);
+        await topUpUsdcByAddress((BigNumber.from(10).pow(6-1)).mul(2).mul(usdiAmount).toString(),farmer1);
+        await topUpDaiByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(usdiAmount).toString(),farmer1);
+        await topUpBusdByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(usdiAmount).toString(),farmer1);
+        await topUpLusdByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(usdiAmount).toString(),farmer1);
+        await topUpUsdpByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(usdiAmount).toString(),farmer1);
+        await topUpSusdByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(usdiAmount).toString(),farmer1);
+        await topUpTusdByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(usdiAmount).toString(),farmer1);
+        await topUpGusdByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(usdiAmount).toString(),farmer1);
+
+        await topUpEthByAddress((BigNumber.from(10).pow(18-5)).mul(2).mul(ethiAmount).toString(),farmer1);
+        await topUpRocketPoolEthByAddress((BigNumber.from(10).pow(18-5)).mul(2).mul(ethiAmount).toString(),farmer1);
+        await topUpSTETHByAddress((BigNumber.from(10).pow(18-5)).mul(2).mul(ethiAmount).toString(),farmer1);
+        await topUpWETHByAddress((BigNumber.from(10).pow(18-5)).mul(2).mul(ethiAmount).toString(),farmer1);
+        await topUpWstEthByAddress((BigNumber.from(10).pow(18-5)).mul(2).mul(ethiAmount).toString(),farmer1);
+        await topUpREth2ByAddress((BigNumber.from(10).pow(18-5)).mul(2).mul(ethiAmount).toString(),farmer1);
+        await topUpSEth2ByAddress((BigNumber.from(10).pow(18-5)).mul(2).mul(ethiAmount).toString(),farmer1);
         snapshotId = await hre.network.provider.send("evm_snapshot", []);
     });
 
-    for (let i = 0; i < tokenList.length; i++) {
-        const srcToken = tokenList[i];
-        // it(`Case ${i}: swap USDT to ${srcToken} should be success.`, async function () {
-        //     await topUpUsdtByAddress((BigNumber.from(10).pow(6)).mul(10).mul(amount).toString(),farmer1);
-        //     if (srcToken != MFC.USDT_ADDRESS){
-        //         const srcTokenERC = await ERC20.at(srcToken);
-        //         const srcTokenSymbol = await srcTokenERC.symbol();
-        //         let srcAmount = await balanceOfToken(farmer1,MFC.USDT_ADDRESS);
-        //         console.log(`start swap USDT to ${srcTokenSymbol}`);
-        //         await swap(MFC.USDT_ADDRESS, srcToken, srcAmount.toString());
-        //     }
-        // });
-        for (let j = 0; j < tokenList.length-1; j++) {
-            const dstToken = tokenList[(j + i + 1) % tokenList.length];
+    for (let i = 0; i < ethiTokenList.length; i++) {
+        const srcToken = ethiTokenList[i];
+        for (let j = 0; j < ethiTokenList.length-1; j++) {
+            const dstToken = ethiTokenList[(j + i + 1) % ethiTokenList.length];
             it(`Case ${i},${j}: swap ${srcToken} to ${dstToken} should be success.`, async function () {
+                await hre.network.provider.send("evm_revert",[snapshotId]);
+                snapshotId = await hre.network.provider.send("evm_snapshot", []);
                 let srcTokenSymbol = 'ETH';
                 let dstTokenSymbol = 'ETH';
                 if (srcToken != NativeToken){
@@ -213,10 +217,38 @@ describe('ExchangeAggregator test.', function () {
                     const token = await ERC20.at(srcToken);
                     decimals = BigNumber.from((await token.decimals()).toString());
                 }
-                let srcAmount = amount.mul(BigNumber.from(10).pow(decimals.sub(1)));
+                let srcAmount = ethiAmount.mul(BigNumber.from(10).pow(decimals.sub(5)));
                 await swap(srcToken, dstToken, srcAmount.toString());
+            });
+        }
+    }
+
+    for (let i = 0; i < usdiTokenList.length; i++) {
+        const srcToken = usdiTokenList[i];
+        for (let j = 0; j < usdiTokenList.length-1; j++) {
+            const dstToken = usdiTokenList[(j + i + 1) % usdiTokenList.length];
+            it(`Case ${i},${j}: swap ${srcToken} to ${dstToken} should be success.`, async function () {
                 await hre.network.provider.send("evm_revert",[snapshotId]);
                 snapshotId = await hre.network.provider.send("evm_snapshot", []);
+                let srcTokenSymbol = 'ETH';
+                let dstTokenSymbol = 'ETH';
+                if (srcToken != NativeToken){
+                    const srcTokenERC = await ERC20.at(srcToken);
+                    srcTokenSymbol = await srcTokenERC.symbol();
+                }
+                if (dstToken != NativeToken){
+                    const dstTokenERC = await ERC20.at(dstToken);
+                    dstTokenSymbol = await dstTokenERC.symbol();
+                }
+
+                console.log(`start ${srcTokenSymbol} to ${dstTokenSymbol}`);
+                let decimals = BigNumber.from(18);
+                if (srcToken != NativeToken){
+                    const token = await ERC20.at(srcToken);
+                    decimals = BigNumber.from((await token.decimals()).toString());
+                }
+                let srcAmount = usdiAmount.mul(BigNumber.from(10).pow(decimals.sub(1)));
+                await swap(srcToken, dstToken, srcAmount.toString());
             });
         }
     }
