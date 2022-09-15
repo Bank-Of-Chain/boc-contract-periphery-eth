@@ -154,7 +154,7 @@ function findStrategyItem(strategyName) {
     return result;
 }
 
-async function check(strategyName, callback, uniswapV3RebalanceCallback, outputCode = 0) {
+async function check(strategyName, callback, uniswapV3RebalanceCallback,callback2, outputCode = 0) {
     before(async function () {
         BigNumber.set({ DECIMAL_PLACES: 6 });
         accounts = await ethers.getSigners();
@@ -317,13 +317,17 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
     it('[totalAssets should increase after 3 days]', async function () {
         const beforeTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
         if (callback) {
-            await callback(strategy.address, keeper);
+            await callback(strategy, keeper);
         }
         await advanceBlock(3);
+        
         pendingRewards = await strategy.harvest.call({
             from: keeper,
         });
         await strategy.harvest({ from: keeper });
+        if (callback2){
+            await callback2(strategy, keeper);
+        }
         // After the harvest is completed, IronBank needs to perform one more step to sell and reinvest the mine
         const rewardsTokens = pendingRewards._rewardsTokens;
         for (let i = 0; i < rewardsTokens.length; i++) {
