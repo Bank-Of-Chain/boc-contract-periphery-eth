@@ -203,7 +203,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
             require(
                 (_strategy != ZERO_ADDRESS) &&
                     (!strategySet.contains(_strategy)) &&
-                    (IETHStrategy(_strategy).vault() == address(this)),
+                    (address(IETHStrategy(_strategy).vault()) == address(this)),
                 "Strategy is invalid"
             );
             _strategies[i] = _strategy;
