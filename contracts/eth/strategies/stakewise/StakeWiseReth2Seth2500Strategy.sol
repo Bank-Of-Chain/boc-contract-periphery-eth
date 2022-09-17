@@ -6,6 +6,9 @@ import "../../../external/uniswap/IUniswapV3.sol";
 import "../../../external/uniswap/IQuoter.sol";
 import "../uniswapv3/ETHUniswapV3BaseStrategy.sol";
 
+/// @title StakeWiseReth2Seth2500Strategy
+/// @notice Investment strategy for investing ETH via rETH-sETH-pool of StakeWise//??????//
+/// @author Bank of Chain Protocol Inc
 contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -15,6 +18,9 @@ contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
     address internal constant RETH2 = 0x20BC832ca081b91433ff6c17f85701B6e92486c5;
     address internal constant SWISE = 0x48C3399719B582dD63eB5AADf12A40B4C3f52FA2;
 
+    /// @notice Initialize this contract
+    /// @param _vault The ETH vaults
+    /// @param _name The name of strategy
     function initialize(address _vault, string memory _name) public initializer {
         uniswapV3Initialize(0xa9ffb27d36901F87f1D0F20773f7072e38C5bfbA, 10, 10, 41400, 0, 100, 60, 10);
         address[] memory _wants = new address[](2);
@@ -23,16 +29,19 @@ contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
         super._initialize(_vault, uint16(ProtocolEnum.StakeWise), _name, _wants);
     }
 
+    /// @inheritdoc ETHUniswapV3BaseStrategy
     function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo){
         _outputsInfo = new OutputInfo[](1);
         _outputsInfo[0].outputTokens = wants;
     }
 
+    /// @inheritdoc ETHUniswapV3BaseStrategy
     function claimRewards() internal override returns (bool _isWorth, address[] memory _assets, uint256[] memory _amounts) {
         (_isWorth, _assets, _amounts) = super.claimRewards();
         swapRewardsToWants();
     }
 
+    /// @inheritdoc ETHUniswapV3BaseStrategy
     function swapRewardsToWants() internal override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){
         uint256 _balanceOfSwise = balanceOfToken(SWISE);
 

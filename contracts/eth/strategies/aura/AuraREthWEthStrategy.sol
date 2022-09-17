@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 
 import "../../../external/balancer/IAsset.sol";
 import "../../../external/balancer/IBalancerVault.sol";
-// aura fork from convex
 import "../../../external/aura/IRewardPool.sol";
 import "../../../external/aura/IAuraBooster.sol";
 
@@ -16,6 +15,9 @@ import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../ETHBaseClaimableStrategy.sol";
 import "../../enums/ProtocolEnum.sol";
 
+/// @title AuraREthWEthStrategy
+/// @notice Investment strategy for investing ETH via REth-WEth-pool of Aura //??????//
+/// @author Bank of Chain Protocol Inc
 contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     enum JoinKind {
@@ -82,6 +84,10 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         super._initialize(_vault, uint16(ProtocolEnum.Aura), _name,_wants);
     }
 
+    /// @notice Sets the path of swap from reward token
+    /// @param _token The reward token
+    /// @param _uniswapRouteToToken The token address list contains reward token and toToken
+    /// Requirements: only vault manager can call
     function setRewardSwapPath(address _token, address[] memory _uniswapRouteToToken)
         external
         isVaultManager
@@ -89,34 +95,43 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         swapRewardRoutes[_token] = _uniswapRouteToToken;
     }
 
+    /// @notice Sets the pool Id of swap from reward token
+    /// @param _token The reward token
+    /// @param _poolId The pool Id 
+    /// Requirements: only vault manager can call
     function setRewardSwapPoolId(address _token, bytes32 _poolId)
-    external
-    isVaultManager
+        external
+        isVaultManager
     {
         swapRewardPoolId[_token] = _poolId;
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @notice Return the pool key
     function getPoolKey() internal pure returns (bytes32) {
         return 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
     }
 
+    /// @notice Return the pId
     function getPId() internal pure returns (uint256) {
         return 21;
     }
 
+    /// @notice Return the LP token address of the rETH stable pool
     function getPoolLpToken() internal pure returns (address) {
         return 0x1E19CF2D73a72Ef1332C882F20534B6519Be0276;
     }
 
+    /// @notice Return the address of the base reward pool
     function getRewardPool() internal pure returns (address) {
         return 0x6eBDC53B2C07378662940A7593Ad39Fb67778457;
     }
 
-    /// @notice Provide the strategy need underlying token and ratio
+    /// @inheritdoc ETHBaseStrategy
     function getWantsInfo()
         external
         view
@@ -127,6 +142,7 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         (, _ratios, ) = BALANCER_VAULT.getPoolTokens(getPoolKey());
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getOutputsInfo()
         external
         view
@@ -150,7 +166,7 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         _info2.outputTokens[0] = WETH; //wETH
     }
 
-    /// @notice 3rd prototcol's pool total assets in USD.
+    /// @inheritdoc ETHBaseStrategy
     function get3rdPoolAssets() external view override returns (uint256) {
         uint256 _totalAssets;
         (address[] memory _tokens, uint256[] memory _balances, ) = BALANCER_VAULT.getPoolTokens(
@@ -162,7 +178,7 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         return _totalAssets;
     }
 
-    /// @notice Returns the position details of the strategy.
+    /// @inheritdoc ETHBaseStrategy
     function getPositionDetail()
         public
         view
@@ -186,6 +202,7 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         }
     }
 
+    /// @notice Return the amount staking on base reward pool
     function getStakingAmount() public view returns (uint256) {
         return IRewardPool(getRewardPool()).balanceOf(address(this));
     }
@@ -198,9 +215,7 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         }
     }
 
-    /// @notice Strategy deposit funds to 3rd pool.
-    /// @param _assets deposit token address
-    /// @param _amounts deposit token amount
+    /// @inheritdoc ETHBaseStrategy
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -209,6 +224,9 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         AURA_BOOSTER.deposit(getPId(), _receiveLpAmount, true);
     }
 
+    /// @notice Strategy deposit funds to the balancer protocol.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function _depositToBalancer(address[] memory _assets, uint256[] memory _amounts)
         internal
         virtual
@@ -226,9 +244,7 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         _receiveLpAmount = balanceOfToken(getPoolLpToken());
     }
 
-    /// @notice Strategy withdraw the funds from 3rd pool.
-    /// @param _withdrawShares Numerator
-    /// @param _totalShares Denominator
+    /// @inheritdoc ETHBaseStrategy
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,
@@ -240,6 +256,9 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         _withdrawFromBalancer(_withdrawAmount, _outputCode);
     }
 
+    /// @notice Strategy withdraw the funds from the balancer protocol
+    /// @param _exitAmount The amount to withdraw
+    /// @param _outputCode The code of output
     function _withdrawFromBalancer(uint256 _exitAmount, uint256 _outputCode) internal virtual {
         address payable _recipient = payable(address(this));
         bytes32 _poolKey = getPoolKey();
@@ -274,6 +293,7 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         BALANCER_VAULT.exitPool(_poolKey, address(this), _recipient, _exitRequest);
     }
 
+    /// @inheritdoc ETHBaseClaimableStrategy
     function claimRewards()
         internal
         override
@@ -297,6 +317,7 @@ contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
         }
     }
 
+    /// @inheritdoc ETHBaseClaimableStrategy
     function swapRewardsToWants() internal override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){
         uint256 _wethBalanceInit = balanceOfToken(WETH);
 

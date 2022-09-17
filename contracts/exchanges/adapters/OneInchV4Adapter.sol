@@ -8,10 +8,15 @@ import "../utils/ExchangeHelpers.sol";
 import "@openzeppelin/contracts~v3/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts~v3/math/SafeMath.sol";
 
+/// @title OneInchV4Adapter
+/// @notice Adapter for interacting with OneInchV4
+/// @author Bank of Chain Protocol Inc
 contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
+    /// @param _success The boolean return value of the call to AGGREGATION_ROUTER_V4
+    /// @param _data The calldata the call to AGGREGATION_ROUTER_V4
     event Response(bool _success, bytes _data);
 
     address private constant AGGREGATION_ROUTER_V4 = 0x1111111254fb6c44bAC0beD2854e76F90643097d;
@@ -21,11 +26,18 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
     fallback() external payable {}
 
     /// @notice Provides a constant string identifier for an adapter
-    /// @return identifier An identifier string
+    /// @return An identifier string
     function identifier() external pure override returns (string memory) {
         return "oneInchV4";
     }
 
+    /// @notice Swap from ETHs or tokens to tokens or ETHs
+    /// @dev Swap with `_sd` data by using `_method` and `_data` on `_platform`.
+    /// @dev `_platform` need be contained. `_sd.receiver` is not 0x00
+    /// if using ETH to swap, `msg.value` need GTE `_sd.amount`
+    /// @param _data The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The return amount of this swap
     function swap(
         uint8,
         bytes calldata _data,

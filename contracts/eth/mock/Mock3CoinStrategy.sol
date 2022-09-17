@@ -13,16 +13,29 @@ import "boc-contract-core/contracts/library/StableMath.sol";
 import "../oracle/IPriceOracleConsumer.sol";
 import "../vault/IETHVault.sol";
 
+/// @title MockS3CoinStrategy
+/// @notice The mock contract of 3CoinStrategy ///// ????
+/// @author Bank of Chain Protocol Inc
 contract MockS3CoinStrategy is Initializable, AccessControlMixin {
     
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @notice The ETH vault interface
     IETHVault public vault;
+
+    /// @notice The price oracle consumer interface
     IPriceOracleConsumer public valueInterpreter;
+
+    /// @notice The ID of protocol, init 32
     uint16 public protocol;
+
+    /// @notice The list of tokens wanted by this strategy
     address[] public wants;
+
+    /// @notice The boolean switch whether ignore the want ratio
     bool public isWantRatioIgnorable;
 
+    /// @dev Modifier that checks that msg.sender is the vault or not
     modifier onlyVault() {
         require(msg.sender == address(vault));
         _;
@@ -46,10 +59,12 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         isWantRatioIgnorable = true;
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure virtual returns (string memory) {
         return "1.0.0";
     }
 
+    /// @notice Return the name of strategy
     function name() external pure virtual returns (string memory) {
         return "MockS3CoinStrategy";
     }
@@ -61,6 +76,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         // emit SetIsWantRatioIgnorable(oldValue, _isWantRatioIgnorable);
     }
 
+    // @notice Return the output path list of the strategy when withdraw.
     function getWantsInfo() external view virtual returns (address[] memory _assets, uint256[] memory _ratios) {
         _assets = wants;
 
@@ -94,22 +110,36 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         }
     }
 
+    /// @notice Return the 3rd protocol's pool total assets in USD.
     function get3rdPoolAssets() external view virtual returns (uint256) {
         return type(uint256).max;
     }
 
+    /// @notice Gets the info of pending rewards
+    /// @param _rewardsTokens The address list of reward tokens
+    /// @param _pendingAmounts The amount list of reward tokens
     function getPendingRewards() public view virtual returns (address[] memory _rewardsTokens, uint256[] memory _pendingAmounts) {
         _rewardsTokens = new address[](0);
         _pendingAmounts = new uint256[](0);
     }
 
+    /// @notice Collect the rewards from 3rd protocol
+    /// @return _rewardsTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards() internal virtual returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts) {
         _rewardsTokens = new address[](0);
         _claimAmounts = new uint256[](0);
     }
 
+    /// @notice Strategy deposit funds to 3rd pool.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal virtual {}
 
+    /// @notice Strategy withdraw the funds from 3rd pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares, uint256 _outputCode) internal virtual {
         // _assets = new address[](wants.length);
         // _amounts = new uint256[](_assets.length);
@@ -122,6 +152,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         // }
     }
 
+    /// @notice Return the list of tokens wanted by this strategy
     function protectedTokens() internal view virtual returns (address[] memory) {
         return wants;
     }
@@ -180,6 +211,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         // emit Repay(_repayShares, _totalShares, _assets, _amounts);
     }
 
+    /// @notice Return the token's balance Of this contract
     function balanceOfToken(address _tokenAddress) internal view returns (uint256) {
         if (_tokenAddress == NativeToken.NATIVE_TOKEN) {
             return address(this).balance;
@@ -204,10 +236,15 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         _valueInUSD = valueInterpreter.valueInUsd(_token, _amount);
     }
 
+    /// @notice Return the uint with decimal of one token
     function decimalUnitOfToken(address _token) internal view returns (uint256) {
         return 10**IERC20MetadataUpgradeable(_token).decimals();
     }
 
+    /// @notice Transfer `_assets` token from this contract to target address.
+    /// @param _target The target address to receive token
+    /// @param _assets the address list of token to transfer
+    /// @param _amounts the amount list of token to transfer
     function transferTokensToTarget(
         address _target,
         address[] memory _assets,
@@ -226,6 +263,10 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         }
     }
 
+    /// @notice Ckecks that `_array` contains `_key` or not
+    /// @param _array The address list
+    /// @param _key A address 
+    /// @return Returns `true` if `_array` contains `_key`, otherwise rerturns `false`
     function arrayContains(address[] memory _array, address _key) internal pure returns (bool) {
         for (uint256 i = 0; i < _array.length; i++) {
             if (_array[i] == _key) {

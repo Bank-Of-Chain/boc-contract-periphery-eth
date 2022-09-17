@@ -5,8 +5,15 @@ pragma experimental ABIEncoderV2;
 import "boc-contract-core/contracts/library/NativeToken.sol";
 import "@openzeppelin/contracts~v3/token/ERC20/IERC20.sol";
 
+/// @title OneInchV4ExchangeHelpersdapter
+/// @notice Helpers for exchange
+/// @author Bank of Chain Protocol Inc
 abstract contract ExchangeHelpers {
 
+    /// @notice Gets the ``_dstToken``'s balance of `_owner`
+    /// @param _dstToken The token get balance from
+    /// @param _owner The address to get balance
+    /// @return The ``_dstToken``'s balance of `_owner`
     function getTokenBalance(address _dstToken, address _owner) internal view returns (uint256){
         uint256 _tokenBalance;
         if(_dstToken == NativeToken.NATIVE_TOKEN){

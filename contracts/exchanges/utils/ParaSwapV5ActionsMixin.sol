@@ -7,6 +7,9 @@ import './ExchangeHelpers.sol';
 import "@openzeppelin/contracts~v3/math/SafeMath.sol";
 import "@openzeppelin/contracts~v3/token/ERC20/SafeERC20.sol";
 
+/// @title ParaSwapV5ActionsMixin
+/// @notice The actions mixin for ParaSwapV5
+/// @author Bank of Chain Protocol Inc
 abstract contract ParaSwapV5ActionsMixin is ExchangeHelpers {
 
     using SafeERC20 for IERC20;

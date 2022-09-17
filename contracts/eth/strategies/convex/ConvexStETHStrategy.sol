@@ -7,6 +7,9 @@ import "../../../external/curve/ICurveLiquidityPoolPayable.sol";
 import "./ETHConvexBaseStrategy.sol";
 import "../../../external/weth/IWeth.sol";
 
+/// @title ConvexStETHStrategy
+/// @notice Investment strategy for investing ETH via Lido:Curve Liquidity Farming Pool Contract //??????//
+/// @author Bank of Chain Protocol Inc
 contract ConvexStETHStrategy is ETHConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address private constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;
@@ -28,10 +31,13 @@ contract ConvexStETHStrategy is ETHConvexBaseStrategy {
         uniswapRewardRoutes[LDO] = _rewardLDOPath;
     }
 
+    /// Curve Liquidity Farming Pool Contract 
+    /// @inheritdoc ETHConvexBaseStrategy
     function getCurvePool() internal pure override returns (ICurveLiquidityPoolPayable) {
         return ICurveLiquidityPoolPayable(address(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022));
     }
 
+    /// @inheritdoc ETHConvexBaseStrategy
     function getConvexWants() internal pure override returns (address[] memory) {
         address[] memory _wants = new address[](2);
         _wants[0] = NativeToken.NATIVE_TOKEN;
@@ -39,6 +45,7 @@ contract ConvexStETHStrategy is ETHConvexBaseStrategy {
         return _wants;
     }
 
+    /// @inheritdoc ETHConvexBaseStrategy
     function getConvexRewards() internal pure override returns (address[] memory) {
         address[] memory _rewards = new address[](3);
         _rewards[0] = CRV;
@@ -47,22 +54,27 @@ contract ConvexStETHStrategy is ETHConvexBaseStrategy {
         return _rewards;
     }
 
+    /// @inheritdoc ETHConvexBaseStrategy
     function getRewardPool() internal pure override returns (IConvexReward) {
         return IConvexReward(address(0x0A760466E1B4621579a82a39CB56Dda2F4E70f03));
     }
 
+    /// @inheritdoc ETHConvexBaseStrategy
     function getLpToken() internal pure override returns (address) {
         return 0x06325440D014e39736583c165C2963BA99fAf14E;
     }
 
+    /// @inheritdoc ETHConvexBaseStrategy
     function getPid() internal pure override returns (uint256) {
         return 25;
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getWantsInfo()
         public
         view
@@ -76,6 +88,7 @@ contract ConvexStETHStrategy is ETHConvexBaseStrategy {
         }
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getOutputsInfo()
         external
         view
@@ -99,6 +112,7 @@ contract ConvexStETHStrategy is ETHConvexBaseStrategy {
         _info2.outputTokens[0] = ST_ETH;
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getPositionDetail()
         public
         view
@@ -124,11 +138,13 @@ contract ConvexStETHStrategy is ETHConvexBaseStrategy {
         }
     }
 
+    /// @inheritdoc ETHConvexBaseStrategy
     function sellWETH2Want() internal override {
         // Unwrap wEth to Eth
         IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -152,6 +168,7 @@ contract ConvexStETHStrategy is ETHConvexBaseStrategy {
         }
     }
 
+    /// @inheritdoc ETHConvexBaseStrategy
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -169,6 +186,7 @@ contract ConvexStETHStrategy is ETHConvexBaseStrategy {
         return getCurvePool().add_liquidity(_depositArray, 0);
     }
 
+    /// @inheritdoc ETHConvexBaseStrategy
     function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPoolPayable pool = getCurvePool();
         if (_outputCode == 1) {

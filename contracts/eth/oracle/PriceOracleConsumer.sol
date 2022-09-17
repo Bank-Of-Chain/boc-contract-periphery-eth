@@ -23,6 +23,9 @@ interface AggregatorInterface {
     function getTimestamp(uint256 _roundId) external view returns (uint256);
 }
 
+/// @title PriceOracleConsumer
+/// @notice The consumer of the price oracle
+/// @author Bank of Chain Protocol Inc
 contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
     AggregatorInterface public constant STETH_ETH_AGGREGATOR =
         AggregatorInterface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
@@ -43,22 +46,27 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
 
     function initialize() public initializer {}
 
+    /// @notice Return the version of this contract.
     function version() external pure returns (string memory){
         return "1.0.1";
     }
     
+    /// @inheritdoc IPriceOracleConsumer
     function decimals() external pure override returns (uint8) {
         return 18;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function stEthPriceInEth() public view override returns (uint256) {
         return uint256(STETH_ETH_AGGREGATOR.latestAnswer());
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function wstEthPriceInEth() public view override returns (uint256) {
         return (IWstETH(wstETH).stEthPerToken() * stEthPriceInEth()) / 1e18;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function rEthPriceInEth() public view override returns (uint256) {
         uint256 _twapPrice  = getTwapPrice(WETH_RETH_UNI_V3_POOL,3600);
         uint256 _exchangeRate = RocketTokenRETHInterface(rETH).getExchangeRate();
@@ -66,20 +74,24 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
         return _weigthedPrice;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function sEthPriceInEth() public pure override returns (uint256) {
         return 1 ether;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function wEthPriceInEth() public pure override returns (uint256) {
         return 1 ether;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function sEth2PriceInEth() public view override returns (uint256) {
         uint256 _twapPrice = getTwapPrice(WETH_SETH2_UNI_V3_POOL, 3600);
         _twapPrice = 1e18 * 1e18 / _twapPrice;
         return (1 ether + _twapPrice) / 2;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function rEth2PriceInEth() public view override returns (uint256) {
         uint256 _reth2ToSeth2TwapPrice = getTwapPrice(RETH2_SETH2_UNI_V3_POOL, 3600);
         uint256 _ethToSeth2TwapPrice = getTwapPrice(WETH_SETH2_UNI_V3_POOL, 3600);
@@ -87,34 +99,42 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
         return (1 ether + _twapPrice) / 2;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function ethPriceInUsd() public view override returns (uint256) {
         return uint256(ETH_USD_AGGREGATOR.latestAnswer());
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function stEthPriceInUsd() external view override returns (uint256) {
         return (stEthPriceInEth() * ethPriceInUsd()) / 1e8;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function wstEthPriceInUsd() external view override returns (uint256) {
         return (wstEthPriceInEth() * ethPriceInUsd()) / 1e8;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function rEthPriceInUsd() external view override returns (uint256) {
         return (rEthPriceInEth() * ethPriceInUsd()) / 1e8;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function wEthPriceInUsd() external view override returns (uint256) {
         return (wEthPriceInEth() * ethPriceInUsd()) / 1e8;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function sEth2PriceInUsd() external view override returns (uint256) {
         return (sEth2PriceInEth() * ethPriceInUsd()) / 1e8;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function rEth2PriceInUsd() public view override returns (uint256) {
         return (rEth2PriceInEth() * ethPriceInUsd()) / 1e8;
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function priceInEth(address _asset) public view override returns (uint256) {
         if (_asset == NativeToken.NATIVE_TOKEN) {
             return 1e18;
@@ -137,6 +157,7 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
         }
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function priceInUSD(address _asset) public view override returns (uint256) {
         if (_asset == NativeToken.NATIVE_TOKEN) {
             return ethPriceInUsd() * 1e10;
@@ -145,14 +166,17 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
         }
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function valueInEth(address _asset, uint256 _amount) external view override returns (uint256) {
         return (priceInEth(_asset) * _amount) / getPowDecimals(_asset);
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function valueInUsd(address _asset, uint256 _amount) external view override returns (uint256) {
         return (priceInUSD(_asset) * _amount) / getPowDecimals(_asset);
     }
 
+    /// @inheritdoc IPriceOracleConsumer
     function valueInTargetToken(
         address _fromToken,
         uint256 _amount,
@@ -164,6 +188,9 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
             priceInEth(_toToken);
     }
 
+    /// @notice Gets the number of decimal of `_asset`
+    /// @param _asset The address of asset. ETH uses '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+    /// @return The number of decimal of `_asset`
     function getPowDecimals(address _asset) internal view returns (uint256) {
         if (_asset == NativeToken.NATIVE_TOKEN) {
             return 1e18;
@@ -172,6 +199,10 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
         }
     }
 
+    /// @notice Gets the TWAP Price of `_pool` on `_twapDuration`
+    /// @param _pool One pool address of uniswap V3
+    /// @param _twapDuration The time duration to get price
+    /// @return The TWAP Price of `_pool` on `_twapDuration`
     function getTwapPrice(address _pool,uint32 _twapDuration) internal view returns(uint256) {
         uint32[] memory _secondsAgo = new uint32[](2);
         _secondsAgo[0] = _twapDuration;

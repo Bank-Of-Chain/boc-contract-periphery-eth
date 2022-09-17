@@ -4,8 +4,14 @@ pragma solidity ^0.8.0;
 
 import "./ETHBaseStrategy.sol";
 
+/// @title ETHBaseClaimableStrategy
+/// @author Bank of Chain Protocol Inc
 abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
+
     /// @notice Collect the rewards from 3rd protocol
+    /// @return _claimIsWorth The boolean value to check the claim action is worth or not
+    /// @return _rewardsTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
         internal
         virtual
@@ -15,9 +21,12 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
             uint256[] memory _claimAmounts
         );
 
+    /// @notice Swap from the reward tokens to wanted tokens 
+    /// @return _wantTokens The address list of the wanted token
+    /// @return _wantAmounts The amount list of the wanted token
     function swapRewardsToWants() internal virtual returns(address[] memory _wantTokens,uint256[] memory _wantAmounts);
 
-    /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
+    /// @inheritdoc ETHBaseStrategy
     function harvest() public virtual override returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts){
         // sell reward token
         (bool _claimIsWorth, address[] memory __rewardsTokens,uint256[] memory __claimAmounts ) = claimRewards();
@@ -36,6 +45,7 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
         emit SwapRewardsToWants(address(this),_rewardsTokens, _claimAmounts, _wantTokens,_wantAmounts);
     }
 
+    /// @notice Reinvest in 3rd protocol
     function reInvest() internal {
         address[] memory _wantsCopy = wants;
         address[] memory _assets = new address[](_wantsCopy.length);
@@ -53,9 +63,7 @@ abstract contract ETHBaseClaimableStrategy is ETHBaseStrategy {
         }
     }
 
-    /// @notice Strategy repay the funds to vault
-    /// @param _repayShares Numerator
-    /// @param _totalShares Denominator
+    /// @inheritdoc ETHBaseStrategy
     function repay(
         uint256 _repayShares,
         uint256 _totalShares,

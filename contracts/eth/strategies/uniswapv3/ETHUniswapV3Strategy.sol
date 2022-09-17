@@ -3,7 +3,21 @@ pragma solidity ^0.8.0;
 
 import "./ETHUniswapV3BaseStrategy.sol";
 
+/// @title ETHUniswapV3Strategy
+/// @author Bank of Chain Protocol Inc
 contract ETHUniswapV3Strategy is ETHUniswapV3BaseStrategy {
+
+    /// @notice Initialize this contract
+    /// @param _vault The ETH vaults
+    /// @param _name The name of strategy
+    /// @param _pool The uniswap V3 pool
+    /// @param _baseThreshold The new base threshold
+    /// @param _limitThreshold The new limit threshold
+    /// @param _period The new period
+    /// @param _minTickMove The minium tick to move
+    /// @param _maxTwapDeviation The max TWAP deviation
+    /// @param _twapDuration The max TWAP duration 
+    /// @param _tickSpacing The specified tickSpacing
     function initialize(
         address _vault,
         string memory _name,
