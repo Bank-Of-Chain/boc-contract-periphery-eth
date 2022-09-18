@@ -3,6 +3,8 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 
+/// @title IEREC20Mint
+/// @notice Multi mock interfaces to simulate mint operations
 interface IEREC20Mint is IERC20MetadataUpgradeable {
     function getOwner() external view returns (address);
 

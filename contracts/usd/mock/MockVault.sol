@@ -7,6 +7,9 @@ import "boc-contract-core/contracts/access-control/AccessControlMixin.sol";
 import "boc-contract-core/contracts/price-feeds/IValueInterpreter.sol";
 import "boc-contract-core/contracts/strategy/IStrategy.sol";
 
+/// @title MockVault
+/// @notice The mock contract of Vault
+/// @author Bank of Chain Protocol Inc
 contract MockVault is AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public valueInterpreter;
@@ -16,8 +19,14 @@ contract MockVault is AccessControlMixin {
         valueInterpreter = _valueInterpreter;
     }
 
+    /// @notice Mock function for burning
+    /// @param _amount Amount of USDi to burn
     function burn(uint256 _amount) external {}
 
+    /// @notice Allocate funds in Vault to strategies.
+    /// @param _strategy The specified strategy to lend
+    /// @param _assets Address of the asset being lended
+    /// @param _amounts Amount of the asset being lended
     function lend(
         address _strategy,
         address[] memory _assets,
@@ -34,6 +43,9 @@ contract MockVault is AccessControlMixin {
     }
 
     /// @notice Withdraw the funds from specified strategy.
+    /// @param _strategy The specified strategy to redeem
+    /// @param _usdValue The amount to redeem in USD 
+    /// @param _outputCode The code of output 
     function redeem(address _strategy, uint256 _usdValue, uint256 _outputCode) external {
         uint256 _totalValue = IStrategy(_strategy).estimatedTotalAssets();
         if (_usdValue > _totalValue) {
@@ -42,6 +54,9 @@ contract MockVault is AccessControlMixin {
         IStrategy(_strategy).repay(_usdValue, _totalValue, _outputCode);
     }
 
-    /// @notice Strategy report asset
+    /// @dev Report the current asset of strategy caller
+    /// @param _rewardTokens The reward token list
+    /// @param _claimAmounts The claim amount list
+    /// Emits a {StrategyReported} event.
     function report(address[] memory _rewardTokens, uint256[] memory _claimAmounts) external {}
 }

@@ -105,12 +105,10 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
         }
     }
 
-    /*
-     * asset value in usd
-     * _baseAsset: source token address
-     * _amount: source token amount
-     * @return usd(1e18)
-     */
+    /// @notice Calculate the asset value in USD
+    /// @param _baseAsset The source token address
+    /// @param _amount The source token amount
+    /// @return _value The asset value in USD
     function calcCanonicalAssetValueInUsd(address _baseAsset, uint256 _amount)
         external
         view
@@ -125,6 +123,9 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
       * _baseAsset: source token address
       * @return usd(1e18)
      */
+    /// @notice Gets the price in USD of one `_baseAsset` 
+    /// @param _baseAsset The source token address
+    /// @return _value The asset value in USD of one `_baseAsset` 
     function price(address _baseAsset) external view override returns (uint256 _value) {
         return priceValue[_baseAsset];
     }
@@ -132,15 +133,24 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
     ///////////////////
     // STATE SETTERS //
     ///////////////////
+
+    /// @notice Sets the `_baseAsset` price in USD
+    /// @param _baseAsset The source token address
+    /// @param _value The new value of price
     function setPrice(address _baseAsset, uint256 _value) external {
         priceValue[_baseAsset] = _value;
     }
 
-    ///////////////////
+    /// @notice Sets `PRIMITIVE_PRICE_FEED` state varizble
+    /// @param _primitivePriceFeed The new value of `PRIMITIVE_PRICE_FEED`
+    /// Requirements: only governance or delegate role can call
     function setPrimitivePriceFeed(address _primitivePriceFeed) external onlyGovOrDelegate {
         PRIMITIVE_PRICE_FEED = _primitivePriceFeed;
     }
 
+    /// @notice Sets `AGGREGATED_DERIVATIVE_PRICE_FEED` state varizble
+    /// @param _aggregatedDerivativePriceFeed The new value of `AGGREGATED_DERIVATIVE_PRICE_FEED`
+    /// Requirements: only governance or delegate role can call
     function setAggregatedDerivativePriceFeed(address _aggregatedDerivativePriceFeed)
         external
         onlyGovOrDelegate
@@ -151,6 +161,7 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
     ///////////////////
     // STATE GETTERS //
     ///////////////////
+
     /// @notice Gets the `AGGREGATED_DERIVATIVE_PRICE_FEED` variable
     /// @return _aggregatedDerivativePriceFeed The `AGGREGATED_DERIVATIVE_PRICE_FEED` variable value
     function getAggregatedDerivativePriceFeed()
@@ -167,6 +178,8 @@ contract MockValueInterpreter is IValueInterpreter, AccessControlMixin {
         return PRIMITIVE_PRICE_FEED;
     }
 
+    /// @notice Gets the power decimals of `_asset`
+    /// @return the power decimals of `_asset`
     function getPowDecimals(address _asset) private view returns (uint256) {
         if (_asset == NativeToken.NATIVE_TOKEN) {
             return 1e18;

@@ -13,6 +13,8 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../../external/dodo/DodoStakePoolV1.sol';
 
+/// @title DodoPoolV1ActionsMixin Contract
+/// @notice Mixin contract for interacting with Dodo V1
 contract DodoPoolV1ActionsMixin {
     address internal STAKE_POOL_V1_ADDRESS;
 
