@@ -420,16 +420,16 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     /// @notice Mints a new uniswap V3 position, receiving an nft as a receipt
-    /// @param _tickLower  The specified tick lower limit
-    /// @param _tickUpper  The specified tick upper limit
+    /// @param _tickLower The lower tick of the new position in which to add liquidity
+    /// @param _tickUpper The upper tick of the new position in which to add liquidity
     /// @param _amount0Desired The amount of token0 desired to invest
     /// @param _amount1Desired The amount of token1 desired to invest
     /// @param _base The boolean flag to start base mint,
     ///     'true' to base mint,'false' to limit mint
     /// @return _tokenId The ID of the token that represents the minted position
-    /// @return _liquidity The amount of liquidity for this position
-    /// @return _amount0 The amount of token0
-    /// @return _amount1 The amount of token1
+    /// @return _liquidity The amount of liquidity for this new position minted
+    /// @return _amount0 The amount of token0 that was paid to mint the given amount of liquidity
+    /// @return _amount1 The amount of token1 that was paid to mint the given amount of liquidity
     function mintNewPosition(
         int24 _tickLower, 
         int24 _tickUpper, 
