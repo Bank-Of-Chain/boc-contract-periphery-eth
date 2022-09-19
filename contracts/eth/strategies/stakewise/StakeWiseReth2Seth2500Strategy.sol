@@ -7,7 +7,7 @@ import "../../../external/uniswap/IQuoter.sol";
 import "../uniswapv3/ETHUniswapV3BaseStrategy.sol";
 
 /// @title StakeWiseReth2Seth2500Strategy
-/// @notice Investment strategy for investing ETH via rETH-sETH-pool of StakeWise//??????//
+/// @notice Investment strategy for investing ETH via rETH-sETH-pool of StakeWise
 /// @author Bank of Chain Protocol Inc
 contract StakeWiseReth2Seth2500Strategy is ETHUniswapV3BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;

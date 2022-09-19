@@ -51,7 +51,7 @@ interface IETHVault {
     event Mint(address _account, address[] _assets, uint256[] _amounts, uint256 _mintAmount);
 
     /// @param _account The owner of token burning
-    /// @param _amounts The amount of the USDi token burning
+    /// @param _amounts The amount of the ETHi token burning
     /// @param _actualAmount The received amount actually
     /// @param _shareAmount The amount of the shares burning
     /// @param _assets The address list of assets to receive
@@ -79,7 +79,7 @@ interface IETHVault {
     );
 
     /// @param _strategy The specified strategy to redeem
-    /// @param _debtChangeAmount The amount to redeem in USD
+    /// @param _debtChangeAmount The amount to redeem in ETH
     /// @param _assets The address list of asset redeeming 
     /// @param _amounts The amount list of asset redeeming 
     event Redeem(
@@ -209,10 +209,10 @@ interface IETHVault {
     /// @notice Return the asset value in ETH(1e18) held by vault and vault buffer
     function valueOfTrackedTokensIncludeVaultBuffer() external view returns (uint256 _totalValue);
 
-    /// @notice Return the total asset value in USD held by vault
+    /// @notice Return the total asset value in ETH held by vault
     function totalAssets() external view returns (uint256);
 
-    /// @notice Return the total asset in USD held by vault and vault buffer 
+    /// @notice Return the total asset in ETH held by vault and vault buffer 
     function totalAssetsIncludeVaultBuffer() external view returns (uint256);
 
     /// @notice Return the total value(by chainlink price) in USD(1e18) held by vault
@@ -227,7 +227,7 @@ interface IETHVault {
     /// @notice Return underlying token per share token
     function underlyingUnitsPerShare() external view returns (uint256);
 
-    /// @notice Get pegToken price in USD(1e18)
+    /// @notice Get pegToken price in ETH(1e18)
     function getPegTokenPrice() external view returns (uint256);
 
     /// @dev Calculate total value of all assets held in Vault.
@@ -262,7 +262,7 @@ interface IETHVault {
         uint256 _minimumAmount
     ) external payable returns (uint256 _sharesAmount);
 
-    /// @notice burn ETHi, return ETH
+    /// @notice burn ETHi, return xETH
     /// @param _amount Amount of ETHi to burn
     /// @param _minimumAmount Minimum stablecoin units to receive in return
     /// @param _assets The address list of assets to receive
@@ -282,7 +282,7 @@ interface IETHVault {
 
     /// @notice Withdraw the funds from specified strategy.
     /// @param _strategy The specified strategy to redeem
-    /// @param _amount The amount to redeem in USD 
+    /// @param _amount The amount to redeem in ETH 
     /// @param _outputCode The code of output 
     function redeem(
         address _strategy,

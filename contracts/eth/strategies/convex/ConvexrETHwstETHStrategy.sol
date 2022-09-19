@@ -8,7 +8,7 @@ import "../../../external/weth/IWeth.sol";
 import "./ETHConvexBaseStrategy.sol";
 
 /// @title ConvexrETHwstETHStrategy
-/// @notice Investment strategy for investing ETH via rETH-wstETH-pool of Convex//??????//
+/// @notice Investment strategy for investing ETH via rETH-wstETH-pool of Convex
 /// @author Bank of Chain Protocol Inc
 contract ConvexrETHwstETHStrategy is ETHConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;

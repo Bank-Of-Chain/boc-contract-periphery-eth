@@ -78,7 +78,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         _amounts[1] = IERC20Upgradeable(stETH).balanceOf(address(mock3rdPool));
     }
 
-    /// @notice Return the third party protocol's pool total assets in USD.
+    /// @notice Return the third party protocol's pool total assets in ETH.
     function get3rdPoolAssets()
         external
         view

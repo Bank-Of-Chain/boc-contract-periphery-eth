@@ -50,7 +50,7 @@ contract MockETHVault is AccessControlMixin {
     }
 
     /// @notice Mock function for burning
-    /// @param _amount Amount of USDi to burn
+    /// @param _amount Amount of ETHi to burn
     function burn(uint256 _amount) external {}
 
     /// @notice Allocate funds in Vault to strategies.
@@ -77,18 +77,18 @@ contract MockETHVault is AccessControlMixin {
 
     /// @notice Withdraw the funds from specified strategy.
     /// @param _strategy The specified strategy to redeem
-    /// @param _usdValue The amount to redeem in USD 
+    /// @param _ethValue The amount to redeem in ETH 
     /// @param _outputCode The code of output 
     function redeem(
         address _strategy,
-        uint256 _usdValue,
+        uint256 _ethValue,
         uint256 _outputCode
     ) external payable {
         uint256 _totalValue = IETHStrategy(_strategy).estimatedTotalAssets();
-        if (_usdValue > _totalValue) {
-            _usdValue = _totalValue;
+        if (_ethValue > _totalValue) {
+            _ethValue = _totalValue;
         }
-        IETHStrategy(_strategy).repay(_usdValue, _totalValue, _outputCode);
+        IETHStrategy(_strategy).repay(_ethValue, _totalValue, _outputCode);
     }
 
     /// @dev Report the current asset of strategy caller

@@ -103,7 +103,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     );
 
     /// @param _strategy The specified strategy to redeem
-    /// @param _debtChangeAmount The amount to redeem in USD
+    /// @param _debtChangeAmount The amount to redeem in ETH
     /// @param _assets The address list of asset redeeming 
     /// @param _amounts The amount list of asset redeeming 
     event Redeem(
@@ -126,7 +126,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
 
     /// @param _strategy The specified strategy repaying from
     /// @param _strategyWithdrawValue The value of `_strategy` to withdraw
-    /// @param _strategyTotalValue The total value of `_strategy` in USD
+    /// @param _strategyTotalValue The total value of `_strategy` in ETH
     /// @param _assets The address list of asset repaying from `_strategy`
     /// @param _amounts The amount list of asset repaying from `_strategy`
     event RepayFromStrategy(

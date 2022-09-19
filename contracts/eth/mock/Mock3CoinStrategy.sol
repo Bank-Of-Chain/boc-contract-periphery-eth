@@ -14,7 +14,7 @@ import "../oracle/IPriceOracleConsumer.sol";
 import "../vault/IETHVault.sol";
 
 /// @title MockS3CoinStrategy
-/// @notice The mock contract of 3CoinStrategy ///// ????
+/// @notice The mock contract of 3CoinStrategy
 /// @author Bank of Chain Protocol Inc
 contract MockS3CoinStrategy is Initializable, AccessControlMixin {
     

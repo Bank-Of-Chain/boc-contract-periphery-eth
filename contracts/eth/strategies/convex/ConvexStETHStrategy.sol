@@ -8,7 +8,7 @@ import "./ETHConvexBaseStrategy.sol";
 import "../../../external/weth/IWeth.sol";
 
 /// @title ConvexStETHStrategy
-/// @notice Investment strategy for investing ETH via Lido:Curve Liquidity Farming Pool Contract //??????//
+/// @notice Investment strategy for investing ETH via Lido:Curve Liquidity Farming Pool Contract
 /// @author Bank of Chain Protocol Inc
 contract ConvexStETHStrategy is ETHConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;

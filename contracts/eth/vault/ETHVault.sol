@@ -91,7 +91,7 @@ contract ETHVault is ETHVaultStorage {
         return _getTotalAssets();
     }
 
-    /// @notice Vault and vault buffer total asset in USD
+    /// @notice Vault and vault buffer total asset in ETH
     function totalAssetsIncludeVaultBuffer() external view returns (uint256) {
         return _totalAssetInVaultAndVaultBuffer() + totalDebt;
     }
@@ -138,8 +138,8 @@ contract ETHVault is ETHVaultStorage {
         return strategySet.values();
     }
 
-    /// @notice Get pegToken price in USD
-    /// @return  price in USD (1e18)
+    /// @notice Get pegToken price in ETH
+    /// @return  price in ETH (1e18)
     function getPegTokenPrice() external view returns (uint256) {
         uint256 _totalSupply = IPegToken(pegTokenAddress).totalSupply();
         uint256 _pegTokenPrice = 1e18;
@@ -1242,8 +1242,8 @@ contract ETHVault is ETHVaultStorage {
         return _decimal;
     }
 
-    /// @notice Get an array of the supported asset prices in USD
-    /// @return  prices in USD (1e18)
+    /// @notice Get an array of the supported asset prices in ETH
+    /// @return  prices in ETH (1e18)
     function _getAssetPrice(
         uint256[] memory _assetPrices,
         uint256 _assetIndex,

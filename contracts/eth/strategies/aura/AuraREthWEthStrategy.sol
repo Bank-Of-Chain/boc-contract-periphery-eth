@@ -16,7 +16,7 @@ import "../ETHBaseClaimableStrategy.sol";
 import "../../enums/ProtocolEnum.sol";
 
 /// @title AuraREthWEthStrategy
-/// @notice Investment strategy for investing ETH via REth-WEth-pool of Aura //??????//
+/// @notice Investment strategy for investing ETH via REth-WEth-pool of Aura
 /// @author Bank of Chain Protocol Inc
 contract AuraREthWEthStrategy is ETHBaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
