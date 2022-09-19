@@ -82,8 +82,6 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     //reward swap path
     mapping(address => address[]) public rewardRoutes;
 
-    address public curveUsdcIbforexPool;
-
     /// Events
     event UpdateBorrowFactor(uint256 _borrowFactor);
     event SwapRewardsToWants(
@@ -111,13 +109,11 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         address _harvester,
         string memory _strategyName,
         address _borrowCToken,
-        address _rewardPool,
-        address _curve_usdc_ibforex_pool
+        address _rewardPool
     ) external initializer {
         borrowCToken = CTokenInterface(_borrowCToken);
         rewardPool = _rewardPool;
         pId = IConvexReward(rewardPool).pid();
-        curveUsdcIbforexPool = _curve_usdc_ibforex_pool;
         address[] memory _wants = new address[](1);
         _wants[0] = COLLATERAL_TOKEN;
 
