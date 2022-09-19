@@ -21,22 +21,32 @@ import "../../../../external/uniswap/IUniswapV2Router2.sol";
 
 import "../../../../external/curve/ICurveMini.sol";
 
+/// @title ConvexIBUsdtStrategy
+/// @notice Investment strategy for investing stablecoins to IronBank-Usdt pool via Convex 
+/// @author Bank of Chain Protocol Inc
 contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // IronBank
     Comptroller public constant COMPTROLLER =
         Comptroller(0xAB1c342C7bf5Ec5F02ADEA1c2270670bCa144CbB);
+    
+    /// @notice The priceOracle interface
     IPriceOracle public priceOracle;
 
     address public constant COLLATERAL_TOKEN = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
     CTokenInterface public constant COLLATERAL_CTOKEN =
         CTokenInterface(0x48759F220ED983dB51fA7A8C0D2AAb8f3ce4166a);
 
+    /// @notice The CToken interface
     CTokenInterface public borrowCToken;
+
+    /// @notice The address of the reward pool
     address public rewardPool;
+
     uint256 internal pId;
-    // borrow factor
+
+    /// @notice The borrow factor
     uint256 public borrowFactor;
 
     // minimum amount to be liquidation
@@ -65,8 +75,14 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
 
     address public curveUsdcIbforexPool;
 
-    /// Events
+    /// @param _borrowFactor The new borrow factor
     event UpdateBorrowFactor(uint256 _borrowFactor);
+
+    /// @param _strategy The specified strategy emitted this event
+    /// @param _rewards The address list of reward tokens
+    /// @param _rewardAmounts The amount list of of reward tokens
+    /// @param _wants The address list of wantted tokens
+    /// @param _wantAmounts The amount list of wantted tokens
     event SwapRewardsToWants(
         address _strategy,
         address[] _rewards,
@@ -75,18 +91,18 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         uint256[] _wantAmounts
     );
 
-    // === fallback and receive === //
+    ////// fallback and receive //////
     receive() external payable {}
 
     fallback() external payable {}
 
-    function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
-        require(_borrowFactor < BPS, "setting output the range");
-        borrowFactor = _borrowFactor;
-
-        emit UpdateBorrowFactor(_borrowFactor);
-    }
-
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _strategyName The name of strategy
+    /// @param _borrowCToken The borrow asset of this strategy
+    /// @param _curve_usdc_ibforex_pool The curve usdc-ibforex pool invested 
+    /// @param _rewardPool The address of the base reward pool which issue reward linearly
     function initialize(
         address _vault,
         address _harvester,
@@ -137,12 +153,13 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         rewardRoutes[USDC] = _usdc2usdt;
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
     // ==== External === //
-    // USD-1e18
+    /// @notice Return the third party protocol's pool total assets in USD(1e18).
     function get3rdPoolAssets() public view override returns (uint256 targetPoolTotalAssets) {
         address _curvePool = getCurveLpToken();
         uint256 _virtualPrice = ICurveFi(_curvePool).get_virtual_price();
@@ -154,8 +171,10 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
             1e30;
     }
 
-    // ==== Public ==== //
-
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
@@ -168,6 +187,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _ratios[0] = 1e18;
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -181,6 +201,11 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _info0.outputTokens = wants;
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -199,9 +224,8 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _usdValue = _assetsValue - _debtsValue;
     }
 
-    /**
-     *  Total strategy valuation, in currency denominated units
-     */
+    
+    /// @notice Return the total valuation of this strategy, in currency denominated units
     function curvePoolAssets() public view returns (uint256 _depositedAssets) {
         uint256 _rewardBalance = balanceOfToken(rewardPool);
         if (_rewardBalance > 0) {
@@ -215,9 +239,8 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         }
     }
 
-    /**
-     *  _debt Rate
-     */
+    
+    /// @notice Gets the current debt Rate    
     function debtRate() public view returns (uint256) {
         //_collateral Assets
         uint256 _collateral = collateralAssets();
@@ -229,7 +252,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         return (_debt * BPS) / _collateral;
     }
 
-    //assets(USD) -18
+    /// @notice Gets the total value of all assets in USD (1e18) 
     function assets() public view returns (uint256 _value) {
         // estimatedDepositedAssets
         uint256 deposited = curvePoolAssets();
@@ -247,9 +270,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         }
     }
 
-    /**
-     *  debts(USD-1e18)
-     */
+    /// @notice Gets the value of debts in USD (1e18) 
     function debts() public view returns (uint256 _value) {
         CTokenInterface _borrowCToken = borrowCToken;
         //for saving gas
@@ -262,7 +283,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
             1e12; //div 1e12 for normalized
     }
 
-    //_collateral assets（USD-1e18)
+    /// @notice Gets the value of collateral assets in USD (1e18) 
     function collateralAssets() public view returns (uint256 _value) {
         CTokenInterface _collateralC = COLLATERAL_CTOKEN;
         address _collateralToken = COLLATERAL_TOKEN;
@@ -284,7 +305,11 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
             1e12; //div 1e12 for normalized
     }
 
-    // borrow info
+    /// @notice Gets the info of current borrow in USD (1e18) 
+    /// @return _space The absolute value of the difference 
+    ///     between `_borrowAvaible` and `_currentBorrow`
+    /// @return _overflow The absolute value of the difference 
+    ///     between `_borrowAvaible` and `_currentBorrow`
     function borrowInfo() public view returns (uint256 _space, uint256 _overflow) {
         uint256 _borrowAvaible = _currentBorrowAvaible();
         uint256 _currentBorrow = borrowCToken.borrowBalanceStored(address(this));
@@ -295,18 +320,24 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         }
     }
 
+    /// @notice Gets the curve LP token invested by this strategy
     function getCurveLpToken() public view returns (address) {
         return IConvex(BOOSTER).poolInfo(pId).lptoken;
     }
 
+    /// @notice Gets the IronBankForex token of the curve LP token
     function getIronBankForex() public view returns (address) {
         ICurveFi _curveForexPool = ICurveFi(getCurveLpToken());
         return _curveForexPool.coins(0);
     }
 
-    /**
-     *   Sell reward and reinvestment logic
-     */
+    
+    
+    /// @notice Harvests by the Strategy, 
+    ///     recognizing any profits or losses and adjusting the Strategy's position.
+    /// @dev Sell reward and reinvestment logic
+    /// @return _rewardsTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function harvest()
         public
         virtual
@@ -361,9 +392,8 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         );
     }
 
-    /**
-     *  sell crv and cvx
-     */
+    
+    /// @dev sell crv and cvx
     function _sellCrvAndCvx(uint256 _crvAmount, uint256 _convexAmount)
         internal
         returns (
@@ -430,12 +460,12 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         }
     }
 
-    // Collateral Token Price In USD ,decimals 1e30
+    /// @dev Return the price in USD (1e30) of collateral token
     function _collateralTokenPrice() internal view returns (uint256) {
         return priceOracle.getUnderlyingPrice(address(COLLATERAL_CTOKEN));
     }
 
-    // Borrown Token Price In USD ，decimals 1e30
+    /// @dev Return the price in USD (1e30) of borrow token
     function _borrowTokenPrice() internal view returns (uint256) {
         return _getNormalizedBorrowToken();
     }
@@ -444,7 +474,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         return priceOracle.getUnderlyingPrice(address(borrowCToken)) * 1e12;
     }
 
-    // Maximum number of borrowings under the specified amount of _collateral assets
+    /// @dev Return the maximum number of borrowing under the specified amount of _collateral assets
     function _borrowAvaiable(uint256 liqudity) internal view returns (uint256 _borrowAvaible) {
         address _borrowToken = getIronBankForex();
         uint256 _borrowTokenPrice = _borrowTokenPrice(); // decimals 1e30
@@ -455,7 +485,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _borrowAvaible = (_maxBorrowAmount * borrowFactor) / BPS;
     }
 
-    // Current total available borrowing amount
+    /// @dev Return the amount of current total available borrow
     function _currentBorrowAvaible() internal view returns (uint256 _borrowAvaible) {
         // Pledge discount _rate, base 1e18
         (, uint256 _rate) = COMPTROLLER.markets(address(COLLATERAL_CTOKEN));
@@ -463,7 +493,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _borrowAvaible = _borrowAvaiable(_liquidity);
     }
 
-    // Add _collateral to IronBank
+    /// @dev Add _collateral to IronBank
     function _mintCollateralCToken(uint256 mintAmount) internal {
         address _collateralC = address(COLLATERAL_CTOKEN);
         //saving gas
@@ -477,16 +507,17 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         COMPTROLLER.enterMarkets(_markets);
     }
 
-    // Forex added to Curve pool
+    /// @dev Added Forex to Curve pool
     function curveAddLiquidity(uint256 _ibTokenAmount) internal {
         ICurveFi(getCurveLpToken()).add_liquidity([_ibTokenAmount, 0], 0);
     }
 
-    // curve remove liquidity
+    /// @dev Curve remove liquidity
     function curveRemoveLiquidity(uint256 shareAmount) internal {
         ICurveFi(getCurveLpToken()).remove_liquidity_one_coin(shareAmount, 0, 0);
     }
 
+    /// @dev Invest IronBank token to Curve pool by Convex
     function _invest(uint256 _ibTokenAmount) internal {
         curveAddLiquidity(_ibTokenAmount);
 
@@ -501,7 +532,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         }
     }
 
-    // borrow forex
+    /// @dev Borrow forex
     function _borrowForex(uint256 _borrowAmount) internal returns (uint256 _receiveAmount) {
         CTokenInterface _borrowC = borrowCToken;
         //saving gas
@@ -509,7 +540,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _receiveAmount = balanceOfToken(_borrowC.underlying());
     }
 
-    // repay forex
+    /// @dev Repay forex
     function _repayForex(uint256 _repayAmount) internal {
         CTokenInterface _borrowC = borrowCToken;
         //saving gas
@@ -519,7 +550,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         _borrowC.repayBorrow(_repayAmount);
     }
 
-    // increase borrow
+    /// @dev Increase the amount of borrow
     function increaseBorrow() public isKeeper {
         (uint256 _space, ) = borrowInfo();
         if (_space > 0) {
@@ -529,9 +560,9 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         }
     }
 
-    // decrease borrow
+    /// @dev  decrease borrow
     function decreaseBorrow() public isKeeper {
-        //The number of borrowings that will be out of range after redemption
+        //The number of borrowing that will be out of range after redemption
         (, uint256 _overflow) = borrowInfo();
         if (_overflow > 0) {
             uint256 _totalStaking = balanceOfToken(rewardPool);
@@ -543,6 +574,17 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         }
     }
 
+    /// @notice Sets `_borrowFactor` to `borrowFactor`
+    /// @param _borrowFactor The new value of `borrowFactor`
+    /// Requirements: only vault manager can call
+    function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
+        require(_borrowFactor < BPS, "setting output the range");
+        borrowFactor = _borrowFactor;
+
+        emit UpdateBorrowFactor(_borrowFactor);
+    }
+
+    /// @dev Redeem assets invested by this strategy
     function _redeem(uint256 _cvxLpAmount) internal {
         IConvexReward(rewardPool).withdraw(_cvxLpAmount, false);
         IConvex(BOOSTER).withdraw(pId, _cvxLpAmount);
@@ -550,6 +592,9 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         curveRemoveLiquidity(_cvxLpAmount);
     }
 
+    /// @notice Strategy deposit funds to third party pool.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -565,6 +610,10 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
         }
     }
 
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,

@@ -57,7 +57,7 @@ abstract contract ETHConvexBaseStrategy is ETHBaseClaimableStrategy {
     /// @return The amount of liquidity
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts) internal virtual returns (uint256);
 
-    /// @notice Remove liquidity into curve pool
+    /// @notice Remove liquidity from curve pool
     /// @param _liquidity The amount of liquidity to remove
     /// @param _outputCode The code of output
     function curveRemoveLiquidity(uint256 _liquidity,uint256 _outputCode) internal virtual;

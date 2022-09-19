@@ -7,6 +7,9 @@ import "../../../external/curve/ICurveLiquidityPool.sol";
 import "../../../external/curve/ICurveLiquidityCustomPool.sol";
 import "../../../external/yearn/IYearnVault.sol";
 
+/// @title ConvexPaxStrategy
+/// @notice Investment strategy for investing stablecoins to Pax via Convex 
+/// @author Bank of Chain Protocol Inc
 contract ConvexPaxStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
@@ -17,6 +20,10 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
     address private constant YC_USDC = 0x9777d7E2b60bB01759D0E2f8be2095df444cb07E;
     address private constant YC_USDT = 0x1bE5d71F2dA660BFdee8012dDc58D024448A0A59;
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
     function initialize(address _vault, address _harvester,string memory _name) public initializer {
         address[] memory _wants = new address[](4);
         _wants[0] = DAI;
@@ -33,11 +40,15 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
         );
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
-
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
@@ -59,6 +70,7 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
         _ratios[3] = curvePoolContract.balances(int128(3)) * 1e18;
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -74,6 +86,11 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
         // not support remove_liquidity_one_coin
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -91,12 +108,17 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
             decimalUnitOfToken(lpToken);
     }
 
+    /// @notice Return the third party protocol's pool total assets in USD(1e18).
     function get3rdPoolAssets() external view override returns (uint256) {
         return
             (ICurveLiquidityPool(curvePool).get_virtual_price() *
                 IERC20Upgradeable(lpToken).totalSupply()) / decimalUnitOfToken(lpToken);
     }
 
+    /// @notice Add liquidity into curve pool
+    /// @param _assets The asset list to add
+    /// @param _amounts The amount list to add
+    /// @return The amount of liquidity
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -128,6 +150,9 @@ contract ConvexPaxStrategy is ConvexBaseStrategy {
         return balanceOfToken(lpToken);
     }
 
+    /// @notice Remove liquidity from curve pool
+    /// @param _removeLiquidity The amount of liquidity to remove
+    /// @param _outputCode The code of output
     function curveRemoveLiquidity(uint256 _removeLiquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool(curvePool).remove_liquidity(
             _removeLiquidity,

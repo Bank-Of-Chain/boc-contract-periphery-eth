@@ -7,8 +7,8 @@ import "../vault/IETHVault.sol";
 /// @title IETHStrategy interface
 interface IETHStrategy {
 
-    /// @param _assets The address list of tokens borrowing
-    /// @param _amounts The amount list of tokens borrowing
+    /// @param _assets The address list of tokens borrow
+    /// @param _amounts The amount list of tokens borrow
     event Borrow(address[] _assets, uint256[] _amounts);
 
     /// @param _withdrawShares The amount of shares to withdraw. Numerator
@@ -22,7 +22,7 @@ interface IETHStrategy {
         uint256[] _amounts
     );
 
-    /// @param  _strategy The specified strategy emitted this event
+    /// @param _strategy The specified strategy emitted this event
     /// @param _rewards The address list of reward tokens
     /// @param _rewardAmounts The amount list of of reward tokens
     /// @param _wants The address list of wantted tokens
@@ -52,6 +52,9 @@ interface IETHStrategy {
     function vault() external view returns (IETHVault);
 
     /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         external
         view
@@ -81,7 +84,7 @@ interface IETHStrategy {
     /// @notice Return the 3rd protocol's pool total assets in ETH.
     function get3rdPoolAssets() external view returns (uint256);
 
-    /// @notice Harvests the Strategy, 
+    /// @notice Harvests by the Strategy, 
     ///     recognizing any profits or losses and adjusting the Strategy's position.
     /// @return _rewardsTokens The list of the reward token
     /// @return _claimAmounts The list of the reward amount claimed

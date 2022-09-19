@@ -78,7 +78,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         _amounts[1] = IERC20Upgradeable(stETH).balanceOf(address(mock3rdPool));
     }
 
-    /// @notice Return the 3rd protocol's pool total assets in USD.
+    /// @notice Return the third party protocol's pool total assets in USD.
     function get3rdPoolAssets()
         external
         view
@@ -102,7 +102,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         (_rewardsTokens, _pendingAmounts) = mock3rdPool.getPendingRewards();
     }
 
-    /// @notice Collect the rewards from 3rd protocol
+    /// @notice Collect the rewards from third party protocol
     /// @return _rewardsTokens The list of the reward token
     /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
@@ -116,7 +116,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         _claimAmounts = mock3rdPool.claim();
     }
 
-    /// @notice Strategy deposit funds to 3rd pool.
+    /// @notice Strategy deposit funds to third party pool.
     /// @param _assets the address list of token to deposit
     /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(
@@ -128,7 +128,7 @@ contract MockEthStrategy is ETHBaseStrategy {
         mock3rdPool.deposit{value: _amounts[0]}(_assets, _amounts);
     }
 
-    /// @notice Strategy withdraw the funds from 3rd pool
+    /// @notice Strategy withdraw the funds from third party pool
     /// @param _withdrawShares The amount of shares to withdraw
     /// @param _totalShares The total amount of shares owned by this strategy
     /// @param _outputCode The code of output

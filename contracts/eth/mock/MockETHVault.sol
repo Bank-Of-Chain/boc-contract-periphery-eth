@@ -16,7 +16,7 @@ contract MockETHVault is AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public priceProvider;
 
-    /// @param  _strategy The strategy for reporting
+    /// @param _strategy The strategy for reporting
     /// @param _gain The gain in USD units for this report
     /// @param _loss The loss in USD units for this report
     /// @param _lastStrategyTotalDebt The total debt of `_strategy` for last report
@@ -54,7 +54,7 @@ contract MockETHVault is AccessControlMixin {
     function burn(uint256 _amount) external {}
 
     /// @notice Allocate funds in Vault to strategies.
-    /// @param  _strategy The specified strategy to lend
+    /// @param _strategy The specified strategy to lend
     /// @param _assets Address of the asset being lended
     /// @param _amounts Amount of the asset being lended
     function lend(
@@ -76,7 +76,7 @@ contract MockETHVault is AccessControlMixin {
     }
 
     /// @notice Withdraw the funds from specified strategy.
-    /// @param  _strategy The specified strategy to redeem
+    /// @param _strategy The specified strategy to redeem
     /// @param _usdValue The amount to redeem in USD 
     /// @param _outputCode The code of output 
     function redeem(

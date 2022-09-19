@@ -89,7 +89,7 @@ interface IETHVault {
         uint256[] _amounts
     );
 
-    /// @param  _strategy The specified strategy to lend
+    /// @param _strategy The specified strategy to lend
     /// @param _wants The address list of token wanted
     /// @param _amounts The amount list of token wanted
     /// @param _lendValue The value to lend in USD 
@@ -143,7 +143,7 @@ interface IETHVault {
     /// @param _newUnderlyingUnitsPerShare The new value of `underlyingUnitsPerShare` when rebasing
     event Rebase(uint256 _totalShares, uint256 _totalValue, uint256 _newUnderlyingUnitsPerShare);
 
-    /// @param  _strategy The strategy for reporting
+    /// @param _strategy The strategy for reporting
     /// @param _gain The gain in USD units for this report
     /// @param _loss The loss in USD units for this report
     /// @param _lastStrategyTotalDebt The total debt of `_strategy` for last report
@@ -281,7 +281,7 @@ interface IETHVault {
         external;
 
     /// @notice Withdraw the funds from specified strategy.
-    /// @param  _strategy The specified strategy to redeem
+    /// @param _strategy The specified strategy to redeem
     /// @param _amount The amount to redeem in USD 
     /// @param _outputCode The code of output 
     function redeem(

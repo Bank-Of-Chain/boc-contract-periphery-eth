@@ -27,13 +27,13 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     /// @param _period The new period
     event UniV3SetPeriod(uint256 _period);
 
-    /// @param _minTickMove The minium tick to move
+    /// @param _minTickMove The new minium tick to move
     event UniV3SetMinTickMove(int24 _minTickMove);
 
-    /// @param _maxTwapDeviation The max TWAP deviation
+    /// @param _maxTwapDeviation The new max TWAP deviation
     event UniV3SetMaxTwapDeviation(int24 _maxTwapDeviation);
 
-    /// @param _twapDuration The max TWAP duration
+    /// @param _twapDuration The new max TWAP duration
     event UniV3SetTwapDuration(uint32 _twapDuration);
 
     int24 internal baseThreshold;
@@ -47,8 +47,8 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     uint32 internal twapDuration;
 
     /// @param tokenId The tokenId of V3 LP NFT minted
-    /// @param tickLower The tickLower of V3 LP NFT minted
-    /// @param tickUpper The tokenId of V3 LP NFT minted
+    /// @param _tickLower The lower tick of the position in which to add liquidity
+    /// @param _tickUpper The upper tick of the position in which to add liquidity
     struct MintInfo {
         uint256 tokenId;
         int24 tickLower;
@@ -135,7 +135,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         return (baseThreshold, limitThreshold, minTickMove, maxTwapDeviation, lastTick, tickSpacing, period, lastTimestamp, twapDuration);
     }
 
-    /// @notice Gets the info LP V3 NFT minted
+    /// @notice Gets the info of LP V3 NFT minted
     function getMintInfo() public view returns(uint256 baseTokenId, int24 baseTickUpper, int24 baseTickLower, uint256 limitTokenId, int24 limitTickUpper, int24 limitTickLower) {
         return (baseMintInfo.tokenId, baseMintInfo.tickUpper, baseMintInfo.tickLower, limitMintInfo.tokenId, limitMintInfo.tickUpper, limitMintInfo.tickLower);
     }
@@ -178,8 +178,8 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     /// @notice Gets the amounts for the specified liquidity
-    /// @param _tickLower  The specified tick lower limit
-    /// @param _tickUpper  The specified tick upper limit
+    /// @param _tickLower  The specified lower tick 
+    /// @param _tickUpper  The specified upper tick 
     /// @param _liquidity The liquidity being valued
     /// @return The amount of token0
     /// @return The amount of token1
@@ -364,7 +364,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     /// @notice Check if rebalancing is possible
-    /// @param _tick The tick to judge
+    /// @param _tick The tick to check
     /// @return Returns 'true' if it should rebalance, otherwise return 'false'
     function shouldRebalance(int24 _tick) public view returns (bool) {
         // check enough time has passed
@@ -399,8 +399,8 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     }
 
     /// @notice Gets the liquidity for the two amounts
-    /// @param _tickLower  The specified tick lower limit
-    /// @param _tickUpper  The specified tick upper limit
+    /// @param _tickLower  The specified lower tick 
+    /// @param _tickUpper  The specified upper tick 
     /// @param _amount0 The amount of token0
     /// @param _amount1 The amount of token1
     /// @return The liquidity being valued

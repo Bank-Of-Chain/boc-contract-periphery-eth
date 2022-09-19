@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "./ETHUniswapV3BaseStrategy.sol";
 
 /// @title ETHUniswapV3Strategy
+/// @notice Investment strategy for investing ETH via UniswapV3
 /// @author Bank of Chain Protocol Inc
 contract ETHUniswapV3Strategy is ETHUniswapV3BaseStrategy {
 

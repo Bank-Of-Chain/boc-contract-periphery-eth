@@ -256,7 +256,7 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /// @notice Redeem the funds from specified strategy.
-    /// @param  _strategy The specified strategy to redeem
+    /// @param _strategy The specified strategy to redeem
     /// @param _amount The amount to redeem in USD
     /// @param _outputCode The code of output 
     function redeem(

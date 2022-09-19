@@ -16,7 +16,7 @@ contract YearnV2Strategy is ETHBaseStrategy {
     IYearnVaultV2 public yVault;
 
     /// @notice Initialize this contract
-    /// @param _vault The ETH vaults
+    /// @param _vault The Vault contract
     /// @param _name The name of strategy
     /// @param _yVault The yearn vault address
     function initialize(

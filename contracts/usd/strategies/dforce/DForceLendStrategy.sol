@@ -10,6 +10,9 @@ import "./../../enums/ProtocolEnum.sol";
 import "../../../external/dforce/DFiToken.sol";
 import "../../../external/dforce/IRewardDistributorV3.sol";
 
+/// @title DForceLendStrategy
+/// @notice Investment strategy for investing stablecoins via DForceLend
+/// @author Bank of Chain Protocol Inc
 contract DForceLendStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address internal constant DF = 0x431ad2ff6a9C365805eBaD47Ee021148d6f7DBe0;
@@ -18,18 +21,34 @@ contract DForceLendStrategy is BaseClaimableStrategy {
 
     address public iToken;
 
-    function initialize(address _vault, address _harvester,string memory _name,address _underlyingToken,address _iToken) external initializer {
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
+    /// @param _underlyingToken The lending asset of the Vault contract
+    /// @param _iToken The iToken which wrap `_underlyingToken`.
+    function initialize(
+        address _vault, 
+        address _harvester,
+        string memory _name,
+        address _underlyingToken,
+        address _iToken
+    ) external initializer {
         address[] memory _wants = new address[](1);
         _wants[0] = _underlyingToken;
         iToken = _iToken;
         super._initialize(_vault, _harvester, _name,uint16(ProtocolEnum.DForce), _wants);
     }
 
-
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
@@ -41,6 +60,7 @@ contract DForceLendStrategy is BaseClaimableStrategy {
         _ratios[0] = 1e18;
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -54,6 +74,11 @@ contract DForceLendStrategy is BaseClaimableStrategy {
         _info0.outputTokens = wants;
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -74,6 +99,7 @@ contract DForceLendStrategy is BaseClaimableStrategy {
             balanceOfToken(_tokens[0]);
     }
 
+    /// @notice Return the third party protocol's pool total assets in USD.
     function get3rdPoolAssets() external view override returns (uint256) {
         address _iTokenTmp = iToken;
         uint256 _iTokenTotalSupply = (DFiToken(_iTokenTmp).totalSupply() *
@@ -81,6 +107,9 @@ contract DForceLendStrategy is BaseClaimableStrategy {
         return _iTokenTotalSupply != 0 ? queryTokenValue(wants[0], _iTokenTotalSupply) : 0;
     }
 
+    /// @notice Collect the rewards from third party protocol
+    /// @return _rewardTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
         internal
         override
@@ -97,6 +126,9 @@ contract DForceLendStrategy is BaseClaimableStrategy {
         _claimAmounts[0] = balanceOfToken(_rewardTokens[0]);
     }
 
+    /// @notice Strategy deposit funds to third party pool.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -111,6 +143,10 @@ contract DForceLendStrategy is BaseClaimableStrategy {
         }
     }
 
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output 
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,

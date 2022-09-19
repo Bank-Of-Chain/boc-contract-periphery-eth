@@ -8,11 +8,18 @@ import "../../../external/curve/ICurveLiquidityPool.sol";
 
 import "./ConvexBaseStrategy.sol";
 
+/// @title ConvexSaaveStrategy
+/// @notice Investment strategy for investing stablecoins to SAAVE via Convex 
+/// @author Bank of Chain Protocol Inc
 contract ConvexSaaveStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private constant STKAAVE = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
     function initialize(
         address _vault,
         address _harvester,
@@ -34,10 +41,15 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         );
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
@@ -52,6 +64,7 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         }
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -76,6 +89,11 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         _info2.outputTokens[0] = _wants[1];
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -101,6 +119,7 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         }
     }
 
+    /// @notice Return the third party protocol's pool total assets in USD(1e18).
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _assets = wants;
         uint256 _thirdPoolAssets;
@@ -112,6 +131,10 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         return _thirdPoolAssets;
     }
 
+    /// @notice Add liquidity into curve pool
+    /// @param _assets The asset list to add
+    /// @param _amounts The amount list to add
+    /// @return The amount of liquidity
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -127,6 +150,10 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         return ICurveLiquidityPool(_curvePool).add_liquidity([_amounts[0], _amounts[1]], 0, true);
     }
 
+
+    /// @notice Remove liquidity from curve pool
+    /// @param liquidity The amount of liquidity to remove
+    /// @param _outputCode The code of output
     function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         if (_outputCode == 1) {
@@ -138,6 +165,9 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         }
     }
 
+    /// @notice Collect the rewards from third party protocol
+    /// @return _rewardTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
         internal
         override

@@ -185,14 +185,14 @@ abstract contract ETHBaseStrategy is IETHStrategy, Initializable, AccessControlM
         emit Repay(_repayShares, _totalShares, _assets, _amounts);
     }
 
-    /// @notice Strategy deposit funds to 3rd pool.
+    /// @notice Strategy deposit funds to third party pool.
     /// @param _assets the address list of token to deposit
     /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         virtual;
 
-    /// @notice Strategy withdraw the funds from 3rd pool
+    /// @notice Strategy withdraw the funds from third party pool
     /// @param _withdrawShares The amount of shares to withdraw
     /// @param _totalShares The total amount of shares owned by this strategy
     /// @param _outputCode The code of output

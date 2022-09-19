@@ -110,7 +110,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         }
     }
 
-    /// @notice Return the 3rd protocol's pool total assets in USD.
+    /// @notice Return the third party protocol's pool total assets in USD.
     function get3rdPoolAssets() external view virtual returns (uint256) {
         return type(uint256).max;
     }
@@ -123,7 +123,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         _pendingAmounts = new uint256[](0);
     }
 
-    /// @notice Collect the rewards from 3rd protocol
+    /// @notice Collect the rewards from third party protocol
     /// @return _rewardsTokens The list of the reward token
     /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards() internal virtual returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts) {
@@ -131,12 +131,12 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
         _claimAmounts = new uint256[](0);
     }
 
-    /// @notice Strategy deposit funds to 3rd pool.
+    /// @notice Strategy deposit funds to third party pool.
     /// @param _assets the address list of token to deposit
     /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal virtual {}
 
-    /// @notice Strategy withdraw the funds from 3rd pool
+    /// @notice Strategy withdraw the funds from third party pool
     /// @param _withdrawShares The amount of shares to withdraw
     /// @param _totalShares The total amount of shares owned by this strategy
     /// @param _outputCode The code of output
