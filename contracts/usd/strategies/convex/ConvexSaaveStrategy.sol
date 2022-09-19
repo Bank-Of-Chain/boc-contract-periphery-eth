@@ -152,16 +152,16 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
 
 
     /// @notice Remove liquidity from curve pool
-    /// @param liquidity The amount of liquidity to remove
+    /// @param _liquidity The amount of liquidity to remove
     /// @param _outputCode The code of output
-    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
+    function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         if (_outputCode == 1) {
-            _pool.remove_liquidity_one_coin(liquidity, 0, 0, true);
+            _pool.remove_liquidity_one_coin(_liquidity, 0, 0, true);
         } else if (_outputCode == 2) {
-            _pool.remove_liquidity_one_coin(liquidity, 1, 0, true);
+            _pool.remove_liquidity_one_coin(_liquidity, 1, 0, true);
         } else {
-            _pool.remove_liquidity(liquidity, [uint256(0), uint256(0)], true);
+            _pool.remove_liquidity(_liquidity, [uint256(0), uint256(0)], true);
         }
     }
 

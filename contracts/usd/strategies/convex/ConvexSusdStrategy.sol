@@ -150,10 +150,10 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
     }
 
     /// @notice Remove liquidity from curve pool
-    /// @param liquidity The amount of liquidity to remove
+    /// @param _liquidity The amount of liquidity to remove
     /// @param _outputCode The code of output
-    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
-        ICurveLiquidityPool(curvePool).remove_liquidity(liquidity, [uint256(0), uint256(0), uint256(0), uint256(0)]);
+    function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal override {
+        ICurveLiquidityPool(curvePool).remove_liquidity(_liquidity, [uint256(0), uint256(0), uint256(0), uint256(0)]);
     }
 
     /// @notice Collect the rewards from third party protocol
