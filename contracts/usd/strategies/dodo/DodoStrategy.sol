@@ -11,25 +11,33 @@ import "./../../enums/ProtocolEnum.sol";
 import "../../../external/dodo/DodoVault.sol";
 import "../../../external/dodo/DodoStakePoolV1.sol";
 import "../../../utils/actions/DodoPoolActionsMixin.sol";
-
+/// @title DodoStrategy
+/// @notice Investment strategy for investing stablecoins via Dodo
+/// @author Bank of Chain Protocol Inc
 contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // reward token address
     address internal constant DODO = 0x43Dfc4159D86F3A37A5A4B3D4580b888ad7d4DDd;
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
+    /// @param _lpTokenPool The LP token pool address
+    /// @param _stakePool The Id of the stake pool invested
     function initialize(
         address _vault,
         address _harvester,
         string memory _name,
         address _lpTokenPool,
-        address _stakePoll
+        address _stakePool
     ) external initializer {
         require(_vault != address(0), "vault cannot be 0.");
-        require(_stakePoll != address(0), "stakePoll cannot be 0.");
+        require(_stakePool != address(0), "stakePool cannot be 0.");
         require(_lpTokenPool != address(0), "lpTokenPool cannot be 0.");
         lpTokenPool = _lpTokenPool;
-        STAKE_POOL_ADDRESS = _stakePoll;
+        STAKE_POOL_ADDRESS = _stakePool;
 
         address[] memory _wants = new address[](2);
         _wants[0] = DodoVault(_lpTokenPool)._BASE_TOKEN_();
@@ -38,10 +46,15 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         super._initialize(_vault, _harvester, _name,uint16(ProtocolEnum.Dodo), _wants);
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
@@ -55,6 +68,7 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         _ratios[1] = _quoteReserve;
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -70,6 +84,11 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         // not support remove_liquidity_one_coin
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -92,6 +111,7 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         _amounts[1] = (_reserve1 * _lpAmount) / _totalSupply + balanceOfToken(_tokens[1]);
     }
 
+    /// @notice Return the third party protocol's pool total assets in USD.
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _wants = wants;
         address _lpTokenPool = lpTokenPool;
@@ -110,6 +130,9 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         return _targetPoolTotalAssets;
     }
 
+    /// @notice Gets the info of pending reward tokens  
+    /// @return _rewardsTokens The list of the reward token
+    /// @return _pendingAmounts The list of the reward amount pending
     function getPendingRewards()
         internal
         view
@@ -121,6 +144,9 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         _pendingAmounts[0] = balanceOfToken(DODO) + getPendingRewardByToken(DODO);
     }
 
+    /// @notice Collect the rewards from third party protocol
+    /// @return _rewardTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
         internal
         override
@@ -132,6 +158,9 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         }
     }
 
+    /// @notice Strategy deposit funds to third party pool.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -146,6 +175,10 @@ contract DodoStrategy is BaseClaimableStrategy, DodoPoolActionsMixin {
         __deposit(_lpAmount);
     }
 
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,

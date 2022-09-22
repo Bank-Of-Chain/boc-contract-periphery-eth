@@ -8,11 +8,18 @@ import "./ConvexBaseStrategy.sol";
 import "../../../external/compound/ICToken.sol";
 import "../../../external/curve/ICurveLiquidityPool.sol";
 
+/// @title ConvexUsdtStrategy
+/// @notice Investment strategy for investing USDT via Convex 
+/// @author Bank of Chain Protocol Inc
 contract ConvexUsdtStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address private constant cDAI = address(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
     address private constant cUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
     function initialize(address _vault, address _harvester,string memory _name) public initializer {
         address[] memory _wants = new address[](3);
         _wants[0] = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
@@ -28,10 +35,15 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
         );
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
@@ -47,6 +59,7 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
         _ratios[2] = IERC20Upgradeable(_assets[2]).balanceOf(curvePool);
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -62,6 +75,10 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
         // not support remove_liquidity_one_coin
     }
 
+    /// @notice Add liquidity into curve pool
+    /// @param _assets The asset list to add
+    /// @param _amounts The amount list to add
+    /// @return The amount of liquidity
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -87,6 +104,11 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
         return balanceOfToken(lpToken);
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -104,12 +126,16 @@ contract ConvexUsdtStrategy is ConvexBaseStrategy {
             decimalUnitOfToken(lpToken);
     }
 
+    /// @notice Return the third party protocol's pool total assets in USD(1e18).
     function get3rdPoolAssets() external view override returns (uint256) {
         return
             (ICurveLiquidityPool(curvePool).get_virtual_price() *
                 IERC20Upgradeable(lpToken).totalSupply()) / decimalUnitOfToken(lpToken);
     }
 
+    /// @notice Remove liquidity from curve pool
+    /// @param _removeLiquidity The amount of liquidity to remove
+    /// @param _outputCode The code of output
     function curveRemoveLiquidity(uint256 _removeLiquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool(curvePool).remove_liquidity(
             _removeLiquidity,

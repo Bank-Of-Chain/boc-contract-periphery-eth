@@ -8,11 +8,18 @@ import "../../../external/curve/ICurveLiquidityPool.sol";
 
 import "./ConvexBaseStrategy.sol";
 
+/// @title ConvexSusdStrategy
+/// @notice Investment strategy for investing SUSD via Convex 
+/// @author Bank of Chain Protocol Inc
 contract ConvexSusdStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private constant SNX = address(0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F);
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
     function initialize(address _vault, address _harvester,string memory _name) public {
         address[] memory _wants = new address[](4);
         // the oder is same with underlying coins
@@ -34,11 +41,15 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         );
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
-
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
@@ -55,6 +66,7 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         }
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -70,6 +82,11 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         // not support remove_liquidity_one_coin
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -97,6 +114,7 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         }
     }
 
+    /// @notice Return the third party protocol's pool total assets in USD(1e18).
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _assets = wants;
         uint256 _thirdPoolAssets;
@@ -110,6 +128,10 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         return _thirdPoolAssets;
     }
 
+    /// @notice Add liquidity into curve pool
+    /// @param _assets The asset list to add
+    /// @param _amounts The amount list to add
+    /// @return The amount of liquidity
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -127,10 +149,16 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
         return _lpAmount;
     }
 
-    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
-        ICurveLiquidityPool(curvePool).remove_liquidity(liquidity, [uint256(0), uint256(0), uint256(0), uint256(0)]);
+    /// @notice Remove liquidity from curve pool
+    /// @param _liquidity The amount of liquidity to remove
+    /// @param _outputCode The code of output
+    function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal override {
+        ICurveLiquidityPool(curvePool).remove_liquidity(_liquidity, [uint256(0), uint256(0), uint256(0), uint256(0)]);
     }
 
+    /// @notice Collect the rewards from third party protocol
+    /// @return _rewardTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
         internal
         override

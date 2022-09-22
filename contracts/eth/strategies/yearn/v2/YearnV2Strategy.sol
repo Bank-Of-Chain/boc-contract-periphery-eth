@@ -7,11 +7,18 @@ import "../../../enums/ProtocolEnum.sol";
 import "../../ETHBaseStrategy.sol";
 import "../../../../external/yearn/IYearnVaultV2.sol";
 
+/// @title YearnV2Strategy
+/// @notice Investment strategy for investing ETH via YearnV2
+/// @author Bank of Chain Protocol Inc
 contract YearnV2Strategy is ETHBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IYearnVaultV2 public yVault;
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _name The name of strategy
+    /// @param _yVault The yearn vault address
     function initialize(
         address _vault,
         string memory _name,
@@ -24,10 +31,12 @@ contract YearnV2Strategy is ETHBaseStrategy {
         super._initialize(_vault, uint16(ProtocolEnum.YearnV2), _name, _wants);
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getVersion() external pure virtual override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getWantsInfo()
         external
         view
@@ -40,6 +49,7 @@ contract YearnV2Strategy is ETHBaseStrategy {
         _ratios[0] = 1e18;
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getOutputsInfo()
         external
         view
@@ -53,6 +63,7 @@ contract YearnV2Strategy is ETHBaseStrategy {
         _info.outputTokens = wants;
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getPositionDetail()
         public
         view
@@ -73,10 +84,12 @@ contract YearnV2Strategy is ETHBaseStrategy {
         _amounts[0] = balanceOfToken(_tokens[0]) + (_balanceOf * _pricePerShare) / 1e18;
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function get3rdPoolAssets() external view override returns (uint256) {
         return queryTokenValueInETH(wants[0], yVault.totalAssets());
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -89,6 +102,7 @@ contract YearnV2Strategy is ETHBaseStrategy {
         yVault.deposit(_amounts[0]);
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,

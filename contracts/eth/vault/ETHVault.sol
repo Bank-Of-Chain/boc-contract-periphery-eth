@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 pragma solidity ^0.8.0;
-/**
- * @title  Vault Contract
- * @notice The Vault contract defines the storage for the Vault contracts
- * @author BankOfChain Protocol Inc
- */
 
 import "./ETHVaultStorage.sol";
 import "../strategies/IETHStrategy.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+/// @title ETHVault
+/// @notice ETHVault is the core of the BoC protocol
+/// @notice ETHVault stores and manages collateral funds of all positions
+/// @author Bank of Chain Protocol Inc
 contract ETHVault is ETHVaultStorage {
     using StableMath for uint256;
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -46,9 +45,7 @@ contract ETHVault is ETHVaultStorage {
         _;
     }
 
-    /**
-     * @dev Verifies that the rebasing is not paused.
-     */
+    /// @dev Verifies that the rebasing is not paused.
     modifier whenNotRebasePaused() {
         require(!rebasePaused, "RP");
         _;
@@ -94,7 +91,7 @@ contract ETHVault is ETHVaultStorage {
         return _getTotalAssets();
     }
 
-    /// @notice Vault and vault buffer total asset in USD
+    /// @notice Vault and vault buffer total asset in ETH
     function totalAssetsIncludeVaultBuffer() external view returns (uint256) {
         return _totalAssetInVaultAndVaultBuffer() + totalDebt;
     }
@@ -104,10 +101,8 @@ contract ETHVault is ETHVaultStorage {
         return totalValueInVault() + totalValueInStrategies();
     }
 
-    /**
-     * @dev Internal to calculate total value of all assets held in Vault.
-     * @return _value Total value(by chainlink price) in USD (1e18)
-     */
+    /// @dev Calculate total value of all assets held in Vault.
+    /// @return _value Total value(by chainlink price) in USD (1e18)
     function totalValueInVault() public view returns (uint256 _value) {
         address[] memory _trackedAssets = _getTrackedAssets();
         for (uint256 i = 0; i < _trackedAssets.length; i++) {
@@ -121,10 +116,8 @@ contract ETHVault is ETHVaultStorage {
         }
     }
 
-    /**
-     * @dev Internal to calculate total value of all assets held in Strategies.
-     * @return _value Total value(by chainlink price) in USD (1e18)
-     */
+    /// @dev Calculate total value of all assets held in Strategies.
+    /// @return _value Total value(by chainlink price) in USD (1e18)
     function totalValueInStrategies() public view returns (uint256 _value) {
         uint256 _strategyLength = strategySet.length();
         for (uint256 i = 0; i < _strategyLength; i++) {
@@ -140,15 +133,13 @@ contract ETHVault is ETHVaultStorage {
         }
     }
 
-    /// @notice All strategies
+    /// @notice Return all strategies
     function getStrategies() external view returns (address[] memory) {
         return strategySet.values();
     }
 
-    /**
-     * @notice Get pegToken price in USD
-     * @return  price in USD (1e18)
-     */
+    /// @notice Get pegToken price in ETH
+    /// @return  price in ETH (1e18)
     function getPegTokenPrice() external view returns (uint256) {
         uint256 _totalSupply = IPegToken(pegTokenAddress).totalSupply();
         uint256 _pegTokenPrice = 1e18;
@@ -184,17 +175,19 @@ contract ETHVault is ETHVaultStorage {
         require(strategySet.contains(_strategy), "strategy not exist");
     }
 
-    /// @notice estimate Minting pending share
+    /// @notice Estimate the pending share amount that can be minted 
+    /// @param _asset Address of the asset being deposited
     /// @param _amount Amount of the asset being deposited
-    /// @return _pending Share Amount
+    /// @return The share Amount estimated
     function estimateMint(address _asset, uint256 _amount) external view returns (uint256) {
         return _estimateMint(_asset, _amount);
     }
 
+    /// @notice Mints the ETHi ticket with ETH
     /// @param _asset Address of the asset being deposited
     /// @param _amount Amount of the asset being deposited
-    /// @dev Support single asset
-    /// @return The amount of share minted
+    /// @param _minimumAmount The minimum return amount of the ETHi ticket
+    /// @return The amount of ETHi ticket minted
     function mint(
         address _asset,
         uint256 _amount,
@@ -216,9 +209,11 @@ contract ETHVault is ETHVaultStorage {
         return _shareAmount;
     }
 
-    /// @notice burn ETHi,return stablecoins
+    /// @notice burn ETHi,return ETH or ETH-equivalent tokens, like wETH,sETH,stETH,rETH etc.
     /// @param _amount Amount of ETHi to burn
-    /// @param _minimumAmount Minimum stablecoin units to receive in return
+    /// @param _minimumAmount The minimum ETH or ETH-equivalent tokens amounts to receive in return
+    /// @param _assets The address list of assets to receive
+    /// @param _amounts The amount list of assets to receive
     function burn(uint256 _amount, uint256 _minimumAmount)
         external
         whenNotEmergency
@@ -260,7 +255,10 @@ contract ETHVault is ETHVaultStorage {
         );
     }
 
-    /// @notice redeem the funds from specified strategy.
+    /// @notice Redeem the funds from specified strategy.
+    /// @param _strategy The specified strategy to redeem
+    /// @param _amount The amount to redeem in USD
+    /// @param _outputCode The code of output 
     function redeem(
         address _strategy,
         uint256 _amount,
@@ -378,12 +376,11 @@ contract ETHVault is ETHVaultStorage {
         _rebase(_totalAssets);
     }
 
-    /**
-     * @dev Report the current asset of strategy caller
-     * @param _rewardTokens The reward token list
-     * @param _claimAmounts The claim amount list
-     * Emits a {StrategyReported} event.
-     */
+    /// @dev Report the current asset of strategy caller
+    /// @param _rewardTokens The reward token list
+    /// @param _claimAmounts The claim amount list
+    /// Requirement: only the strategy caller is active
+    /// Emits a {StrategyReported} event.
     function report(address[] memory _rewardTokens, uint256[] memory _claimAmounts)
         external
         isActiveStrategy(msg.sender)
@@ -609,10 +606,8 @@ contract ETHVault is ETHVaultStorage {
         return trackedAssetsMap._inner._keys.values();
     }
 
-    /**
-     * @dev Internal to calculate total value of all assets held in Vault.
-     * @return Total value in ETH (1e18)
-     */
+    /// @dev Internal to calculate total value of all assets held in Vault.
+    /// @return Total value in ETH (1e18)
     function _totalAssetInVault() internal view returns (uint256) {
         address[] memory _trackedAssets = _getTrackedAssets();
         uint256 _trackedAssetsLength = _trackedAssets.length;
@@ -839,7 +834,7 @@ contract ETHVault is ETHVaultStorage {
     /// @param _assetDecimals array of asset decimal
     /// @param _assetIndex index of the asset in trackedAssets array
     /// @param _trackedAsset address of the asset
-    /// @return shareAmount
+    /// @return The share amount
     function _calculateAssetValue(
         uint256[] memory _assetPrices,
         uint256[] memory _assetDecimals,
@@ -998,11 +993,9 @@ contract ETHVault is ETHVaultStorage {
         emit Burn(msg.sender, _amount, _actualAmount, _shareAmount, _assets, _amounts);
     }
 
-    /**
-     * @dev Calculate the total value of assets held by the Vault and all
-     *      strategies and update the supply of ETHi, optionally sending a
-     *      portion of the yield to the trustee.
-     */
+    /// @dev Calculate the total value of assets held by the Vault and all
+    ///      strategies and update the supply of ETHi, optionally sending a
+    ///      portion of the yield to the trustee.
     function _rebase(uint256 _totalAssets) internal {
         uint256 _totalShares = IPegToken(pegTokenAddress).totalShares();
         _rebase(_totalAssets, _totalShares);
@@ -1230,10 +1223,8 @@ contract ETHVault is ETHVaultStorage {
         return _balance;
     }
 
-    /**
-     * @notice Get the supported asset Decimal
-     * @return _assetDecimal asset Decimals
-     */
+    /// @notice Get the supported asset Decimal
+    /// @return _assetDecimal asset Decimals
     function _getAssetDecimals(
         uint256[] memory _assetDecimals,
         uint256 _assetIndex,
@@ -1251,10 +1242,8 @@ contract ETHVault is ETHVaultStorage {
         return _decimal;
     }
 
-    /**
-     * @notice Get an array of the supported asset prices in USD
-     * @return  prices in USD (1e18)
-     */
+    /// @notice Get an array of the supported asset prices in ETH
+    /// @return  prices in ETH (1e18)
     function _getAssetPrice(
         uint256[] memory _assetPrices,
         uint256 _assetIndex,
@@ -1297,19 +1286,15 @@ contract ETHVault is ETHVaultStorage {
         return _totalAssetInVault() + totalDebt;
     }
 
-    /**
-     * @notice Send funds to the pool
-     * @dev Users are able to submit their funds by transacting to the fallback function.
-     * Unlike vanilla Eth2.0 Deposit contract, accepting only 32-Ether transactions, Lido
-     * accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
-     * depositBufferedEther() and pushes them to the ETH2 Deposit contract.
-     */
+    /// @notice Send funds to the pool
+    /// @dev Users are able to submit their funds by transacting to the fallback function.
+    /// Unlike vanilla Eth2.0 Deposit contract, accepting only 32-Ether transactions, Lido
+    /// accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
+    /// depositBufferedEther() and pushes them to the ETH2 Deposit contract.
     receive() external payable {}
 
-    /**
-     * @dev Falldown to the admin implementation
-     * @notice This is a catch all for all functions not declared in core
-     */
+    /// @dev Falldown to the admin implementation
+    /// @notice This is a catch all for all functions not declared in core
     fallback() external payable {
         bytes32 slot = ADMIN_IMPL_POSITION;
 

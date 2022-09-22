@@ -16,14 +16,28 @@ import "../../../external/uniswapV3/libraries/LiquidityAmounts.sol";
 import "../../../utils/actions/UniswapV3LiquidityActionsMixin.sol";
 import "./../../enums/ProtocolEnum.sol";
 
+/// @title UniswapV3Strategy
+/// @notice Investment strategy for investing stablecoins via UniswapV3
+/// @author Bank of Chain Protocol Inc
 contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @param _baseThreshold The new base threshold
     event UniV3SetBaseThreshold(int24 _baseThreshold);
+
+    /// @param _limitThreshold The new limit threshold
     event UniV3SetLimitThreshold(int24 _limitThreshold);
+
+    /// @param _period The new period
     event UniV3SetPeriod(uint256 _period);
+
+    /// @param _minTickMove The new minium tick to move
     event UniV3SetMinTickMove(int24 _minTickMove);
+
+    /// @param _maxTwapDeviation The new max TWAP deviation
     event UniV3SetMaxTwapDeviation(int24 _maxTwapDeviation);
+
+    /// @param _twapDuration The new max TWAP duration
     event UniV3SetTwapDuration(uint32 _twapDuration);
 
     int24 internal baseThreshold;
@@ -36,6 +50,9 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
     uint256 internal lastTimestamp;
     uint32 internal twapDuration;
 
+    /// @param tokenId The tokenId of V3 LP NFT minted
+    /// @param _tickLower The lower tick of the position in which to add liquidity
+    /// @param _tickUpper The upper tick of the position in which to add liquidity
     struct MintInfo {
         uint256 tokenId;
         int24 tickLower;
@@ -45,6 +62,18 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
     MintInfo internal baseMintInfo;
     MintInfo internal limitMintInfo;
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
+    /// @param _pool The uniswap V3 pool
+    /// @param _baseThreshold The new base threshold
+    /// @param _limitThreshold The new limit threshold
+    /// @param _period The new period
+    /// @param _minTickMove The minium tick to move
+    /// @param _maxTwapDeviation The max TWAP deviation
+    /// @param _twapDuration The max TWAP duration
+    /// @param _tickSpacing The specified tickSpacing
     function initialize(
         address _vault,
         address _harvester,
@@ -72,18 +101,31 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.UniswapV3), _wants);
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
-    function getStatus() public view returns(int24 baseThreshold, int24 limitThreshold, int24 minTickMove, int24 maxTwapDeviation, int24 lastTick, int24 tickSpacing, uint256 period, uint256 lastTimestamp, uint32 twapDuration) {
+    /// @notice Gets the statuses about uniswap V3
+    /// @return _baseThreshold The new base threshold
+    /// @return _limitThreshold The new limit threshold
+    /// @return _minTickMove The minium tick to move
+    /// @return _maxTwapDeviation The max TWAP deviation
+    /// @return _lastTick The last tick
+    /// @return _tickSpacing The number of tickSpacing
+    /// @return _period The new period
+    /// @return _lastTimestamp The timestamp of last action
+    /// @return _twapDuration The max TWAP duration
+    function getStatus() public view returns(int24 _baseThreshold, int24 _limitThreshold, int24 _minTickMove, int24 _maxTwapDeviation, int24 _lastTick, int24 _tickSpacing, uint256 _period, uint256 _lastTimestamp, uint32 _twapDuration) {
         return (baseThreshold, limitThreshold, minTickMove, maxTwapDeviation, lastTick, tickSpacing, period, lastTimestamp, twapDuration);
     }
 
+    /// @notice Gets the info of LP V3 NFT minted
     function getMintInfo() public view returns(uint256 baseTokenId, int24 baseTickUpper, int24 baseTickLower, uint256 limitTokenId, int24 limitTickUpper, int24 limitTickLower) {
         return (baseMintInfo.tokenId, baseMintInfo.tickUpper, baseMintInfo.tickLower, limitMintInfo.tokenId, limitMintInfo.tickUpper, limitMintInfo.tickLower);
     }
 
+    /// @notice Return the underlying token list and ratio list needed by the strategy
     function getWantsInfo()
         public
         view
@@ -108,6 +150,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         _ratios[1] = _amount1;
     }
 
+    // @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -121,6 +164,12 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         _info0.outputTokens = wants;
     }
 
+    /// @notice Gets the specifie ranges of `_tick`
+    /// @param _tick The input number of tick
+    /// @return _tickFloor The nearest tick which LTE `_tick`
+    /// @return _tickCeil The nearest tick which GTE `_tick`
+    /// @return _tickLower  `_tickFloor` subtrace `baseThreshold`
+    /// @return _tickUpper  `_tickFloor` add `baseThreshold`
     function getSpecifiedRangesOfTick(int24 _tick) 
     	internal 
 	    view 
@@ -137,6 +186,12 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         _tickUpper = _tickCeil + baseThreshold;
     }
 
+    /// @notice Gets the amounts for the specified liquidity
+    /// @param _tickLower  The specified lower tick 
+    /// @param _tickUpper  The specified upper tick 
+    /// @param _liquidity The liquidity being valued
+    /// @return The amount of token0
+    /// @return The amount of token1
     function getAmountsForLiquidity(
         int24 _tickLower, 
         int24 _tickUpper, 
@@ -149,6 +204,11 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         return (_amount0, _amount1);
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -172,6 +232,10 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         _amounts[1] += _amount1;
     }
 
+    /// @notice Gets the two tokens' balances of LP V3 NFT
+    /// @param _mintInfo  The info of LP V3 NFT
+    /// @return The amount of token0
+    /// @return The amount of token1
     function balanceOfPoolWants(MintInfo memory _mintInfo)
         internal
         view
@@ -186,6 +250,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
             );
     }
 
+    /// @notice Return the 3rd protocol's pool total assets in USD.
     function get3rdPoolAssets() external view override returns (uint256 totalAssets) {
         address _pool = IUniswapV3Factory(nonfungiblePositionManager.factory()).getPool(
             token0,
@@ -196,6 +261,10 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         totalAssets += queryTokenValue(token1, IERC20Minimal(token1).balanceOf(_pool));
     }
 
+    /// @notice Harvests by the Strategy, 
+    ///     recognizing any profits or losses and adjusting the Strategy's position.
+    /// @return _rewardsTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function harvest()
         public
         override
@@ -218,6 +287,9 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         vault.report(_rewardsTokens, _claimAmounts);
     }
 
+    /// @notice Strategy deposit funds to third party pool.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -253,6 +325,9 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         }
     }
 
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,
@@ -269,6 +344,10 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         }
     }
 
+    /// @notice Remove partial liquidity of `_tokenId`
+    /// @param _tokenId One tokenId to remove liquidity
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
     function withdraw(
         uint256 _tokenId,
         uint256 _withdrawShares,
@@ -285,6 +364,9 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         }
     }
 
+    /// @notice Remove liquidity of one `_tokenId` LP NFT
+    /// @param _tokenId One tokenId to remove liquidity
+    /// @param _liquidity The liquidity amount to remove
     function removeLiquidity(uint256 _tokenId, uint128 _liquidity) internal {
         // remove _liquidity
         INonfungiblePositionManager.DecreaseLiquidityParams
@@ -302,17 +384,24 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         }
     }
 
+    /// @notice Gets the total liquidity of `_tokenId` NFT position.
+    /// @param _tokenId One tokenId to get its liquidity
+    /// @return The total liquidity of `_tokenId` NFT position
     function balanceOfLpToken(uint256 _tokenId) public view returns (uint128) {
         if (_tokenId == 0) return 0;
         return __getLiquidityForNFT(_tokenId);
     }
 
+    /// @notice Rebalance the position of this strategy
+    /// Requirements: only keeper can call
     function rebalanceByKeeper() external nonReentrant isKeeper {
         (, int24 _tick, , , , , ) = pool.slot0();
         require(shouldRebalance(_tick), "cannot rebalance");
         rebalance(_tick);
     }
 
+    /// @notice Rebalance the position of this strategy
+    /// @param _tick The new tick to invest
     function rebalance(int24 _tick) internal {
         harvest();
         // Withdraw all current _liquidity
@@ -366,6 +455,9 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         lastTick = _tick;
     }
 
+    /// @notice Check if rebalancing is possible
+    /// @param _tick The tick to check
+    /// @return Returns 'true' if it should rebalance, otherwise return 'false'
     function shouldRebalance(int24 _tick) public view returns (bool) {
         // check enough time has passed
         if (block.timestamp < lastTimestamp + period) {
@@ -401,6 +493,12 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         return true;
     }
 
+    /// @notice Gets the liquidity for the two amounts
+    /// @param _tickLower  The specified lower tick 
+    /// @param _tickUpper  The specified upper tick 
+    /// @param _amount0 The amount of token0
+    /// @param _amount1 The amount of token1
+    /// @return The liquidity being valued
     function getLiquidityForAmounts(
         int24 _tickLower,
         int24 _tickUpper,
@@ -418,7 +516,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
             );
     }
 
-    // Fetches time-weighted average price in ticks from Uniswap _pool.
+     /// @notice Fetches time-weighted average price in ticks from Uniswap pool.
     function getTwap() public view returns (int24) {
         uint32[] memory _secondsAgo = new uint32[](2);
         _secondsAgo[0] = twapDuration;
@@ -428,7 +526,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         return int24((_tickCumulatives[1] - _tickCumulatives[0]) / int32(twapDuration));
     }
 
-    // Rounds _tick down towards negative infinity so that it's a multiple of `tickSpacing`.
+    /// @notice Rounds _tick down towards negative infinity so that it's a multiple of `tickSpacing`.
     function _floor(int24 _tick) internal view returns (int24) {
         // compressed=-27633, _tick=-276330, tickSpacing=10
         int24 compressed = _tick / tickSpacing;
@@ -436,6 +534,17 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         return compressed * tickSpacing;
     }
 
+    /// @notice Mints a new uniswap V3 position, receiving an nft as a receipt
+    /// @param _tickLower The lower tick of the new position in which to add liquidity
+    /// @param _tickUpper The upper tick of the new position in which to add liquidity
+    /// @param _amount0Desired The amount of token0 desired to invest
+    /// @param _amount1Desired The amount of token1 desired to invest
+    /// @param _base The boolean flag to start base mint,
+    ///     'true' to base mint,'false' to limit mint
+    /// @return _tokenId The ID of the token that represents the minted position
+    /// @return _liquidity The amount of liquidity for this new position minted
+    /// @return _amount0 The amount of token0 that was paid to mint the given amount of liquidity
+    /// @return _amount1 The amount of token1 that was paid to mint the given amount of liquidity
     function mintNewPosition(
         int24 _tickLower,
         int24 _tickUpper,
@@ -481,6 +590,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         }
     }
 
+    /// @notice Check the Validity of `_threshold`
     function _checkThreshold(int24 _threshold) internal view {
         require(
             _threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0,
@@ -488,18 +598,24 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         );
     }
 
+    /// @notice Sets `baseThreshold` state variable
+    /// Requirements: only vault manager  can call
     function setBaseThreshold(int24 _baseThreshold) external isVaultManager {
         _checkThreshold(_baseThreshold);
         baseThreshold = _baseThreshold;
         emit UniV3SetBaseThreshold(_baseThreshold);
     }
 
+    /// @notice Sets `limitThreshold` state variable
+    /// Requirements: only vault manager  can call
     function setLimitThreshold(int24 _limitThreshold) external isVaultManager {
         _checkThreshold(_limitThreshold);
         limitThreshold = _limitThreshold;
         emit UniV3SetLimitThreshold(_limitThreshold);
     }
 
+    /// @notice Sets `period` state variable
+    /// Requirements: only vault manager  can call
     function setPeriod(uint256 _period) external isVaultManager {
         period = _period;
         emit UniV3SetPeriod(_period);
@@ -511,12 +627,16 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         emit UniV3SetMinTickMove(_minTickMove);
     }
 
+    /// @notice Sets `minTickMove` state variable
+    /// Requirements: only vault manager  can call
     function setMaxTwapDeviation(int24 _maxTwapDeviation) external isVaultManager {
         require(_maxTwapDeviation >= 0, "MAXE");
         maxTwapDeviation = _maxTwapDeviation;
         emit UniV3SetMaxTwapDeviation(_maxTwapDeviation);
     }
 
+    /// @notice Sets `maxTwapDeviation` state variable
+    /// Requirements: only vault manager  can call
     function setTwapDuration(uint32 _twapDuration) external isVaultManager {
         require(_twapDuration > 0, "TWAPE");
         twapDuration = _twapDuration;

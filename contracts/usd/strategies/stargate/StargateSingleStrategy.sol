@@ -9,6 +9,9 @@ import "../../../external/stargate/IStargateLiquidityPool.sol";
 import "../../../external/stargate/IStargateStakePool.sol";
 import "../../../external/stargate/IStargatePool.sol";
 
+/// @title StargateSingleStrategy
+/// @notice Investment strategy for investing stablecoins via Stargate
+/// @author Bank of Chain Protocol Inc
 contract StargateSingleStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public constant REWARD_TOKEN_STG = address(0xAf5191B0De278C7286d6C7CC6ab6BB8A73bA2Cd6);
@@ -19,6 +22,15 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
     uint256 poolId;
     uint256 stakePoolId;
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
+    /// @param _router The router address of Stargate
+    /// @param _underlying The lending asset of the Vault contract
+    /// @param _lpToken The LP token address
+    /// @param _poolId The Id of stargate's liquidity pool
+    /// @param _stakePoolId The Id of stake pool on stargate
     function initialize(
         address _vault,
         address _harvester,
@@ -38,11 +50,15 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
         super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Stargate), _wants);
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
-
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
@@ -54,6 +70,7 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
         _ratios[0] = 1e18;
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -67,6 +84,11 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
         _info0.outputTokens = wants;
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -89,10 +111,12 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
             balanceOfToken(_tokens[0]);
     }
 
+    /// @notice Gets the amount of liquidity this strategy deposited into `STARGATE_STAKE_POOL`
     function balanceOfLpToken() private view returns (uint256 _lpAmount) {
         (_lpAmount, ) = STARGATE_STAKE_POOL.userInfo(stakePoolId, address(this));
     }
 
+    /// @notice Return the third party protocol's pool total assets in USD.
     function get3rdPoolAssets() external view override returns (uint256) {
         IStargatePool _stargatePoolTmp = stargatePool;
         uint256 _localDecimals = _stargatePoolTmp.localDecimals();
@@ -104,6 +128,9 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
                 : 0;
     }
 
+    /// @notice Collect the rewards from third party protocol
+    /// @return _rewardTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
         internal
         override
@@ -119,6 +146,9 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
         }
     }
 
+    /// @notice Strategy deposit funds to third party pool.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -138,6 +168,10 @@ contract StargateSingleStrategy is BaseClaimableStrategy {
         }
     }
 
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,

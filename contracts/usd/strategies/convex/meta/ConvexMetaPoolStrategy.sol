@@ -9,6 +9,9 @@ import "../../../../external/yearn/IYearnVault.sol";
 
 import "../ConvexBaseStrategy.sol";
 
+/// @title ConvexMetaPoolStrategy
+/// @notice Investment strategy for investing stablecoins to curve meta pool via Convex
+/// @author Bank of Chain Protocol Inc
 contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -18,8 +21,21 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
     uint256 private constant USD_INDEX = 0;
     uint256 private constant CRV3_INDEX = 1;
 
+    /// @notice One of wanted tokens(stablecoins)
     address public pairToken;
 
+    ////// fallback and receive //////
+    receive() external payable {}
+
+    fallback() external payable {}
+
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
+    /// @param _pairToken One of wanted tokens(stablecoins)
+    /// @param _curvePool The curve pool invested 
+    /// @param _rewardPool The address of the base reward pool which issue reward linearly
     function initialize(
         address _vault,
         address _harvester,
@@ -41,10 +57,15 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         super._initialize(_vault, _harvester, _name, _wants, _curvePool, _rewardPool);
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
@@ -62,6 +83,7 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         }
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -96,6 +118,11 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         _info4.outputTokens[0] = _wants[3];
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -126,6 +153,7 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         }
     }
 
+    /// @notice Return the third party protocol's pool total assets in USD(1e18).
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _assets = wants;
         uint256 _crv3Amount = ICurveLiquidityPool(curvePool).balances(CRV3_INDEX);
@@ -143,6 +171,10 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         return _thirdPoolAssets;
     }
 
+    /// @notice Add liquidity into curve pool
+    /// @param _assets The asset list to add
+    /// @param _amounts The amount list to add
+    /// @return The amount of liquidity
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -174,6 +206,9 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         return balanceOfToken(lpToken);
     }
 
+    /// @notice Remove liquidity from curve pool
+    /// @param _liquidity The amount of liquidity to remove
+    /// @param _outputCode The code of output
     function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal override {
         ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         if (_outputCode == 4) {

@@ -14,6 +14,9 @@ import "../../../external/aura/IAuraBooster.sol";
 import "boc-contract-core/contracts/strategy/BaseClaimableStrategy.sol";
 import "../../enums/ProtocolEnum.sol";
 
+/// @title Aura3PoolStrategy
+/// @notice Investment strategy for investing stablecoins via Aura 
+/// @author Bank of Chain Protocol Inc
 contract Aura3PoolStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -60,14 +63,17 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         isWantRatioIgnorable = true;
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @notice Return the pool key
     function getPoolKey() internal pure returns (bytes32) {
         return 0x06df3b2bbb68adc8b0e302443692037ed9f91b42000000000000000000000063;
     }
 
+    /// @notice Return the pId
     function getPId() internal pure returns (uint256) {
         return 0;
     }
@@ -76,11 +82,15 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         return 0x06Df3b2bbB68adc8B0e302443692037ED9f91b42;
     }
 
+    /// @notice Return the LP token address of the rETH stable pool
     function getRewardPool() internal pure returns (address) {
         return 0x08b8a86B9498AC249bF4B86e14C5d4187085a239;
     }
 
-    /// @notice Provide the strategy need underlying token and ratio
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         external
         view
@@ -90,6 +100,7 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         (_assets, _ratios, ) = BALANCER_VAULT.getPoolTokens(getPoolKey());
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
@@ -118,7 +129,7 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         _info3.outputTokens[0] = USDT;
     }
 
-    /// @notice 3rd prototcol"s pool total assets in USD.
+    /// @notice Return the 3rd protocol's pool total assets in USD.
     function get3rdPoolAssets() external view override returns (uint256) {
         uint256 _totalAssets;
         (address[] memory _tokens, uint256[] memory _balances, ) = BALANCER_VAULT.getPoolTokens(
@@ -131,6 +142,10 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
     }
 
     /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -153,6 +168,7 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         }
     }
 
+    /// @notice Return the amount staking on base reward pool
     function getStakingAmount() public view returns (uint256) {
         return IRewardPool(getRewardPool()).balanceOf(address(this));
     }
@@ -165,7 +181,7 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         }
     }
 
-    /// @notice Strategy deposit funds to 3rd pool.
+    /// @notice Strategy deposit funds to third party pool.
     /// @param _assets deposit token address
     /// @param _amounts deposit token amount
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
@@ -176,6 +192,9 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         AURA_BOOSTER.deposit(getPId(), _receiveLpAmount, true);
     }
 
+    /// @notice Strategy deposit funds to the balancer protocol.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function _depositToBalancer(address[] memory _assets, uint256[] memory _amounts)
         internal
         virtual
@@ -193,9 +212,10 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         _receiveLpAmount = balanceOfToken(getPoolLpToken());
     }
 
-    /// @notice Strategy withdraw the funds from 3rd pool.
-    /// @param _withdrawShares Numerator
-    /// @param _totalShares Denominator
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,
@@ -207,6 +227,9 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         _withdrawFromBalancer(_withdrawAmount, _outputCode);
     }
 
+    /// @notice Strategy withdraw the funds from the balancer protocol
+    /// @param _exitAmount The amount to withdraw
+    /// @param _outputCode The code of output
     function _withdrawFromBalancer(uint256 _exitAmount, uint256 _outputCode) internal virtual {
         bytes32 _poolKey = getPoolKey();
         address payable _recipient = payable(address(this));
@@ -239,6 +262,9 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         BALANCER_VAULT.exitPool(_poolKey, address(this), _recipient, _exitRequest);
     }
 
+    /// @notice Collect the rewards from 3rd protocol
+    /// @return _rewardsTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
         internal
         override

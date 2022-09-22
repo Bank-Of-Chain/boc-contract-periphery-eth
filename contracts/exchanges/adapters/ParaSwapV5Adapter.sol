@@ -33,13 +33,23 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
     }
 
     /// @notice Provides a constant string identifier for an adapter
-    /// @return identifier_ An identifier string
+    /// @return An identifier string
     function identifier() external pure override returns (string memory) {
         return "paraswap";
     }
 
     // EXTERNAL FUNCTIONS
-    function swap(uint8 _method, bytes calldata _encodedCallArgs, IExchangeAdapter.SwapDescription calldata _sd) external payable override returns (uint256){
+
+    /// @notice Swap with `_sd` data and `_encodedCallArgs` by using `_method` on ParaSwap(V5).
+    /// @param _method The method of the exchange platform
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
+    function swap(
+        uint8 _method, 
+        bytes calldata _encodedCallArgs, 
+        IExchangeAdapter.SwapDescription calldata _sd
+    )external payable override returns (uint256){
         require(_method < swapMethodSelector.length, "ParaswapAdapter method out of range");
         bytes4 _selector = swapMethodSelector[_method];
         bytes memory _data = abi.encodeWithSelector(_selector, _encodedCallArgs, _sd);
@@ -55,6 +65,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         }
     }
 
+    /// @notice Multi swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `multiSwap` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function multiSwap(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
@@ -70,6 +85,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         return __multiSwap(_data);
     }
 
+    /// @notice Swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `megaSwap` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function megaSwap(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
@@ -89,6 +109,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         return __megaSwap(data);
     }
 
+    /// @notice Swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `protectedMultiSwap` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function protectedMultiSwap(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
@@ -104,6 +129,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         return __protectedMultiSwap(_data);
     }
 
+    /// @notice Swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `protectedMegaSwap` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function protectedMegaSwap(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
@@ -123,6 +153,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         return __protectedMegaSwap(_data);
     }
 
+    /// @notice Swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `protectedSimpleSwap` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function protectedSimpleSwap(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
@@ -139,6 +174,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         return __protectedSimpleSwap(_data);
     }
 
+    /// @notice Swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `simpleSwap` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function simpleSwap(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
@@ -155,6 +195,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         return __simpleSwap(_data);
     }
 
+    /// @notice Swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `swapOnUniswap` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function swapOnUniswap(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
@@ -179,6 +224,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
 
     }
 
+    /// @notice Swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `swapOnUniswap` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function swapOnUniswapFork(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
@@ -212,6 +262,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         return _amount;
     }
 
+    /// @notice Swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `swapOnUniswapV2Fork` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function swapOnUniswapV2Fork(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
@@ -241,6 +296,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         return _amount;
     }
 
+    /// @notice Swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `swapOnZeroXv2` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function swapOnZeroXv2(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
@@ -274,6 +334,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         return _amount;
     }
 
+    /// @notice Swap with `_encodedCallArgs` data and `_sd` data 
+    ///     by method `swapOnZeroXv2` on ParaSwap(V5).
+    /// @param _encodedCallArgs The encoded parameters to call
+    /// @param _sd The description info of this swap
+    /// @return The amount of token received on this swap
     function swapOnZeroXv4(
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd

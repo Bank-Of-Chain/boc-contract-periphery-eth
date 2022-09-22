@@ -8,6 +8,8 @@ import "../../../external/convex/IConvex.sol";
 
 import "../../enums/ProtocolEnum.sol";
 
+/// @title ConvexBaseStrategy
+/// @author Bank of Chain Protocol Inc
 abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -21,6 +23,13 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
     address public rewardPool;
     uint256 public pid;
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
+    /// @param _wants The address list of tokens wanted
+    /// @param _curvePool The curve pool invested 
+    /// @param _rewardPool The address of the base reward pool which issue reward linearly
     function _initialize(
         address _vault,
         address _harvester,
@@ -37,13 +46,19 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
         isWantRatioIgnorable = true;
     }
 
-
+    /// @notice Add liquidity into curve pool
     /// @dev override method should allow to deposit multi tokens
+    /// @param _assets The asset list to add
+    /// @param _amounts The amount list to add
+    /// @return The amount of liquidity
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
         internal
         virtual
         returns (uint256);
 
+    /// @notice Strategy deposit funds to third party pool.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -58,9 +73,16 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
         }
     }
 
+    /// @notice Remove liquidity from curve pool
     /// @dev do not remove with one coin, and return underlying
+    /// @param _liquidity The amount of liquidity to remove
+    /// @param _outputCode The code of output
     function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal virtual;
 
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,
@@ -76,6 +98,9 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
         }
     }
 
+    /// @notice Collect the rewards from third party protocol
+    /// @return _rewardTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
         internal
         virtual
@@ -91,6 +116,7 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
         _claimAmounts[1] = balanceOfToken(CVX);
     }
 
+    /// @notice Return the LP token's balance Of this contract
     function balanceOfLpToken() internal view returns (uint256) {
         return IConvexReward(rewardPool).balanceOf(address(this));
     }

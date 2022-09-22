@@ -9,10 +9,21 @@ import "../oracle/IPriceOracleConsumer.sol";
 import "../strategies/IETHStrategy.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 
+/// @title MockETHVault
+/// @notice The mock contract of ETHVault
+/// @author Bank of Chain Protocol Inc
 contract MockETHVault is AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address public priceProvider;
 
+    /// @param _strategy The strategy for reporting
+    /// @param _gain The gain in USD units for this report
+    /// @param _loss The loss in USD units for this report
+    /// @param _lastStrategyTotalDebt The total debt of `_strategy` for last report
+    /// @param _nowStrategyTotalDebt The total debt of `_strategy` for this report
+    /// @param _rewardTokens The reward token list
+    /// @param _claimAmounts The amount list of `_rewardTokens`
+    /// @param _type The type of lend operations
     event StrategyReported(
         address indexed _strategy,
         uint256 _gain,
@@ -33,12 +44,19 @@ contract MockETHVault is AccessControlMixin {
 
     fallback() external payable {}
 
+    /// @notice Return the address of treasury
     function treasury() external view returns (address) {
         return address(this);
     }
 
+    /// @notice Mock function for burning
+    /// @param _amount Amount of ETHi to burn
     function burn(uint256 _amount) external {}
 
+    /// @notice Allocate funds in Vault to strategies.
+    /// @param _strategy The specified strategy to lend
+    /// @param _assets Address of the asset being lended
+    /// @param _amounts Amount of the asset being lended
     function lend(
         address _strategy,
         address[] memory _assets,
@@ -58,18 +76,25 @@ contract MockETHVault is AccessControlMixin {
     }
 
     /// @notice Withdraw the funds from specified strategy.
+    /// @param _strategy The specified strategy to redeem
+    /// @param _ethValue The amount to redeem in ETH 
+    /// @param _outputCode The code of output 
     function redeem(
         address _strategy,
-        uint256 _usdValue,
+        uint256 _ethValue,
         uint256 _outputCode
     ) external payable {
         uint256 _totalValue = IETHStrategy(_strategy).estimatedTotalAssets();
-        if (_usdValue > _totalValue) {
-            _usdValue = _totalValue;
+        if (_ethValue > _totalValue) {
+            _ethValue = _totalValue;
         }
-        IETHStrategy(_strategy).repay(_usdValue, _totalValue, _outputCode);
+        IETHStrategy(_strategy).repay(_ethValue, _totalValue, _outputCode);
     }
 
+    /// @dev Report the current asset of strategy caller
+    /// @param _rewardTokens The reward token list
+    /// @param _claimAmounts The claim amount list
+    /// Emits a {StrategyReported} event.
     function report(address[] memory _rewardTokens, uint256[] memory _claimAmounts) external {
         emit StrategyReported(msg.sender, 0, 0, 0, 0, _rewardTokens, _claimAmounts, 0);
     }

@@ -8,6 +8,8 @@ import "../../enums/ProtocolEnum.sol";
 import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../../../external/curve/ICurveLiquidityPoolPayable.sol";
 
+/// @title ETHConvexBaseStrategy
+/// @author Bank of Chain Protocol Inc
 abstract contract ETHConvexBaseStrategy is ETHBaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     mapping(address => address[]) public uniswapRewardRoutes;
@@ -23,28 +25,47 @@ abstract contract ETHConvexBaseStrategy is ETHBaseClaimableStrategy {
         isWantRatioIgnorable = true;
     }
 
+    /// @notice Sets the path of swap from reward token
+    /// @param _token The reward token
+    /// @param _uniswapRouteToToken The token address list contains reward token and toToken
+    /// Requirements: only vault manager can call
     function setRewardSwapPath(address _token, address[] memory _uniswapRouteToToken) public isVaultManager {
         uniswapRewardRoutes[_token] = _uniswapRouteToToken;
     }
 
+    /// @notice Return the address of the base reward pool
     function getRewardPool() internal pure virtual returns (IConvexReward);
 
+    /// @notice Return the pId
     function getPid() internal pure virtual returns (uint256);
 
+    /// @notice Return the LP token address
     function getLpToken() internal pure virtual returns (address);
 
+    /// @notice Return the underlying token list needed by the strategy via Convex
     function getConvexWants() internal pure virtual returns (address[] memory);
 
+    /// @notice Return the reward token list of this pool
     function getConvexRewards() internal pure virtual returns (address[] memory);
 
+    /// @notice Return the liquidity pool invested of Curve
     function getCurvePool() internal pure virtual returns (ICurveLiquidityPoolPayable);
 
+    /// @notice Add liquidity into curve pool
+    /// @param _assets The asset list to add
+    /// @param _amounts The amount list to add
+    /// @return The amount of liquidity
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts) internal virtual returns (uint256);
 
+    /// @notice Remove liquidity from curve pool
+    /// @param _liquidity The amount of liquidity to remove
+    /// @param _outputCode The code of output
     function curveRemoveLiquidity(uint256 _liquidity,uint256 _outputCode) internal virtual;
 
+    /// @notice Sell WETH to wanted token
     function sellWETH2Want() internal virtual;
 
+    /// @inheritdoc ETHBaseStrategy
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
         if (_lpAmount > 0) {
@@ -53,7 +74,7 @@ abstract contract ETHConvexBaseStrategy is ETHBaseClaimableStrategy {
             curveRemoveLiquidity(_lpAmount,_outputCode);
         }
     }
-
+    /// @inheritdoc ETHBaseClaimableStrategy
     // https://etherscan.io/tx/0x0d6595b02f7c54ccb669cd72383b0dd54c0a00e3195f109843617889a967db3a
     function claimRewards()
         internal
@@ -77,6 +98,7 @@ abstract contract ETHConvexBaseStrategy is ETHBaseClaimableStrategy {
         }
     }
 
+    /// @inheritdoc ETHBaseClaimableStrategy
     function swapRewardsToWants() internal virtual override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){
         uint256 _wethBalanceLast = balanceOfToken(W_ETH);
         uint256 _wethBalanceCur;
@@ -102,10 +124,12 @@ abstract contract ETHConvexBaseStrategy is ETHBaseClaimableStrategy {
         sellWETH2Want();
     }
 
+    /// @notice Return the LP token's balance Of this contract
     function balanceOfLpToken() internal view returns (uint256) {
         return getRewardPool().balanceOf(address(this));
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function get3rdPoolAssets() external view override returns (uint256) {
         uint256 _thirdPoolAssets = 0;
         for (uint256 i = 0; i < wants.length; i++) {

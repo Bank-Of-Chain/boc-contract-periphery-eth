@@ -14,40 +14,40 @@ import "../oracle/IPriceOracleConsumer.sol";
 import "../vault/IETHVault.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 
-abstract contract ETHBaseStrategy is Initializable, AccessControlMixin, ReentrancyGuardUpgradeable {
+import "./IETHStrategy.sol";
+
+/// @title ETHBaseStrategy
+/// @author Bank of Chain Protocol Inc
+abstract contract ETHBaseStrategy is IETHStrategy, Initializable, AccessControlMixin, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using StableMath for uint256;
 
+    /// @param _outputCode The code of output,0:default path, Greater than 0:specify output path
+    /// @param outputTokens The output tokens
     struct OutputInfo {
-        uint256 outputCode; //0：default path，Greater than 0：specify output path
-        address[] outputTokens; //output tokens
+        uint256 outputCode;
+        address[] outputTokens;
     }
 
-    IETHVault public vault;
+    /// @inheritdoc IETHStrategy
+    IETHVault public override vault;
+
+    /// @notice The interface of PriceOracleConsumer contract
     IPriceOracleConsumer public priceOracleConsumer;
-    uint16 public protocol;
-    string public name;
+
+    /// @inheritdoc IETHStrategy
+    uint16 public override protocol;
+
+    /// @inheritdoc IETHStrategy
+    string public override name;
+
+    /// @notice The list of tokens wanted by this strategy
     address[] public wants;
-    bool public isWantRatioIgnorable;
 
-    event Borrow(address[] _assets, uint256[] _amounts);
-
-    event Repay(
-        uint256 _withdrawShares,
-        uint256 _totalShares,
-        address[] _assets,
-        uint256[] _amounts
-    );
-
-    event SetIsWantRatioIgnorable(bool _oldValue, bool _newValue);
-    event SwapRewardsToWants(
-        address _strategy,
-        address[] _rewards,
-        uint256[] _rewardAmounts,
-        address[] _wants,
-        uint256[] _wantAmounts
-    );
+    /// @inheritdoc IETHStrategy
+    bool public override isWantRatioIgnorable;
     
+    /// @dev Modifier that checks that msg.sender is the vault or not
     modifier onlyVault() {
         require(msg.sender == address(vault));
         _;
@@ -74,37 +74,41 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin, Reentran
         wants = _wants;
     }
 
-    /// @notice Version of strategy
-    function getVersion() external pure virtual returns (string memory);
+    /// @inheritdoc IETHStrategy
+    function getVersion() external pure virtual override returns (string memory);
 
 
-    /// @notice True means that can ignore ratios given by wants info
+    /// @notice Sets the flag of `isWantRatioIgnorable` 
+    /// @param _isWantRatioIgnorable "true" means that can ignore ratios given by wants info,
+    ///    "false" is the opposite.
     function setIsWantRatioIgnorable(bool _isWantRatioIgnorable) external isVaultManager {
         bool _oldValue = isWantRatioIgnorable;
         isWantRatioIgnorable = _isWantRatioIgnorable;
         emit SetIsWantRatioIgnorable(_oldValue, _isWantRatioIgnorable);
     }
 
-    /// @notice Provide the strategy need underlying token and ratio
+    /// @inheritdoc IETHStrategy
     function getWantsInfo()
         external
         view
         virtual
+        override
         returns (address[] memory _assets, uint256[] memory _ratios);
 
-    /// @notice Provide the strategy need underlying tokens
-    function getWants() external view returns (address[] memory) {
+    /// @inheritdoc IETHStrategy
+    function getWants() external view override returns (address[] memory) {
         return wants;
     }
 
-    // @notice Provide the strategy output path when withdraw.
+    // @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo() external view virtual returns (OutputInfo[] memory _outputsInfo);
 
-    /// @notice Returns the position details or ETH value of the strategy.
+    /// @inheritdoc IETHStrategy
     function getPositionDetail()
         public
         view
         virtual
+        override
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
@@ -112,8 +116,8 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin, Reentran
             uint256 _ethValue
         );
 
-    /// @notice Total assets of strategy in ETH.
-    function estimatedTotalAssets() external view returns (uint256 _assetsInETH) {
+    /// @inheritdoc IETHStrategy
+    function estimatedTotalAssets() external view override returns (uint256 _assetsInETH) {
         (
             address[] memory _tokens,
             uint256[] memory _amounts,
@@ -132,20 +136,19 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin, Reentran
         }
     }
 
-    /// @notice 3rd prototcol's pool total assets in ETH.
-    function get3rdPoolAssets() external view virtual returns (uint256);
+    /// @inheritdoc IETHStrategy
+    function get3rdPoolAssets() external view virtual override returns (uint256);
 
-    /// @notice Harvests the Strategy, recognizing any profits or losses and adjusting the Strategy's position.
-    function harvest() external virtual returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts){
+    /// @inheritdoc IETHStrategy
+    function harvest() external virtual override returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts){
         vault.report(_rewardsTokens,_claimAmounts);
     }
 
-    /// @notice Strategy borrow funds from vault
-    /// @param _assets borrow token address
-    /// @param _amounts borrow token amount
+    /// @inheritdoc IETHStrategy
     function borrow(address[] memory _assets, uint256[] memory _amounts)
         external
         payable
+        override
         onlyVault
     {
         depositTo3rdPool(_assets, _amounts);
@@ -153,14 +156,12 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin, Reentran
         emit Borrow(_assets, _amounts);
     }
 
-    /// @notice Strategy repay the funds to vault
-    /// @param _repayShares Numerator
-    /// @param _totalShares Denominator
+    /// @inheritdoc IETHStrategy
     function repay(
         uint256 _repayShares,
         uint256 _totalShares,
         uint256 _outputCode
-    ) public virtual onlyVault nonReentrant returns (address[] memory _assets, uint256[] memory _amounts) {
+    ) public virtual override onlyVault nonReentrant returns (address[] memory _assets, uint256[] memory _amounts) {
         require(_repayShares > 0 && _totalShares >= _repayShares, "cannot repay 0 shares");
         _assets = wants;
         uint256[] memory _balancesBefore = new uint256[](_assets.length);
@@ -184,22 +185,24 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin, Reentran
         emit Repay(_repayShares, _totalShares, _assets, _amounts);
     }
 
-    /// @notice Strategy deposit funds to 3rd pool.
-    /// @param _assets deposit token address
-    /// @param _amounts deposit token amount
+    /// @notice Strategy deposit funds to third party pool.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         virtual;
 
-    /// @notice Strategy withdraw the funds from 3rd pool.
-    /// @param _withdrawShares Numerator
-    /// @param _totalShares Denominator
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,
         uint256 _outputCode
     ) internal virtual;
 
+    /// @notice Return the token's balance Of this contract
     function balanceOfToken(address _tokenAddress) internal view returns (uint256) {
         if (_tokenAddress == NativeToken.NATIVE_TOKEN) {
             return address(this).balance;
@@ -207,12 +210,12 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin, Reentran
         return IERC20Upgradeable(_tokenAddress).balanceOf(address(this));
     }
 
-    /// @notice Investable amount of strategy in ETH
+    /// @notice Return the investable amount of strategy in ETH
     function poolQuota() public view virtual returns (uint256) {
         return type(uint256).max;
     }
 
-    /// @notice Query the ETH value of Token.
+    /// @notice Return the value of token in ETH
     function queryTokenValueInETH(address _token, uint256 _amount)
         internal
         view
@@ -225,6 +228,7 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin, Reentran
         }
     }
 
+    /// @notice Return the uint with decimal of one token
     function decimalUnitOfToken(address _token) internal view returns (uint256) {
         if (_token == NativeToken.NATIVE_TOKEN) {
             return 1e18;
@@ -232,6 +236,10 @@ abstract contract ETHBaseStrategy is Initializable, AccessControlMixin, Reentran
         return 10**IERC20MetadataUpgradeable(_token).decimals();
     }
 
+    /// @notice Transfer `_assets` token from this contract to target address.
+    /// @param _target The target address to receive token
+    /// @param _assets the address list of token to transfer
+    /// @param _amounts the amount list of token to transfer
     function transferTokensToTarget(
         address _target,
         address[] memory _assets,
