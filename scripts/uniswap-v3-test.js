@@ -58,9 +58,6 @@ const main = async () => {
     await token1.approve(mockUniswapV3Router.address, new BigNumber(10).pow(10).multipliedBy(new BigNumber(10).pow(token0Decimals)), { "from": investor });
 
     // start data back to test
-    let offset = 0;
-    const limit = 1000;
-    let recordTimestamp = 0;
     let count = 0;
     for (let i = 0; i < dateBlockNumbers.length; i++) {
         await eventsTracing(dateBlockNumbers[i], dateBlockNumbers[i + 1]);
@@ -100,21 +97,21 @@ const main = async () => {
                             await batchSwapRetry(swapEventDatas);
                             swapEventDatas = [];
                         }
-                        await mintRetry(eventData.owner, eventData.tickLower, eventData.tickUpper, eventData.amount0, eventData.amount1, eventData.amount);
+                        await mintRetry(eventData.owner, eventData.tickLower, eventData.tickUpper, new BigNumber(eventData.amount0), new BigNumber(eventData.amount1), new BigNumber(eventData.amount));
                         break;
                     case "Burn":
                         if (swapEventDatas.length > 0) {
                             await batchSwapRetry(swapEventDatas);
                             swapEventDatas = [];
                         }
-                        await burnRetry(eventData.owner, eventData.tickLower, eventData.tickUpper, eventData.amount, eventData.amount0, eventData.amount1);
+                        await burnRetry(eventData.owner, eventData.tickLower, eventData.tickUpper, new BigNumber(eventData.amount), new BigNumber(eventData.amount0), new BigNumber(eventData.amount1));
                         break;
                     case "Collect":
                         if (swapEventDatas.length > 0) {
                             await batchSwapRetry(swapEventDatas);
                             swapEventDatas = [];
                         }
-                        await collectRetry(eventData.owner, eventData.tickLower, eventData.tickUpper, eventData.amount0, eventData.amount1, eventData.recipient);
+                        await collectRetry(eventData.owner, eventData.tickLower, eventData.tickUpper, new BigNumber(eventData.amount0), new BigNumber(eventData.amount1), eventData.recipient);
                         break;
                     default:
                         throw new Error("Unsupported product!");
@@ -150,22 +147,22 @@ const main = async () => {
     }
 
     async function mint(ownerAddress, tickLower, tickUpper, amount0, amount1, amount) {
-        if (amount0 > 0) {
-            await topUpAmount(token0Address, new BigNumber(amount0).multipliedBy(10), ownerAddress);
+        if (amount0.gt(0)) {
+            await topUpAmount(token0Address, amount0.multipliedBy(10), ownerAddress);
         }
-        if (amount1 > 0) {
-            await topUpAmount(token1Address, new BigNumber(amount1).multipliedBy(10), ownerAddress);
+        if (amount1.gt(0)) {
+            await topUpAmount(token1Address, amount1.multipliedBy(10), ownerAddress);
         }
 
         await topUp.sendEthers(ownerAddress);
         const callback = await topUp.impersonates([ownerAddress]);
         await token0.approve(mockUniswapV3Router.address, new BigNumber(0), { "from": ownerAddress });
-        await token0.approve(mockUniswapV3Router.address, new BigNumber(amount0).multipliedBy(10), { "from": ownerAddress });
+        await token0.approve(mockUniswapV3Router.address, amount0.multipliedBy(10), { "from": ownerAddress });
         await token1.approve(mockUniswapV3Router.address, new BigNumber(0), { "from": ownerAddress });
-        await token1.approve(mockUniswapV3Router.address, new BigNumber(amount1).multipliedBy(10), { "from": ownerAddress });
+        await token1.approve(mockUniswapV3Router.address, amount1.multipliedBy(10), { "from": ownerAddress });
         console.log(`=== mint before amount0: ${amount0}, amount1: ${amount1} ===`);
         console.log(`=== mint before token0.balanceOf: ${await token0.balanceOf(ownerAddress)}, token1.balanceOf: ${await token1.balanceOf(ownerAddress)} ===`);
-        await mockUniswapV3Router.mint(poolAddress, tickLower, tickUpper, new BigNumber(amount), { "from": ownerAddress });
+        await mockUniswapV3Router.mint(poolAddress, tickLower, tickUpper, amount, { "from": ownerAddress });
         console.log(`=== mint after token0.balanceOf: ${await token0.balanceOf(ownerAddress)}, token1.balanceOf: ${await token1.balanceOf(ownerAddress)} ===`);
         await callback();
     }
@@ -190,13 +187,13 @@ const main = async () => {
     async function burn(ownerAddress, tickLower, tickUpper, amount, amount0, amount1) {
         await topUp.sendEthers(ownerAddress);
         const callback = await topUp.impersonates([ownerAddress]);
-        const liquidity = await uniswapV3Strategy.getLiquidityForAmounts(tickLower, tickUpper, new BigNumber(amount0), new BigNumber(amount1));
-        if (liquidity < amount) {
+        const liquidity = await uniswapV3Strategy.getLiquidityForAmounts(tickLower, tickUpper, amount0, amount1);
+        if (new BigNumber(liquidity).lt(amount)) {
 //            console.log('=== burn before uniswapV3Strategy.getLiquidityForAmounts: %d, amount: %d ===', liquidity, amount);
             amount = liquidity;
         }
 //        console.log(`=== burn before uniswapV3Pool.liquidity: ${await uniswapV3Pool.liquidity()},  uniswapV3Pool.slot0: ${JSON.stringify(await uniswapV3Pool.slot0())} ===`);
-        await uniswapV3Pool.burn(tickLower, tickUpper, new BigNumber(amount), { "from": ownerAddress });
+        await uniswapV3Pool.burn(tickLower, tickUpper, amount, { "from": ownerAddress });
 //        console.log(`=== burn after uniswapV3Pool.liquidity: ${await uniswapV3Pool.liquidity()},  uniswapV3Pool.slot0: ${JSON.stringify(await uniswapV3Pool.slot0())} ===`);
         await callback();
     }
@@ -222,7 +219,7 @@ const main = async () => {
         await topUp.sendEthers(ownerAddress);
         const callback = await topUp.impersonates([ownerAddress]);
 //        console.log(`=== collect before token0.balanceOf: ${await token0.balanceOf(recipient)}, token1.balanceOf: ${await token1.balanceOf(recipient)} ===`);
-        await uniswapV3Pool.collect(recipient, tickLower, tickUpper, new BigNumber(amount0Requested), new BigNumber(amount1Requested), { "from": ownerAddress });
+        await uniswapV3Pool.collect(recipient, tickLower, tickUpper, amount0Requested, amount1Requested, { "from": ownerAddress });
 //        console.log(`=== collect after token0.balanceOf: ${await token0.balanceOf(recipient)}, token1.balanceOf: ${await token1.balanceOf(recipient)} ===`);
         await callback();
     }
@@ -247,22 +244,24 @@ const main = async () => {
     async function batchSwap(swapEventDatas) {
         let multicallFuns = [];
         for (const swapEvent of swapEventDatas) {
-            let amount0 = swapEvent.amount0;
-            let amount1 = swapEvent.amount1;
+            let amount0 = new BigNumber(swapEvent.amount0);
+            let amount1 = new BigNumber(swapEvent.amount1);
 
             let zeroForOne = true;
             let amountSpecified = amount0;
-            if (amount0 < 0) {
+            if (amount0.lt(0)) {
                 zeroForOne = false;
                 amountSpecified = amount1;
             }
 
-            multicallFuns.push(mockUniswapV3Router.contract.methods.swap(poolAddress, zeroForOne, new BigNumber(amountSpecified)).encodeABI());
+            multicallFuns.push(mockUniswapV3Router.contract.methods.swap(poolAddress, zeroForOne, amountSpecified).encodeABI());
         }
-        console.log(`=== swap before swapEventDatas.length: ${swapEventDatas.length}, swapEventDatas: ${swapEventDatas} ===`);
-        console.log(`=== swap before token0.balanceOf: ${await token0.balanceOf(investor)}, token1.balanceOf: ${await token1.balanceOf(investor)} ===`);
+        console.log(`=== swap before swapEventDatas.length: ${swapEventDatas.length} ===`);
+//        console.log(`=== swap before token0.balanceOf: ${await token0.balanceOf(investor)}, token1.balanceOf: ${await token1.balanceOf(investor)} ===`);
         await mockUniswapV3Router.multicall(multicallFuns, { "from": investor });
-        console.log(`=== swap after token0.balanceOf: ${await token0.balanceOf(investor)}, token1.balanceOf: ${await token1.balanceOf(investor)} ===`);
+//        console.log(`=== swap after token0.balanceOf: ${await token0.balanceOf(investor)}, token1.balanceOf: ${await token1.balanceOf(investor)} ===`);
+        const slot0 = await uniswapV3Pool.slot0();
+        console.log(`=== swap after slot0.tick: ${slot0.tick}, swapEventDatas.amount0: ${new BigNumber(swapEventDatas[swapEventDatas.length - 1].amount0).toFixed()}, swapEventDatas.amount1: ${new BigNumber(swapEventDatas[swapEventDatas.length - 1].amount1).toFixed()} ===`);
     }
 
     async function strategyInvest() {
