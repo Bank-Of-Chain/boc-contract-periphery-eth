@@ -35,13 +35,13 @@ describe('AaveLendActionMixin test', function () {
   });
 
   it('borrow',async function(){
-    const borrowAmount = new BigNumber(5000 * 1e6);
+    const borrowAmount = new BigNumber(1000 * 1e6);
     await aaveLendAction.borrow(borrowAmount);
     await logBorrowInfo();
   });
 
-  it('borrow',async function(){
-    const repayAmount = new BigNumber(2000 * 1e6);
+  it('repay',async function(){
+    const repayAmount = new BigNumber(500 * 1e6);
     await aaveLendAction.repay(repayAmount);
     await logBorrowInfo();
   });
