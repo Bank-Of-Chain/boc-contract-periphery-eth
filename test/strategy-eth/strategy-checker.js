@@ -13,6 +13,9 @@ const { send } = require('@openzeppelin/test-helpers');
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 const AccessControlProxy = hre.artifacts.require('AccessControlProxy');
 const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
+const ILidoOracle = hre.artifacts.require('ILidoOracle');
+const ILido = hre.artifacts.require('ILido');
+const IERC20Upgradeable = hre.artifacts.require('IERC20Upgradeable');
 const MockVault = hre.artifacts.require('MockETHVault');
 const Mock3rdEthPool = hre.artifacts.require('contracts/eth/mock/Mock3rdEthPool.sol:Mock3rdEthPool');
 const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
@@ -226,7 +229,15 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         // initial parameters definition
         let initialAmount = new BigNumber(20);
         let initialRatio = wantsInfo._ratios[0];
-        let wants0Precision = new BigNumber(10 ** (await decimals(wantsInfo._assets[0])));
+        let initPrecision = new BigNumber(10 ** (await decimals(wantsInfo._assets[0])));
+        let initIndex = 0;
+        for (let i = 0; i < wants.length; i++){
+            if(initialRatio<wantsInfo._ratios[i]){
+                initIndex = i;
+                initialRatio = wantsInfo._ratios[i];
+                initPrecision = new BigNumber(10 ** (await decimals(wantsInfo._assets[i])));
+            }
+        }
 
         // is ignore want ratio
         let isIgnoreRatio = await strategy.isWantRatioIgnorable();
@@ -243,13 +254,17 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
             // calculate amount wanted to deposit
             let amount;
             
-            if (i !== 0) {
+            if (i !== initIndex) {
                 // for example,
                 // assets: [ETH, stETH]
                 // ratios: [100, 200]
                 // we assume that ETH amount is 20
                 // then, USDT amount = ETH amount * 200 / 100 = 40
-                amount = new BigNumber(initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0,1));
+                if(initialRatio>0){
+                    amount = new BigNumber(initialAmount.multipliedBy(initPrecision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0,1));
+                }else{
+                    amount = new BigNumber(initialAmount.multipliedBy(initPrecision).toFixed(0,1));
+                }
             } else {
                 amount = initialAmount.multipliedBy(assetPrecision);
             }
@@ -287,9 +302,9 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         
         // we can tolerate a little loss
         assertUtils.assertBNBt(
-            depositETH.multipliedBy(9995).dividedBy(10000),
+            depositETH.multipliedBy(997).dividedBy(1000),
             estimatedTotalAssets,
-            depositETH.multipliedBy(10005).dividedBy(10000),
+            depositETH.multipliedBy(1003).dividedBy(1000),
             'estimatedTotalAssets does not match depositedETH value'
         );
     });
@@ -326,12 +341,15 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
     }
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
-        const estimatedTotalAssets0 = new BigNumber(await strategy.estimatedTotalAssets());
-        const redeemTx = await mockVault.redeem(strategy.address, estimatedTotalAssets0, outputCode);
+        const strategyParam = await mockVault.strategies(strategy.address);
+        console.log("strategyTotalDebt:%s",strategyParam.totalDebt);
+        const strategyTotalDebt = new BigNumber(strategyParam.totalDebt);
+
+        const redeemTx = await mockVault.redeem(strategy.address, strategyTotalDebt, outputCode);
         expectEvent.inTransaction(redeemTx,'Repay');
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets());
         console.log('After withdraw all shares,strategy assets:%d', estimatedTotalAssets1);
-        assert.isTrue(estimatedTotalAssets1.multipliedBy(10000).isLessThan(depositETH), 'assets left in strategy should not be more than 1/10000');
+        assert.isTrue(estimatedTotalAssets1.isLessThan(depositETH), 'assets left in strategy should not be more than 1/1e18');
     });
 
     let withdrawETH = new BigNumber(0);
