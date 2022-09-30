@@ -100,6 +100,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, AaveLend
         realTokens[0] = token0;
         realTokens[1] = token1;
         __initLendConfigation(2, token1, token0);
+        console.log('----------------lendingPoolAddressesProvider.getPriceOracle(): %s', lendingPoolAddressesProvider.getPriceOracle());
         priceOracleGetter = IPriceOracleGetter(lendingPoolAddressesProvider.getPriceOracle());
         super._initialize(_vault, uint16(ProtocolEnum.UniswapV3), _name, _wants);
     }
@@ -398,6 +399,11 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, AaveLend
     function borrowRebalance() external nonReentrant isKeeper {
         console.log('---------getPositionDetail-------%d', priceOracleGetter.getAssetPrice(token0));
         (uint256 _totalCollateralETH, uint256 _totalDebtETH, uint256 _availableBorrowsETH, uint256 _currentLiquidationThreshold, uint256 _ltv, uint256 _healthFactor) = borrowInfo();
+        console.log('----------------%d,%d', _totalCollateralETH, _totalDebtETH);
+        console.log('----------------%d,%d', _availableBorrowsETH, _currentLiquidationThreshold);
+        console.log('----------------%d,%d', _ltv, _healthFactor);
+        console.log('----------------%d', getCurrentBorrow());
+
         if (_totalDebtETH.mul(10000).div(_totalCollateralETH) >= 7500) {
             uint256 newTotalDebtETH = _totalDebtETH.mul(5000).div(_totalDebtETH.mul(10000).div(_totalCollateralETH));
             console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', (_totalDebtETH - newTotalDebtETH).mul(1e6).div(priceOracleGetter.getAssetPrice(token0)));
@@ -422,8 +428,14 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, AaveLend
             console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', (newTotalDebtETH - _totalDebtETH).mul(1e6).div(priceOracleGetter.getAssetPrice(token0)));
             console.log('borrowRebalance priceOracleGetter.getAssetPrice:%d', priceOracleConsumer.valueInTargetToken(token1, (newTotalDebtETH - _totalDebtETH), token0));
             uint256 borrowAmount = (newTotalDebtETH - _totalDebtETH).mul(1e6).div(priceOracleGetter.getAssetPrice(token0));
+            console.log('borrowRebalance borrowAmount:%d', borrowAmount);
             __borrow(borrowAmount);
         }
+        (_totalCollateralETH, _totalDebtETH, _availableBorrowsETH, _currentLiquidationThreshold, _ltv, _healthFactor) = borrowInfo();
+        console.log('----------------%d,%d', _totalCollateralETH, _totalDebtETH);
+        console.log('----------------%d,%d', _availableBorrowsETH, _currentLiquidationThreshold);
+        console.log('----------------%d,%d', _ltv, _healthFactor);
+        console.log('----------------%d', getCurrentBorrow());
         (, int24 _tick,,,,,) = pool.slot0();
         rebalance(_tick);
     }
@@ -461,12 +473,12 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, AaveLend
             delete limitMintInfo;
         }
 
-        if (_baseLiquidity <= 0 && _limitLiquidity <= 0) return;
+        uint256 _balance0 = balanceOfToken(token0);
+        uint256 _balance1 = balanceOfToken(token1);
+        if (_baseLiquidity <= 0 && _limitLiquidity <= 0 && _balance0 <= 0 && _balance1 <= 0) return;
 
         // Mint new base and limit position
         (int24 _tickFloor, int24 _tickCeil, int24 _tickLower, int24 _tickUpper) = getSpecifiedRangesOfTick(_tick);
-        uint256 _balance0 = balanceOfToken(token0);
-        uint256 _balance1 = balanceOfToken(token1);
         if (_balance0 > 0 && _balance1 > 0) {
             mintNewPosition(_tickLower, _tickUpper, _balance0, _balance1, true);
             _balance0 = balanceOfToken(token0);

@@ -26,9 +26,9 @@ const main = async () => {
 
     const usdi = false;
     const poolAddress = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640";
-    const strategyAddress = "0xCA8c8688914e0F7096c920146cd0Ad85cD7Ae8b9";
-    const vaultAddress = "0x457cCf29090fe5A24c19c1bc95F492168C0EaFdb";
-    const vaultBufferAddress = "0xF32D39ff9f6Aa7a7A64d7a4F00a54826Ef791a55";
+    const strategyAddress = "0x5FeaeBfB4439F3516c74939A9D04e95AFE82C4ae";
+    const vaultAddress = "0x38a024C0b412B9d1db8BC398140D00F5Af3093D4";
+    const vaultBufferAddress = "0x99dBE4AEa58E518C50a1c04aE9b48C9F6354612f";
 
     const uniswapV3Pool = await UniswapV3Pool.at(poolAddress);
     const uniswapV3Strategy = usdi ? (await UniswapV3Strategy.at(strategyAddress)) : (await ETHUniswapV3Strategy.at(strategyAddress));
@@ -75,14 +75,14 @@ const main = async () => {
         console.log("=== strategyHarvest before strategy.getPositionDetail.token0: %d, strategy.getPositionDetail.token1: %d ===", positionDetail._amounts[0], positionDetail._amounts[1]);
         await strategyHarvest();
         positionDetail = await uniswapV3Strategy.getPositionDetail();
-        console.log("=== strategyHarvest after strategy.getPositionDetail.token0: %d, strategy.getPositionDetail.token1: %d ===", positionDetail._amounts[0], positionDetail._amounts[1]);
+        console.log("=== strategyHarvest after strategy.getPositionDetail._ethValue: %d ===", positionDetail._ethValue);
         const twap = await uniswapV3Strategy.getTwap();
 
         await originPriceOracleConsumer.setAssetPrice('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', new BigNumber(Math.pow(1.0001, twap) * 1e6).toFixed(0,1));
         await strategyBorrowRebalance();
         await strategyRebalance();
         positionDetail = await uniswapV3Strategy.getPositionDetail();
-        console.log("=== strategyRebalance after strategy.getPositionDetail.token0: %d, strategy.getPositionDetail.token1: %d ===", positionDetail._amounts[0], positionDetail._amounts[1]);
+        console.log("=== strategyRebalance after strategy.getPositionDetail._ethValue: %d ===", positionDetail._ethValue);
         console.log("======== getBlockNumber: %d ========", await ethers.provider.getBlockNumber());
     }
 
@@ -266,10 +266,13 @@ const main = async () => {
             }
 
             multicallFuns.push(mockUniswapV3Router.contract.methods.swap(poolAddress, zeroForOne, amountSpecified).encodeABI());
+            if (multicallFuns.length >= 300) {
+                await mockUniswapV3Router.multicall(multicallFuns, { "from": investor });
+                multicallFuns = [];
+            }
         }
         console.log(`=== swap before swapEventDatas.length: ${swapEventDatas.length} ===`);
 //        console.log(`=== swap before token0.balanceOf: ${await token0.balanceOf(investor)}, token1.balanceOf: ${await token1.balanceOf(investor)} ===`);
-        await mockUniswapV3Router.multicall(multicallFuns, { "from": investor });
 //        console.log(`=== swap after token0.balanceOf: ${await token0.balanceOf(investor)}, token1.balanceOf: ${await token1.balanceOf(investor)} ===`);
         const slot0 = await uniswapV3Pool.slot0();
         console.log(`=== swap after slot0.tick: ${slot0.tick}, swapEventDatas.amount0: ${new BigNumber(swapEventDatas[swapEventDatas.length - 1].amount0).toFixed()}, swapEventDatas.amount1: ${new BigNumber(swapEventDatas[swapEventDatas.length - 1].amount1).toFixed()} ===`);
@@ -347,7 +350,7 @@ const main = async () => {
 
     async function strategyBorrowRebalance() {
         console.log(`=== strategyBorrowRebalance before token0.balanceOf: ${await token0.balanceOf(strategyAddress)}, token1.balanceOf: ${await token1.balanceOf(strategyAddress)} ===`);
-        await uniswapV3Strategy.strategyBorrowRebalance();
+        await uniswapV3Strategy.borrowRebalance();
         console.log(`=== strategyBorrowRebalance after token0.balanceOf: ${await token0.balanceOf(strategyAddress)}, token1.balanceOf: ${await token1.balanceOf(strategyAddress)} ===`);
     }
 
