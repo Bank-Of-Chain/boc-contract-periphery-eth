@@ -50,6 +50,8 @@ async function impersonates (targetAccounts) {
  */
 const sendEthers = async (reviver, amount = new BigNumber(10 * 10 ** 18)) => {
     if (!BigNumber.isBigNumber(amount)) return new Error("must be a bignumber.js object")
+    console.log("amount=",amount.toFormat())
+    console.log("reviver=",reviver.toString())
     await network.provider.send("hardhat_setBalance", [reviver, `0x${amount.toString(16)}`])
 }
 
@@ -406,8 +408,9 @@ async function topUpBalByAddress (amount = new BigNumber(10 ** 18), to) {
     const nextAmount = new BigNumber(amount)
     console.log(`[Mint]Start recharge ${tokenName}，recharge amount：%s`, nextAmount.toFormat())
     const beforeBalance = await balance.current(to)
-    await sendEthers(to, nextAmount.plus(beforeBalance).toFormat())
-    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await await balance.current(to)).toFormat())
+    console.log(`Balance of toAddress ${beforeBalance} before recharge`)
+    await sendEthers(to, nextAmount.plus(beforeBalance))
+    console.log(`${tokenName} Balance of toAddress：` + new BigNumber(await balance.current(to)).toFormat())
     console.log(`${tokenName} recharge completed`)
 }
 

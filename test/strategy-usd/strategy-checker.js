@@ -346,8 +346,11 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
     }
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
-        const estimatedTotalAssets0 = new BigNumber(await strategy.estimatedTotalAssets());
-        const redeemTx = await mockVault.redeem(strategy.address, estimatedTotalAssets0, outputCode);
+        const strategyParam = await mockVault.strategies(strategy.address);
+        console.log("strategyTotalDebt:%s",strategyParam.totalDebt);
+        const strategyTotalDebt = new BigNumber(strategyParam.totalDebt);
+
+        const redeemTx = await mockVault.redeem(strategy.address, strategyTotalDebt, outputCode);
         expectEvent.inTransaction(redeemTx,'Repay');
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets()).dividedBy(10 ** 18);
         console.log('After withdraw all shares,strategy assets:%s', estimatedTotalAssets1.toFixed());
