@@ -25,6 +25,9 @@ contract MockAavePriceOracleConsumer is IPriceOracleGetter {
         //WETH
         address WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         priceMap[WETH] = originPriceOracle.getAssetPrice(WETH);
+        //stETH
+        address ST_ETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
+        priceMap[ST_ETH] = originPriceOracle.getAssetPrice(ST_ETH);
         //ETH
         address ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
         priceMap[ETH] = originPriceOracle.getAssetPrice(WETH);

@@ -19,9 +19,11 @@ const IERC20Upgradeable = hre.artifacts.require('IERC20Upgradeable');
 const MockVault = hre.artifacts.require('MockETHVault');
 const Mock3rdEthPool = hre.artifacts.require('contracts/eth/mock/Mock3rdEthPool.sol:Mock3rdEthPool');
 const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
+const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
 
 let accessControlProxy;
 let priceOracleConsumer;
+let mockPriceOracle;
 let mockVault;
 let mockUniswapV3Router;
 let strategy;
@@ -140,6 +142,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
 
         accessControlProxy = await AccessControlProxy.new();
         priceOracleConsumer = await PriceOracleConsumer.new();
+        mockPriceOracle = await MockAavePriceOracleConsumer.new();
         await accessControlProxy.initialize(governance, governance, governance, keeper);
         // init mockVault
         mockVault = await MockVault.new(accessControlProxy.address, priceOracleConsumer.address);
@@ -336,7 +339,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
 
     if (uniswapV3RebalanceCallback) {
         it('[UniswapV3 rebalance]', async function () {
-            await uniswapV3RebalanceCallback(strategy.address);
+            await uniswapV3RebalanceCallback(strategy.address,[mockPriceOracle.address]);
         });
     }
 
@@ -346,6 +349,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         const strategyTotalDebt = new BigNumber(strategyParam.totalDebt);
 
         const redeemTx = await mockVault.redeem(strategy.address, strategyTotalDebt, outputCode);
+        console.log("redeem gasUsed",redeemTx.receipt.gasUsed.toString())
         expectEvent.inTransaction(redeemTx,'Repay');
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets());
         console.log('After withdraw all shares,strategy assets:%d', estimatedTotalAssets1);

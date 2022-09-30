@@ -50,9 +50,9 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         address[] memory _wants = new address[](1);
         //weth
         _wants[0] = NativeToken.NATIVE_TOKEN;
-        borrowFactor = 6700;
-        borrowFactorMin = 6500;
-        borrowFactorMax = 6900;
+        borrowFactor = 6900;
+        borrowFactorMin = 6300;
+        borrowFactorMax = 7500;
         borrowCount = 3;
         super._initialize(_vault, uint16(ProtocolEnum.Aave), _name, _wants);
     }
@@ -274,7 +274,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                 _stETHPrice;
             console.log("(i, _astETHAmount, _allowWithdrawAmount)=");
             console.log(i, _astETHAmount, _allowWithdrawAmount);
-            if (_allowWithdrawAmount > 0 && _astETHAmount > 0) {
+            if (_allowWithdrawAmount > 0 && _astETHAmount > 1) {
                 uint256 _setupWithdraw = _allowWithdrawAmount;
                 if (_allowWithdrawAmount >= _astETHAmount) {
                     _setupWithdraw = _astETHAmount;
