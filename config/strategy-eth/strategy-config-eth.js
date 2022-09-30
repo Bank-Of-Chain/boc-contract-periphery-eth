@@ -7,7 +7,7 @@ const {yearnStrategies} = require('./strategy-config-eth-yearn');
 const strategiesList = [
 //    ...auraStrategies,
 //    ...convexStrategies,
-//    ...uniswapStrategies,
+    ...uniswapStrategies,
 //    ...stakewiseStrategies,
 //    ...yearnStrategies
 ]

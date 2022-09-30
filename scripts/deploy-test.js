@@ -74,7 +74,9 @@ const ETHPegToken = 'ETHPegToken';
 const PriceOracleConsumer = 'PriceOracleConsumer';
 const HarvestHelper = 'HarvestHelper';
 const ETH_INITIAL_ASSET_LIST = [
+    MFC_PRODUCTION.USDC_ADDRESS,
     MFC_PRODUCTION.ETH_ADDRESS,
+    MFC_PRODUCTION.WETH_ADDRESS,
 ]
 
 // Used to store address information during deployment

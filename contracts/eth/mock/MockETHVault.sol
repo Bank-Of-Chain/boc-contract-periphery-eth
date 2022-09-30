@@ -14,7 +14,25 @@ import "boc-contract-core/contracts/library/NativeToken.sol";
 /// @author Bank of Chain Protocol Inc
 contract MockETHVault is AccessControlMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    // strategy info
+    mapping(address => StrategyParams) public strategies;
+    //all strategy asset
+    uint256 public totalDebt;
     address public priceProvider;
+
+    /// @param lastReport The last report timestamp
+    /// @param totalDebt The total asset of this strategy
+    /// @param profitLimitRatio The limited ratio of profit
+    /// @param lossLimitRatio The limited ratio for loss
+    /// @param enforceChangeLimit The switch of enforce change Limit
+    struct StrategyParams {
+        uint256 lastReport;
+        uint256 totalDebt;
+        uint256 profitLimitRatio;
+        uint256 lossLimitRatio;
+        bool enforceChangeLimit;
+    }
 
     /// @param _strategy The strategy for reporting
     /// @param _gain The gain in USD units for this report
@@ -77,14 +95,14 @@ contract MockETHVault is AccessControlMixin {
 
     /// @notice Withdraw the funds from specified strategy.
     /// @param _strategy The specified strategy to redeem
-    /// @param _ethValue The amount to redeem in ETH 
-    /// @param _outputCode The code of output 
+    /// @param _ethValue The amount to redeem in ETH
+    /// @param _outputCode The code of output
     function redeem(
         address _strategy,
         uint256 _ethValue,
         uint256 _outputCode
     ) external payable {
-        uint256 _totalValue = IETHStrategy(_strategy).estimatedTotalAssets();
+        uint256 _totalValue = strategies[_strategy].totalDebt;
         if (_ethValue > _totalValue) {
             _ethValue = _totalValue;
         }
@@ -96,6 +114,45 @@ contract MockETHVault is AccessControlMixin {
     /// @param _claimAmounts The claim amount list
     /// Emits a {StrategyReported} event.
     function report(address[] memory _rewardTokens, uint256[] memory _claimAmounts) external {
+        _report(msg.sender, _rewardTokens, _claimAmounts, 0);
         emit StrategyReported(msg.sender, 0, 0, 0, 0, _rewardTokens, _claimAmounts, 0);
+    }
+
+    function _report(
+        address _strategy,
+        address[] memory _rewardTokens,
+        uint256[] memory _claimAmounts,
+        uint256 _lendValue
+    ) private {
+        StrategyParams memory _strategyParam = strategies[_strategy];
+        uint256 _lastStrategyTotalDebt = _strategyParam.totalDebt + _lendValue;
+        uint256 _nowStrategyTotalDebt = IETHStrategy(_strategy).estimatedTotalAssets();
+        uint256 _gain = 0;
+        uint256 _loss = 0;
+
+        if (_nowStrategyTotalDebt > _lastStrategyTotalDebt) {
+            _gain = _nowStrategyTotalDebt - _lastStrategyTotalDebt;
+        } else if (_nowStrategyTotalDebt < _lastStrategyTotalDebt) {
+            _loss = _lastStrategyTotalDebt - _nowStrategyTotalDebt;
+        }
+
+        strategies[_strategy].totalDebt = _nowStrategyTotalDebt;
+        totalDebt = totalDebt + _nowStrategyTotalDebt + _lendValue - _lastStrategyTotalDebt;
+
+        strategies[_strategy].lastReport = block.timestamp;
+        uint256 _type = 0;
+        if (_lendValue > 0) {
+            _type = 1;
+        }
+        emit StrategyReported(
+            _strategy,
+            _gain,
+            _loss,
+            _lastStrategyTotalDebt,
+            _nowStrategyTotalDebt,
+            _rewardTokens,
+            _claimAmounts,
+            _type
+        );
     }
 }

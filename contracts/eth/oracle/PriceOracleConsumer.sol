@@ -31,6 +31,11 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
         AggregatorInterface(0x86392dC19c0b719886221c78AB11eb8Cf5c52812);
     AggregatorInterface public constant ETH_USD_AGGREGATOR =
         AggregatorInterface(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419);
+    AggregatorInterface public constant USDC_ETH_AGGREGATOR =
+        AggregatorInterface(0x986b5E1e1755e3C2440e960477f25201B0a8bbD4);
+    AggregatorInterface public constant USDT_ETH_AGGREGATOR =
+    AggregatorInterface(0xEe9F2375b4bdF6387aa8265dD4FB8F16512A1d46);
+
 
     address private constant stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address private constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
@@ -39,6 +44,8 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
     address private constant sETH = 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb;
     address public constant sETH2 = 0xFe2e637202056d30016725477c5da089Ab0A043A;
     address internal constant rETH2 = 0x20BC832ca081b91433ff6c17f85701B6e92486c5;
+    address internal constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address internal constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
 
     address private constant WETH_RETH_UNI_V3_POOL = 0xf0E02Cf61b31260fd5AE527d58Be16312BDA59b1;
     address private constant WETH_SETH2_UNI_V3_POOL = 0x7379e81228514a1D2a6Cf7559203998E20598346;
@@ -59,6 +66,17 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
     /// @inheritdoc IPriceOracleConsumer
     function stEthPriceInEth() public view override returns (uint256) {
         return uint256(STETH_ETH_AGGREGATOR.latestAnswer());
+    }
+
+
+    /// @inheritdoc IPriceOracleConsumer
+    function usdcPriceInEth() public view override returns (uint256) {
+        return uint256(USDC_ETH_AGGREGATOR.latestAnswer());
+    }
+
+    /// @inheritdoc IPriceOracleConsumer
+    function usdtPriceInEth() public view override returns (uint256) {
+        return uint256(USDT_ETH_AGGREGATOR.latestAnswer());
     }
 
     /// @inheritdoc IPriceOracleConsumer
@@ -152,6 +170,10 @@ contract PriceOracleConsumer is IPriceOracleConsumer, Initializable {
             return sEth2PriceInEth();
         } else if (_asset == rETH2) {
             return rEth2PriceInEth();
+        } else if (_asset == USDC) {
+            return usdcPriceInEth();
+        } else if (_asset == USDT) {
+            return usdtPriceInEth();
         } else {
             assert(false);
         }

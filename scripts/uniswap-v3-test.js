@@ -10,6 +10,8 @@ const IETHVault = hre.artifacts.require("IETHVault");
 const UniswapV3Strategy = hre.artifacts.require("UniswapV3Strategy");
 const ETHUniswapV3Strategy = hre.artifacts.require("ETHUniswapV3Strategy");
 const MockUniswapV3Router = hre.artifacts.require("MockUniswapV3Router");
+const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
+const ILendingPoolAddressesProvider = hre.artifacts.require('ILendingPoolAddressesProvider');
 
 const address = require("./../config/address-config");
 const topUp = require("./../utils/top-up-utils");
@@ -17,16 +19,16 @@ const { advanceBlock } = require("./../utils/block-utils");
 
 const main = async () => {
     // init
-    const dateBlockNumbers = [15449618, 15455880, 15462172, 15468373, 15474642, 15480812, 15487071, 15493290, 15499581, 15505647, 15511690, 15517756, 15523804, 15529867];
+    const dateBlockNumbers = [13724084, 13730329, 13736623, 13742801, 13749028, 13755301, 13761567, 13767793, 13774074, 13780502, 13786990, 13793512, 13799999, 13806390, 13812868, 13819265, 13825732, 13832240, 13838693, 13845239, 13851681, 13858106, 13864522, 13870990, 13877450, 13883917, 13890393, 13896836, 13903355, 13909787, 13916166, 13922671, 13929167, 13935628, 13942121, 13948582, 13954973, 13961397, 13967922, 13974426, 13980848];
     const accounts = await ethers.getSigners();
     const investor = accounts[0].address;
     const keeper = accounts[19].address;
 
-    const usdi = true;
-    const poolAddress = "0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36";
-    const strategyAddress = "0x8E45C0936fa1a65bDaD3222bEFeC6a03C83372cE";
-    const vaultAddress = "0x9c65f85425c619A6cB6D29fF8d57ef696323d188";
-    const vaultBufferAddress = "0x9849832a1d8274aaeDb1112ad9686413461e7101";
+    const usdi = false;
+    const poolAddress = "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640";
+    const strategyAddress = "0xCA8c8688914e0F7096c920146cd0Ad85cD7Ae8b9";
+    const vaultAddress = "0x457cCf29090fe5A24c19c1bc95F492168C0EaFdb";
+    const vaultBufferAddress = "0xF32D39ff9f6Aa7a7A64d7a4F00a54826Ef791a55";
 
     const uniswapV3Pool = await UniswapV3Pool.at(poolAddress);
     const uniswapV3Strategy = usdi ? (await UniswapV3Strategy.at(strategyAddress)) : (await ETHUniswapV3Strategy.at(strategyAddress));
@@ -46,16 +48,21 @@ const main = async () => {
     const strategies = await bocVault.strategies(strategyAddress);
     console.log("=== strategies: %s ===", JSON.stringify(strategies));
 
+    const addressProvider = await ILendingPoolAddressesProvider.at('0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5');
+
+    const originPriceOracleConsumer = await MockAavePriceOracleConsumer.at(await addressProvider.getPriceOracle());
+    console.log('USDC price0:%s',await originPriceOracleConsumer.getAssetPrice('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'));
+
     // invest
     await strategyInvest();
 
     // topUp & approve
-    await topUpAmount(token0Address, new BigNumber(10).pow(10).multipliedBy(new BigNumber(10).pow(token0Decimals)), investor);
+    await topUpAmount(token0Address, new BigNumber(10).pow(12).multipliedBy(new BigNumber(10).pow(token0Decimals)), investor);
     await token0.approve(mockUniswapV3Router.address, new BigNumber(0), { "from": investor });
     await token0.approve(mockUniswapV3Router.address, new BigNumber(10).pow(10).multipliedBy(new BigNumber(10).pow(token0Decimals)), { "from": investor });
-    await topUpAmount(token1Address, new BigNumber(10).pow(10).multipliedBy(new BigNumber(10).pow(token0Decimals)), investor);
+    await topUpAmount(token1Address, new BigNumber(10).pow(12).multipliedBy(new BigNumber(10).pow(token1Decimals)), investor);
     await token1.approve(mockUniswapV3Router.address, new BigNumber(0), { "from": investor });
-    await token1.approve(mockUniswapV3Router.address, new BigNumber(10).pow(10).multipliedBy(new BigNumber(10).pow(token0Decimals)), { "from": investor });
+    await token1.approve(mockUniswapV3Router.address, new BigNumber(10).pow(10).multipliedBy(new BigNumber(10).pow(token1Decimals)), { "from": investor });
 
     // start data back to test
     let count = 0;
@@ -69,6 +76,10 @@ const main = async () => {
         await strategyHarvest();
         positionDetail = await uniswapV3Strategy.getPositionDetail();
         console.log("=== strategyHarvest after strategy.getPositionDetail.token0: %d, strategy.getPositionDetail.token1: %d ===", positionDetail._amounts[0], positionDetail._amounts[1]);
+        const twap = await uniswapV3Strategy.getTwap();
+
+        await originPriceOracleConsumer.setAssetPrice('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', new BigNumber(Math.pow(1.0001, twap) * 1e6).toFixed(0,1));
+        await strategyBorrowRebalance();
         await strategyRebalance();
         positionDetail = await uniswapV3Strategy.getPositionDetail();
         console.log("=== strategyRebalance after strategy.getPositionDetail.token0: %d, strategy.getPositionDetail.token1: %d ===", positionDetail._amounts[0], positionDetail._amounts[1]);
@@ -299,12 +310,12 @@ const main = async () => {
         for (let i = 0; i < wantsInfo._assets.length; i++) {
             const asset = wantsInfo._assets[i];
             const assetContract = await ERC20.at(asset);
-            let amount;
-            if (i !== 0) {
-                amount = new BigNumber(investAmount1).multipliedBy(new BigNumber(10 ** (usdi ? (token1Decimals) : (token1Decimals - 7)))).toFixed();
-            } else {
-                amount = new BigNumber(investAmount1).multipliedBy(new BigNumber(10 ** (usdi ? (token1Decimals) : (token1Decimals - 7)))).multipliedBy(wantsInfo._ratios[i]).dividedBy(initialRatio).toFixed(0);
-            }
+            let amount = new BigNumber(1).multipliedBy(new BigNumber(10 ** token1Decimals)).toFixed();
+//            if (i !== 0) {
+//                amount = new BigNumber(investAmount1).multipliedBy(new BigNumber(10 ** (usdi ? (token1Decimals) : (token1Decimals - 7)))).toFixed();
+//            } else {
+//                amount = new BigNumber(investAmount1).multipliedBy(new BigNumber(10 ** (usdi ? (token1Decimals) : (token1Decimals - 7)))).multipliedBy(wantsInfo._ratios[i]).dividedBy(initialRatio).toFixed(0);
+//            }
             exchangeTokens.push({
                 fromToken: asset,
                 toToken: asset,
@@ -332,6 +343,12 @@ const main = async () => {
         console.log(`=== strategyHarvest before token0.balanceOf: ${await token0.balanceOf(strategyAddress)}, token1.balanceOf: ${await token1.balanceOf(strategyAddress)} ===`);
         await uniswapV3Strategy.harvest();
         console.log(`=== strategyHarvest after token0.balanceOf: ${await token0.balanceOf(strategyAddress)}, token1.balanceOf: ${await token1.balanceOf(strategyAddress)} ===`);
+    }
+
+    async function strategyBorrowRebalance() {
+        console.log(`=== strategyBorrowRebalance before token0.balanceOf: ${await token0.balanceOf(strategyAddress)}, token1.balanceOf: ${await token1.balanceOf(strategyAddress)} ===`);
+        await uniswapV3Strategy.strategyBorrowRebalance();
+        console.log(`=== strategyBorrowRebalance after token0.balanceOf: ${await token0.balanceOf(strategyAddress)}, token1.balanceOf: ${await token1.balanceOf(strategyAddress)} ===`);
     }
 
     async function strategyRebalance() {

@@ -275,6 +275,8 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, IUni
         override
         returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
+        _poke(baseMintInfo.tickLower, baseMintInfo.tickUpper);
+        _poke(limitMintInfo.tickLower, limitMintInfo.tickUpper);
         _rewardsTokens = wants;
         _claimAmounts = new uint256[](2);
         if (baseMintInfo.tickLower != 0 || baseMintInfo.tickUpper != 0) {
@@ -564,6 +566,13 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, IUni
             tickLower: _tickLower,
             tickUpper: _tickUpper
             });
+        }
+    }
+
+    function _poke(int24 tickLower, int24 tickUpper) internal {
+        (uint128 liquidity, , , , ) = __position(tickLower, tickUpper);
+        if (liquidity > 0) {
+            pool.burn(tickLower, tickUpper, 0);
         }
     }
 

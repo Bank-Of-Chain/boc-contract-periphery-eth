@@ -118,23 +118,23 @@ const uniswapStrategies = [
 //            1
 //        ]
 //    },
-//    {
-//        name: "UniswapV3UsdcUsdt500Strategy",
-//        contract: "UniswapV3Strategy",
-//        profitLimitRatio: 100,
-//        lossLimitRatio: 100,
-//        addToVault: true,
-//        customParams: [
-//            "0x7858E59e0C01EA06Df3aF3D20aC7B0003275D4Bf",
-//            0,
-//            10,
-//            41400,
-//            0,
-//            100,
-//            60,
-//            10
-//        ]
-//    },
+    {
+        name: "UniswapV3UsdcUsdt500Strategy",
+        contract: "UniswapV3Strategy",
+        profitLimitRatio: 100,
+        lossLimitRatio: 100,
+        addToVault: true,
+        customParams: [
+            "0x7858E59e0C01EA06Df3aF3D20aC7B0003275D4Bf",
+            0,
+            10,
+            41400,
+            0,
+            100,
+            60,
+            10
+        ]
+    },
 //    {
 //        name: "UniswapV3EthUsdc500Strategy",
 //        contract: "UniswapV3Strategy",

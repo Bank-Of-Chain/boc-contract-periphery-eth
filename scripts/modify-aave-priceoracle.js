@@ -19,11 +19,10 @@ const main = async () => {
     await send.ether(accounts[0].address, addressPrividerOwner, 10 * 10 ** 18)
     await addressProvider.setPriceOracle(mockPriceOracle.address,{from:addressPrividerOwner});
     console.log('AaveAddressProvider oracle:%s',await addressProvider.getPriceOracle());
-    
-    console.log('USDC price1:%s',await mockPriceOracle.getAssetPrice(USDC));
-    await mockPriceOracle.setAssetPrice(USDC,await mockPriceOracle.getAssetPrice(USDC) * 2);
-    console.log('USDC price2:%s',await mockPriceOracle.getAssetPrice(USDC));
-    
+//
+//    console.log('USDC price1:%s',await mockPriceOracle.getAssetPrice(USDC));
+//    await mockPriceOracle.setAssetPrice(USDC,await mockPriceOracle.getAssetPrice(USDC) * 2);
+//    console.log('USDC price2:%s',await mockPriceOracle.getAssetPrice(USDC));
 };
 
 /**

@@ -26,6 +26,10 @@ interface IPriceOracleConsumer {
     /// @return The price of 'sEth2' token in ETH
     function sEth2PriceInEth() external view returns(uint);
 
+    function usdcPriceInEth() external view returns(uint);
+
+    function usdtPriceInEth() external view returns(uint);
+
     /// @return The price of 'rEth2' token in ETH
     function rEth2PriceInEth() external view returns (uint);
 
