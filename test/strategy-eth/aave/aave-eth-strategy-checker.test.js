@@ -4,7 +4,7 @@ const topUp = require('../../../utils/top-up-utils');
 const MFC = require('../../../config/mainnet-fork-test-config');
 const {ethers} = require("hardhat");
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
-const IAaveLendingPool = hre.artifacts.require('IAaveLendingPool');
+const ILendingPool = hre.artifacts.require('ILendingPool');
 const AaveWETHstETHStrategy = hre.artifacts.require('AaveWETHstETHStrategy');
 const ILendingPoolAddressesProvider = hre.artifacts.require('ILendingPoolAddressesProvider');
 const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
@@ -23,7 +23,7 @@ describe('【AaveWETHstETHStrategy Strategy Checker】', function() {
         await topUp.topUpSTETHByAddress(increaseAstEthAmount,keeper);
 
         const _lendingPoolAddress = '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9';
-        const _aaveLendingPool =  await IAaveLendingPool.at(_lendingPoolAddress);
+        const _aaveLendingPool =  await ILendingPool.at(_lendingPoolAddress);
 
         const tokenContract = await ERC20.at(MFC.stETH_ADDRESS);
         await tokenContract.approve(_lendingPoolAddress, increaseAstEthAmount,{from:keeper});
@@ -47,7 +47,7 @@ describe('【AaveWETHstETHStrategy Strategy Checker】', function() {
         let ethPrice = new BigNumber((await mockPriceOracle.getAssetPrice(MFC.stETH_ADDRESS)).toString());
         console.log('stETH price1:%s',ethPrice.toFixed(0,2));
         const lendingPoolAddress = await addressProvider.getLendingPool();
-        const lendingPool  = await IAaveLendingPool.at(lendingPoolAddress);
+        const lendingPool  = await ILendingPool.at(lendingPoolAddress);
 
         let userAccountData = await lendingPool.getUserAccountData(strategyAddress);
         console.log(userAccountData.totalCollateralETH.toString(),

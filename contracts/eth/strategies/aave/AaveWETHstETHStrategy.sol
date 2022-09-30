@@ -5,9 +5,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "../../enums/ProtocolEnum.sol";
 import "../ETHBaseStrategy.sol";
-import "../../../external/aave/IAaveLendingPool.sol";
-import "../../../external/aave/IAaveLendingPoolProvider.sol";
-import "../../../external/aave/IAavePriceOracle.sol";
+import "../../../external/aave/ILendingPool.sol";
+import "../../../external/aave/ILendingPoolAddressesProvider.sol";
+import "../../../external/aave/IPriceOracleGetter.sol";
 import "../../../external/curve/ICurveLiquidityFarmingPool.sol";
 import "../../../external/weth/IWeth.sol";
 import "hardhat/console.sol";
@@ -24,8 +24,8 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     /**
      * @dev Aave Lending Pool Provider
      */
-    IAaveLendingPoolProvider internal constant aaveProvider =
-        IAaveLendingPoolProvider(0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5);
+    ILendingPoolAddressesProvider internal constant aaveProvider =
+        ILendingPoolAddressesProvider(0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5);
     ICurveLiquidityFarmingPool private curvePool;
     uint256 public borrowFactor;
     uint256 public borrowFactorMax;
@@ -187,8 +187,8 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
         if (_receivedStETHAmount > 0) {
             address _lendingPoolAddress = aaveProvider.getLendingPool();
-            IAaveLendingPool _aaveLendingPool = IAaveLendingPool(_lendingPoolAddress);
-            IAavePriceOracle _aaveOracle = IAavePriceOracle(aaveProvider.getPriceOracle());
+            ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
+            IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
             uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
 
             console.log(
@@ -234,7 +234,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         uint256 _stETHPrice,
         address _lendingPoolAddress
     ) private returns (uint256 _increaseAstEthAmount) {
-        IAaveLendingPool _aaveLendingPool = IAaveLendingPool(_lendingPoolAddress);
+        ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
         uint256 _astETHValueInEth = (_astETHAmount * _stETHPrice) / 1e18;
         uint256 _borrowAmount = (_astETHValueInEth * borrowFactor) / BPS;
         _aaveLendingPool.borrow(W_ETH, _borrowAmount, 2, 0, address(this));
@@ -264,7 +264,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         ICurveLiquidityFarmingPool _curvePool = curvePool;
         address _curvePoolAddress = address(_curvePool);
         address _lendingPoolAddress = aaveProvider.getLendingPool();
-        IAaveLendingPool _aaveLendingPool = IAaveLendingPool(_lendingPoolAddress);
+        ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
         uint256 _borrowFactorMax = borrowFactorMax;
         uint256 _repayCount = borrowCount * 2;
         for (uint256 i = 0; i < _repayCount; i++) {
@@ -320,7 +320,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-        IAavePriceOracle _aaveOracle = IAavePriceOracle(aaveProvider.getPriceOracle());
+        IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
         uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
         uint256 _astETHAmount = (balanceOfToken(A_ST_ETH) * _withdrawShares) / _totalShares;
         uint256 _wethDebtAmount = (balanceOfToken(DEBT_W_ETH) * _withdrawShares) / _totalShares;
@@ -350,8 +350,8 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     /// Requirements: only keeper can call
     function rebalance() external isKeeper {
         address _lendingPoolAddress = aaveProvider.getLendingPool();
-        IAaveLendingPool _aaveLendingPool = IAaveLendingPool(_lendingPoolAddress);
-        IAavePriceOracle _aaveOracle = IAavePriceOracle(aaveProvider.getPriceOracle());
+        ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
+        IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
         uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
         (
             uint256 _remainingAmount,
@@ -476,7 +476,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
             uint256 _overflowDebtAmount
         )
     {
-        IAavePriceOracle _aaveOracle = IAavePriceOracle(aaveProvider.getPriceOracle());
+        IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
         uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
         (_remainingAmount, _overflowAmount, _overflowDebtAmount) = _borrowInfo(_stETHPrice);
     }
