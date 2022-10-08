@@ -41,6 +41,9 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     event UpdateBorrowFactorMin(uint256 _borrowFactorMin);
     /// @param _borrowCount The new count Of borrow
     event UpdateBorrowCount(uint256 _borrowCount);
+    /// @param _remainingAmount The amount of aToken will still be used as collateral to borrow eth
+    /// @param _overflowAmount The amount of debt token that exceeds the maximum allowable loan
+    event Rebalance(uint256 _remainingAmount,uint256 _overflowAmount);
 
     function initialize(address _vault, string memory _name) external initializer {
         curvePool = ICurveLiquidityFarmingPool(
@@ -341,7 +344,9 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
             uint256 _wethDebtAmount = _overflowAmount * 3;
             _repay(_astETHAmount, _wethDebtAmount, _stETHPrice);
         }
-        (_remainingAmount, _overflowAmount) = _borrowInfo(_stETHPrice);
+        if(_remainingAmount+_overflowAmount>0){
+            emit Rebalance(_remainingAmount,_overflowAmount);
+        }
     }
 
     /// @notice Returns the info of borrow.
