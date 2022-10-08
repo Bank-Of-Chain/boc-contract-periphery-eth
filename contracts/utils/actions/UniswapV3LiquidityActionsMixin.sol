@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import "../AssetHelpers.sol";
 import "./../../external/uniswapV3/INonfungiblePositionManager.sol";
-import "./../../external/uniswapV3/libraries/PositionKey.sol";
 
 /// @title UniswapV3LiquidityActionsMixin Contract
 /// @notice Mixin contract for interacting with Uniswap v3
@@ -48,10 +47,6 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
         return __collect(_nftId, type(uint128).max, type(uint128).max);
     }
 
-    function __poolCollectAll(int24 _tickLower, int24 _tickUpper) internal returns (uint256, uint256){
-        return __poolCollect(_tickLower, _tickUpper, type(uint128).max, type(uint128).max);
-    }
-
     /// @dev Collects all uncollected amounts from the nft position and sends it to the vaultProxy
     function __collect(uint256 _nftId, uint128 _amount0, uint128 _amount1) internal returns (uint256 __amount0, uint256 __amount1){
         (__amount0, __amount1) = nonfungiblePositionManager.collect(INonfungiblePositionManager.CollectParams({
@@ -62,18 +57,6 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
             })
         );
         emit UniV3NFTCollect(_nftId, __amount0, __amount1);
-    }
-
-    /// TODO toTest
-    function __poolCollect(int24 _tickLower, int24 _tickUpper, uint128 _amount0, uint128 _amount1) internal returns (uint256 __amount0, uint256 __amount1){
-        (__amount0, __amount1) =
-        pool.collect(
-            address(this),
-            _tickLower,
-            _tickUpper,
-            type(uint128).max,
-            type(uint128).max
-        );
     }
 
     /// @dev Helper to get the total _liquidity of an nft position.
@@ -102,18 +85,6 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
     ){
         (_tokenId, _liquidity, _amount0, _amount1) = nonfungiblePositionManager.mint(_params);
         emit UniV3NFTPositionAdded(_tokenId, _liquidity, _amount0, _amount1);
-    }
-
-    /// TODO toTest
-    function __poolMint(int24 _tickLower, int24 _tickUpper, uint128 _liquidity) internal returns (
-        uint256 _tokenId,
-        uint128 __liquidity,
-        uint256 _amount0,
-        uint256 _amount1
-    ){
-        if (_liquidity > 0) {
-            pool.mint(address(this), _tickLower, _tickUpper, _liquidity, "");
-        }
     }
 
     /// @dev Purges a position by removing all _liquidity, collecting and transferring all tokens owed to the vault, and burning the nft.
@@ -150,44 +121,5 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
         nonfungiblePositionManager.burn(_nftId);
 
         emit UniV3NFTPositionRemoved(_nftId);
-    }
-
-    /// TODO toTest
-    function __poolPurge(
-        int24 _tickLower,
-        int24 _tickUpper,
-        uint128 _liquidity,
-        uint256 _amount0Min,
-        uint256 _amount1Min
-    ) internal {
-        if (_liquidity == type(uint128).max) {
-            // This consumes a lot of unnecessary gas because of all the SLOAD operations,
-            // when we only care about `_liquidity`.
-            // Should ideally only be used in the rare case where a griefing attack
-            // (i.e., frontrunning the tx and adding extra _liquidity dust) is a concern.
-            (_liquidity, , , ,) = __position(_tickLower, _tickUpper);
-        }
-
-        if (_liquidity > 0) {
-            pool.burn(_tickLower, _tickUpper, _liquidity);
-        }
-
-        __poolCollectAll(_tickLower, _tickUpper);
-    }
-
-    /// TODO toTest
-    function __position(int24 tickLower, int24 tickUpper)
-    internal
-    view
-    returns (
-        uint128,
-        uint256,
-        uint256,
-        uint128,
-        uint128
-    )
-    {
-        bytes32 positionKey = PositionKey.compute(address(this), tickLower, tickUpper);
-        return pool.positions(positionKey);
     }
 }
