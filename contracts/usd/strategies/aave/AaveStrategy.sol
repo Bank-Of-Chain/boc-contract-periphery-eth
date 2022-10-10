@@ -40,7 +40,7 @@ contract AaveStrategy is BaseStrategy {
      * @dev Aave Lending Pool Provider
      */
     ILendingPoolAddressesProvider internal constant aaveProvider =
-        ILendingPoolAddressesProvider(0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5);
+    ILendingPoolAddressesProvider(0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5);
     ICurveLiquidityFarmingPool private curvePool;
     uint256 public stETHBorrowFactor;
     uint256 public borrowFactor;
@@ -108,8 +108,8 @@ contract AaveStrategy is BaseStrategy {
     function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
         require(
             _borrowFactor < BPS &&
-                _borrowFactor >= borrowFactorMin &&
-                _borrowFactor <= borrowFactorMax,
+            _borrowFactor >= borrowFactorMin &&
+            _borrowFactor <= borrowFactorMax,
             "setting output the range"
         );
         borrowFactor = _borrowFactor;
@@ -160,11 +160,11 @@ contract AaveStrategy is BaseStrategy {
 
     /// @inheritdoc BaseStrategy
     function getWantsInfo()
-        external
-        view
-        virtual
-        override
-        returns (address[] memory _assets, uint256[] memory _ratios)
+    external
+    view
+    virtual
+    override
+    returns (address[] memory _assets, uint256[] memory _ratios)
     {
         _assets = wants;
         _ratios = new uint256[](1);
@@ -173,11 +173,11 @@ contract AaveStrategy is BaseStrategy {
 
     /// @inheritdoc BaseStrategy
     function getOutputsInfo()
-        external
-        view
-        virtual
-        override
-        returns (OutputInfo[] memory _outputsInfo)
+    external
+    view
+    virtual
+    override
+    returns (OutputInfo[] memory _outputsInfo)
     {
         _outputsInfo = new OutputInfo[](1);
         OutputInfo memory _info = _outputsInfo[0];
@@ -187,16 +187,16 @@ contract AaveStrategy is BaseStrategy {
 
     /// @inheritdoc BaseStrategy
     function getPositionDetail()
-        public
-        view
-        virtual
-        override
-        returns (
-            address[] memory _tokens,
-            uint256[] memory _amounts,
-            bool _isUsd,
-            uint256 _usdValue
-        )
+    public
+    view
+    virtual
+    override
+    returns (
+        address[] memory _tokens,
+        uint256[] memory _amounts,
+        bool _isUsd,
+        uint256 _usdValue
+    )
     {
         _tokens = wants;
         _amounts = new uint256[](1);
@@ -207,27 +207,21 @@ contract AaveStrategy is BaseStrategy {
         uint256 _tokenAmount = balanceOfToken(_token) + balanceOfToken(aToken);
         uint256 _wethAmount = balanceOfToken(W_ETH) + address(this).balance;
         uint256 _stEthAmount = balanceOfToken(A_ST_ETH) + balanceOfToken(ST_ETH);
-        console.log("_wethDebtAmount,_tokenAmount,_wethAmount,_stEthAmount");
-        console.log(_wethDebtAmount, _tokenAmount, _wethAmount, _stEthAmount);
-        console.log("balanceOfToken(W_ETH), address(this).balance, balanceOfToken(A_ST_ETH), balanceOfToken(ST_ETH)");
-        console.log(balanceOfToken(W_ETH), address(this).balance, balanceOfToken(A_ST_ETH), balanceOfToken(ST_ETH));
-        console.log("queryTokenValue(_token, _tokenAmount), queryTokenValue(ST_ETH, _stEthAmount),  queryTokenValue(W_ETH, _wethAmount),  queryTokenValue(W_ETH, _wethDebtAmount)");
-        console.log(queryTokenValue(_token, _tokenAmount), queryTokenValue(ST_ETH, _stEthAmount),  queryTokenValue(W_ETH, _wethAmount),  queryTokenValue(W_ETH, _wethDebtAmount));
         _isUsd = true;
         if (_wethAmount > _wethDebtAmount) {
             _usdValue =
-                queryTokenValue(_token, _tokenAmount) +
-                queryTokenValue(ST_ETH, _stEthAmount) +
-                queryTokenValue(W_ETH, _wethAmount - _wethDebtAmount);
+            queryTokenValue(_token, _tokenAmount) +
+            queryTokenValue(ST_ETH, _stEthAmount) +
+            queryTokenValue(W_ETH, _wethAmount - _wethDebtAmount);
         } else if (_wethAmount < _wethDebtAmount) {
             _usdValue =
-                queryTokenValue(_token, _tokenAmount) +
-                queryTokenValue(ST_ETH, _stEthAmount) -
-                queryTokenValue(W_ETH, _wethDebtAmount - _wethAmount);
+            queryTokenValue(_token, _tokenAmount) +
+            queryTokenValue(ST_ETH, _stEthAmount) -
+            queryTokenValue(W_ETH, _wethDebtAmount - _wethAmount);
         } else {
             _usdValue =
-                queryTokenValue(_token, _tokenAmount) +
-                queryTokenValue(ST_ETH, _stEthAmount);
+            queryTokenValue(_token, _tokenAmount) +
+            queryTokenValue(ST_ETH, _stEthAmount);
         }
     }
 
@@ -238,45 +232,59 @@ contract AaveStrategy is BaseStrategy {
 
     /// @inheritdoc BaseStrategy
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
-        internal
-        override
+    internal
+    override
     {
         address _lendingPoolAddress = aaveProvider.getLendingPool();
-        ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
-        IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
-
-        uint256 _amount = _amounts[0];
-        address _asset = _assets[0];
-        address _aToken = aToken;
-        uint256 _beforeBalanceOfAToken = balanceOfToken(_aToken);
-        IERC20Upgradeable(_asset).safeApprove(_lendingPoolAddress, 0);
-        IERC20Upgradeable(_asset).safeApprove(_lendingPoolAddress, _amount);
-        _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
-        uint256 _aTokenAmount = balanceOfToken(_aToken) - _beforeBalanceOfAToken;
-        uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
-        uint256 _aTokenPrice = _aaveOracle.getAssetPrice(_asset);
-
-        uint256 _aTokenValueInEth = (_aTokenAmount * _aTokenPrice) / 1e18;
-        uint256 _borrowAmount = (_aTokenValueInEth * borrowFactor) / BPS;
-        console.log("_aTokenAmount,_aTokenValueInEth,_aTokenPrice,_borrowAmount");
-        console.log(_aTokenAmount, _aTokenValueInEth, _aTokenPrice, _borrowAmount);
-        _aaveLendingPool.borrow(W_ETH, _borrowAmount, 2, 0, address(this));
-        IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
-        uint256 _ethAmount = address(this).balance;
-        curvePool.exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
+        uint256 _stETHPrice;
+        uint256 _tokenPrice;
+        {
+            address _aToken = aToken;
+            address _asset = _assets[0];
+            uint256 _beforeBalanceOfAToken = balanceOfToken(_aToken);
+            {
+                uint256 _amount = _amounts[0];
+                IERC20Upgradeable(_asset).safeApprove(_lendingPoolAddress, 0);
+                IERC20Upgradeable(_asset).safeApprove(_lendingPoolAddress, _amount);
+                ILendingPool(_lendingPoolAddress).deposit(_asset, _amount, address(this), 0);
+            }
+            {
+                address[] memory _assets = new address[](2);
+                _assets[0] = ST_ETH;
+                _assets[1] = _asset;
+                IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
+                uint256[] memory _prices = _aaveOracle.getAssetsPrices(_assets);
+                _stETHPrice = _prices[0];
+                _tokenPrice = _prices[1];
+            }
+            {
+                uint256 _aTokenAmount = balanceOfToken(_aToken) - _beforeBalanceOfAToken;
+                uint256 _borrowAmount = (((_aTokenAmount * _tokenPrice) /
+                decimalUnitOfToken(_asset)) * borrowFactor) / BPS;
+                ILendingPool(_lendingPoolAddress).borrow(
+                    W_ETH,
+                    _borrowAmount,
+                    2,
+                    0,
+                    address(this)
+                );
+                IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
+                uint256 _ethAmount = address(this).balance;
+                curvePool.exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
+            }
+        }
         uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
-        console.log("_ethAmount,_receivedStETHAmount=", _ethAmount, _receivedStETHAmount);
 
         if (_receivedStETHAmount > 0) {
-            address _lendingPoolAddress = aaveProvider.getLendingPool();
-            ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
-            IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
-            uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
-
             uint256 _beforeBalanceOfAStETH = balanceOfToken(A_ST_ETH);
             IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, 0);
             IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, _receivedStETHAmount);
-            _aaveLendingPool.deposit(ST_ETH, _receivedStETHAmount, address(this), 0);
+            ILendingPool(_lendingPoolAddress).deposit(
+                ST_ETH,
+                _receivedStETHAmount,
+                address(this),
+                0
+            );
             uint256 _astETHAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
             uint256 _borrowCount = borrowCount;
             uint256 _borrowFactor = stETHBorrowFactor;
@@ -288,8 +296,6 @@ contract AaveStrategy is BaseStrategy {
                         _stETHPrice,
                         _lendingPoolAddress
                     );
-                    console.log("i,_astETHAmount,_increaseAstEthAmount");
-                    console.log(i, _astETHAmount, _increaseAstEthAmount);
                     _astETHAmount = _increaseAstEthAmount;
                 } else {
                     break;
@@ -325,7 +331,12 @@ contract AaveStrategy is BaseStrategy {
         _increaseAstEthAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
     }
 
-    function _getAllowWithdrawETHAmount(
+    /// @notice get allow withdraw amount
+    /// @param _aaveLendingPool The address of lendingPool
+    /// @param _stETHPrice the price of stETH in ETH
+    /// @param _tokenPrice the price of token(DAI/USDC) in ETH
+    /// @return _allowWithdrawAmount The amount of can withdraw
+    function _getAllowWithdrawAmount(
         ILendingPool _aaveLendingPool,
         uint256 _stETHPrice,
         uint256 _tokenPrice,
@@ -334,32 +345,22 @@ contract AaveStrategy is BaseStrategy {
         uint256 _idleDebtETH;
         {
             (
-        uint256 _totalCollateralETH,
+            uint256 _totalCollateralETH,
             uint256 _totalDebtETH,
             uint256 _availableBorrowsETH,
-        uint256 _currentLiquidationThreshold,
-        ,
+            ,
+            ,
 
-        ) = _aaveLendingPool.getUserAccountData(address(this));
-            console.log("_totalCollateralETH,_totalDebtETH,_availableBorrowsETH,_currentLiquidationThreshold");
-            console.log(_totalCollateralETH,_totalDebtETH,_availableBorrowsETH,_currentLiquidationThreshold);
+            ) = _aaveLendingPool.getUserAccountData(address(this));
 
-            if(_totalDebtETH<1){
-_idleDebtETH = _totalCollateralETH;
-            }else{
-_idleDebtETH =_availableBorrowsETH;
+            if (_totalDebtETH < 1) {
+                _idleDebtETH = _totalCollateralETH;
+            } else {
+                _idleDebtETH = _availableBorrowsETH;
             }
-//            uint256 _allowDebtETH = _totalCollateralETH * _currentLiquidationThreshold/BPS;
-//            if(_allowDebtETH>_totalDebtETH){
-//                _idleDebtETH = _allowDebtETH - _totalDebtETH;
-//            }
-//            console.log("_availableBorrowsETH,_idleDebtETH,_allowDebtETH=",_availableBorrowsETH,_idleDebtETH,_allowDebtETH);
-//            if(_idleDebtETH>_availableBorrowsETH){
-//_idleDebtETH = _availableBorrowsETH;
-//            }
         }
-        if(_idleDebtETH>0){
-            if(_isFetchATokenAmount){
+        if (_idleDebtETH > 0) {
+            if (_isFetchATokenAmount) {
                 DataTypes.ReserveData memory _reserveDataOfToken = _aaveLendingPool.getReserveData(
                     wants[0]
                 );
@@ -369,39 +370,23 @@ _idleDebtETH =_availableBorrowsETH;
                 uint256 _tokenDecimal = ReserveConfiguration.getDecimals(
                     _reserveDataOfToken.configuration.data
                 );
-                _allowWithdrawAmount =  _idleDebtETH*BPS*(10**_tokenDecimal) /(_tokenLiquidationThreshold*_tokenPrice);
-            }else{
-                DataTypes.ReserveData memory _reserveDataOfStETH = _aaveLendingPool.getReserveData(ST_ETH);
+                _allowWithdrawAmount =
+                (_idleDebtETH * BPS * (10**_tokenDecimal)) /
+                (_tokenLiquidationThreshold * _tokenPrice);
+            } else {
+                DataTypes.ReserveData memory _reserveDataOfStETH = _aaveLendingPool.getReserveData(
+                    ST_ETH
+                );
                 uint256 _stETHLiquidationThreshold = ReserveConfiguration.getLiquidationThreshold(
                     _reserveDataOfStETH.configuration.data
                 );
-                _allowWithdrawAmount =  _idleDebtETH*BPS*1e18 /(_stETHLiquidationThreshold*_stETHPrice);
-//                {
-//                    (
-//                    uint256 totalCollateralInETH,
-//                    uint256 totalDebtInETH,
-//                    ,
-//                    uint256 avgLiquidationThreshold,
-//                    ,
-//
-//                    ) = _aaveLendingPool.getUserAccountData(address(this));
-//
-//                    uint256 liquidationThreshold=_stETHLiquidationThreshold;
-//
-//                    uint256 amountToDecreaseInETH = _allowWithdrawAmount * _stETHPrice/1e18;
-//                    console.log("totalCollateralInETH , amountToDecreaseInETH=",totalCollateralInETH , amountToDecreaseInETH);
-//                    uint256 collateralBalanceAfterDecrease = totalCollateralInETH - amountToDecreaseInETH;
-//                    uint256 liquidationThresholdAfterDecrease = (totalCollateralInETH * avgLiquidationThreshold - amountToDecreaseInETH * liquidationThreshold)/collateralBalanceAfterDecrease;
-//                    uint256 healthFactorAfterDecrease = _wadDiv(_percentMul(collateralBalanceAfterDecrease,liquidationThreshold),totalDebtInETH);
-//                    console.log("healthFactorAfterDecrease=",healthFactorAfterDecrease);
-//                }
+                _allowWithdrawAmount =
+                (_idleDebtETH * BPS * 1e18) /
+                (_stETHLiquidationThreshold * _stETHPrice);
             }
         }
 
-
-
         console.log("_allowWithdrawAmount=", _allowWithdrawAmount);
-
     }
 
     /// @notice redeem aToken and astETH,then exchange to debt Token ,and finally repay the debt
@@ -431,7 +416,7 @@ _idleDebtETH =_availableBorrowsETH;
             console.log("_astETHAmount,_aTokenAmount=", _astETHAmount, _aTokenAmount);
             if (_astETHAmount > 1 || _aTokenAmount > 0) {
                 if (_astETHAmount > 1) {
-                    uint256 _setupWithdraw = _getAllowWithdrawETHAmount(
+                    uint256 _setupWithdraw = _getAllowWithdrawAmount(
                         _aaveLendingPool,
                         _stETHPrice,
                         _tokenPrice,
@@ -472,7 +457,7 @@ _idleDebtETH =_availableBorrowsETH;
                     }
                 }
                 if (_aTokenAmount > 0) {
-                    uint256 _setupWithdraw = _getAllowWithdrawETHAmount(
+                    uint256 _setupWithdraw = _getAllowWithdrawAmount(
                         _aaveLendingPool,
                         _stETHPrice,
                         _tokenPrice,
@@ -501,7 +486,12 @@ _idleDebtETH =_availableBorrowsETH;
                                 UNISWAP_V3_ROUTER,
                                 _receivedTokenAmount
                             );
-                            console.log("_receivedTokenAmount,_quoteAmount,_wethDebtAmountCopy=",_receivedTokenAmount,_quoteAmount,_wethDebtAmountCopy);
+                            console.log(
+                                "_receivedTokenAmount,_quoteAmount,_wethDebtAmountCopy=",
+                                _receivedTokenAmount,
+                                _quoteAmount,
+                                _wethDebtAmountCopy
+                            );
                             if (_quoteAmount >= _wethDebtAmountCopy) {
                                 IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
                                     IUniswapV3.ExactOutputSingleParams(
@@ -511,7 +501,7 @@ _idleDebtETH =_availableBorrowsETH;
                                         address(this),
                                         block.timestamp,
                                         _wethDebtAmountCopy,
-                                            _receivedTokenAmount,
+                                        _receivedTokenAmount,
                                         0
                                     )
                                 );
@@ -547,24 +537,20 @@ _idleDebtETH =_availableBorrowsETH;
                         }
                     }
                 }
-                console.log("_astETHAmount,_aTokenAmount=",_astETHAmount,_aTokenAmount);
+                console.log("_astETHAmount,_aTokenAmount=", _astETHAmount, _aTokenAmount);
             } else {
                 break;
             }
         }
         uint256 _ethAmount = address(this).balance;
-        if(_ethAmount > 0){
+        if (_ethAmount > 0) {
             IWeth(W_ETH).deposit{value: _ethAmount}();
         }
 
         uint256 _wethAmount = balanceOfToken(W_ETH);
-        if(_wethAmount>0){
-
+        if (_wethAmount > 0) {
             IERC20Upgradeable(W_ETH).safeApprove(UNISWAP_V3_ROUTER, 0);
-            IERC20Upgradeable(W_ETH).safeApprove(
-                UNISWAP_V3_ROUTER,
-                    _wethAmount
-            );
+            IERC20Upgradeable(W_ETH).safeApprove(UNISWAP_V3_ROUTER, _wethAmount);
 
             IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
                 IUniswapV3.ExactInputSingleParams(
@@ -573,7 +559,7 @@ _idleDebtETH =_availableBorrowsETH;
                     500,
                     address(this),
                     block.timestamp,
-                        _wethAmount,
+                    _wethAmount,
                     0,
                     0
                 )
@@ -663,9 +649,9 @@ _idleDebtETH =_availableBorrowsETH;
     /// @return _remainingAmount The amount of aToken will still be used as collateral to borrow eth
     /// @return _overflowAmount The amount of debt token that exceeds the maximum allowable loan
     function _borrowInfo(uint256 _stETHPrice)
-        private
-        view
-        returns (uint256 _remainingAmount, uint256 _overflowAmount)
+    private
+    view
+    returns (uint256 _remainingAmount, uint256 _overflowAmount)
     {
         uint256 _stETHPriceCopy = _stETHPrice;
         uint256 _borrowFactor = borrowFactor;
@@ -703,16 +689,16 @@ _idleDebtETH =_availableBorrowsETH;
             uint256 _astETHAmount = balanceOfToken(A_ST_ETH);
             if (_needATokenAmountMin > _astETHAmount) {
                 _overflowAmount =
-                    (_leverage *
-                        _wethDebtAmount *
-                        1e18 -
-                        _astETHAmount *
-                        (_leverage - BPS) *
-                        _stETHPriceCopy) /
-                    (_leverage *
-                        curvePool.get_dy(1, 0, 1e18) -
-                        (_leverage - BPS) *
-                        _stETHPriceCopy);
+                (_leverage *
+                _wethDebtAmount *
+                1e18 -
+                _astETHAmount *
+                (_leverage - BPS) *
+                _stETHPriceCopy) /
+                (_leverage *
+                curvePool.get_dy(1, 0, 1e18) -
+                (_leverage - BPS) *
+                _stETHPriceCopy);
             } else if (_needATokenAmountMax < _astETHAmount) {
                 _remainingAmount = _astETHAmount - _needATokenAmount;
             }
@@ -740,54 +726,20 @@ _idleDebtETH =_availableBorrowsETH;
         address _baseToken,
         address _quoteToken
     ) internal pure returns (uint256 _quoteAmount) {
-
         uint160 _sqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tick);
 
         // Calculate quoteAmount with better precision if it doesn't overflow when multiplied by itself
         if (_sqrtRatioX96 <= type(uint128).max) {
             uint256 _ratioX192 = uint256(_sqrtRatioX96) * _sqrtRatioX96;
             _quoteAmount = _baseToken < _quoteToken
-                ? FullMath.mulDiv(_ratioX192, _baseAmount, 1 << 192)
-                : FullMath.mulDiv(1 << 192, _baseAmount, _ratioX192);
+            ? FullMath.mulDiv(_ratioX192, _baseAmount, 1 << 192)
+            : FullMath.mulDiv(1 << 192, _baseAmount, _ratioX192);
         } else {
             uint256 _ratioX128 = FullMath.mulDiv(_sqrtRatioX96, _sqrtRatioX96, 1 << 64);
             _quoteAmount = _baseToken < _quoteToken
-                ? FullMath.mulDiv(_ratioX128, _baseAmount, 1 << 128)
-                : FullMath.mulDiv(1 << 128, _baseAmount, _ratioX128);
+            ? FullMath.mulDiv(_ratioX128, _baseAmount, 1 << 128)
+            : FullMath.mulDiv(1 << 128, _baseAmount, _ratioX128);
         }
     }
 
-    /**
-   * @dev Executes a percentage multiplication
-   * @param value The value of which the percentage needs to be calculated
-   * @param percentage The percentage of the value to be calculated
-   * @return The percentage of value
-   **/
-    function _percentMul(uint256 value, uint256 percentage) internal pure returns (uint256) {
-        if (value == 0 || percentage == 0) {
-            return 0;
-        }
-
-        require(
-            value <= (type(uint256).max - HALF_PERCENT) / percentage,
-            "MATH_MULTIPLICATION_OVERFLOW"
-        );
-
-        return (value * percentage + HALF_PERCENT) / PERCENTAGE_FACTOR;
-    }
-
-    /**
-   * @dev Divides two wad, rounding half up to the nearest wad
-   * @param a Wad
-   * @param b Wad
-   * @return The result of a/b, in wad
-   **/
-    function _wadDiv(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b != 0, "MATH_DIVISION_BY_ZERO");
-        uint256 halfB = b / 2;
-
-        require(a <= (type(uint256).max - halfB) / WAD, "MATH_MULTIPLICATION_OVERFLOW");
-
-        return (a * WAD + halfB) / b;
-    }
 }
