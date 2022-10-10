@@ -88,7 +88,7 @@ contract AaveStrategy is BaseStrategy {
         borrowFactor = 6700;
         borrowFactorMin = 6500;
         borrowFactorMax = 6900;
-        borrowCount = 2;
+        borrowCount = 3;
         super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Aave), _wants);
     }
 
@@ -209,7 +209,10 @@ contract AaveStrategy is BaseStrategy {
         uint256 _stEthAmount = balanceOfToken(A_ST_ETH) + balanceOfToken(ST_ETH);
         console.log("_wethDebtAmount,_tokenAmount,_wethAmount,_stEthAmount");
         console.log(_wethDebtAmount, _tokenAmount, _wethAmount, _stEthAmount);
+        console.log("balanceOfToken(W_ETH), address(this).balance, balanceOfToken(A_ST_ETH), balanceOfToken(ST_ETH)");
         console.log(balanceOfToken(W_ETH), address(this).balance, balanceOfToken(A_ST_ETH), balanceOfToken(ST_ETH));
+        console.log("queryTokenValue(_token, _tokenAmount), queryTokenValue(ST_ETH, _stEthAmount),  queryTokenValue(W_ETH, _wethAmount),  queryTokenValue(W_ETH, _wethDebtAmount)");
+        console.log(queryTokenValue(_token, _tokenAmount), queryTokenValue(ST_ETH, _stEthAmount),  queryTokenValue(W_ETH, _wethAmount),  queryTokenValue(W_ETH, _wethDebtAmount));
         _isUsd = true;
         if (_wethAmount > _wethDebtAmount) {
             _usdValue =
@@ -340,17 +343,22 @@ contract AaveStrategy is BaseStrategy {
         ) = _aaveLendingPool.getUserAccountData(address(this));
             console.log("_totalCollateralETH,_totalDebtETH,_availableBorrowsETH,_currentLiquidationThreshold");
             console.log(_totalCollateralETH,_totalDebtETH,_availableBorrowsETH,_currentLiquidationThreshold);
-            uint256 _allowDebtETH = _totalCollateralETH * _currentLiquidationThreshold/BPS;
-            if(_allowDebtETH>_totalDebtETH){
-                _idleDebtETH = _allowDebtETH - _totalDebtETH;
+
+            if(_totalDebtETH<1){
+_idleDebtETH = _totalCollateralETH;
+            }else{
+_idleDebtETH =_availableBorrowsETH;
             }
+//            uint256 _allowDebtETH = _totalCollateralETH * _currentLiquidationThreshold/BPS;
+//            if(_allowDebtETH>_totalDebtETH){
+//                _idleDebtETH = _allowDebtETH - _totalDebtETH;
+//            }
 //            console.log("_availableBorrowsETH,_idleDebtETH,_allowDebtETH=",_availableBorrowsETH,_idleDebtETH,_allowDebtETH);
 //            if(_idleDebtETH>_availableBorrowsETH){
 //_idleDebtETH = _availableBorrowsETH;
 //            }
         }
         if(_idleDebtETH>0){
-
             if(_isFetchATokenAmount){
                 DataTypes.ReserveData memory _reserveDataOfToken = _aaveLendingPool.getReserveData(
                     wants[0]
@@ -368,24 +376,25 @@ contract AaveStrategy is BaseStrategy {
                     _reserveDataOfStETH.configuration.data
                 );
                 _allowWithdrawAmount =  _idleDebtETH*BPS*1e18 /(_stETHLiquidationThreshold*_stETHPrice);
-                {
-                    (
-                    uint256 totalCollateralInETH,
-                    uint256 totalDebtInETH,
-                    ,
-                    uint256 avgLiquidationThreshold,
-                    ,
-
-                    ) = _aaveLendingPool.getUserAccountData(address(this));
-
-                    uint256 liquidationThreshold=_stETHLiquidationThreshold;
-
-                    uint256 amountToDecreaseInETH = _allowWithdrawAmount * _stETHPrice/1e18;
-                    uint256 collateralBalanceAfterDecrease = totalCollateralInETH - amountToDecreaseInETH;
-                    uint256 liquidationThresholdAfterDecrease = (totalCollateralInETH * avgLiquidationThreshold - amountToDecreaseInETH * liquidationThreshold)/collateralBalanceAfterDecrease;
-                    uint256 healthFactorAfterDecrease = _wadDiv(_percentMul(collateralBalanceAfterDecrease,liquidationThreshold),totalDebtInETH);
-                    console.log("healthFactorAfterDecrease=",healthFactorAfterDecrease);
-                }
+//                {
+//                    (
+//                    uint256 totalCollateralInETH,
+//                    uint256 totalDebtInETH,
+//                    ,
+//                    uint256 avgLiquidationThreshold,
+//                    ,
+//
+//                    ) = _aaveLendingPool.getUserAccountData(address(this));
+//
+//                    uint256 liquidationThreshold=_stETHLiquidationThreshold;
+//
+//                    uint256 amountToDecreaseInETH = _allowWithdrawAmount * _stETHPrice/1e18;
+//                    console.log("totalCollateralInETH , amountToDecreaseInETH=",totalCollateralInETH , amountToDecreaseInETH);
+//                    uint256 collateralBalanceAfterDecrease = totalCollateralInETH - amountToDecreaseInETH;
+//                    uint256 liquidationThresholdAfterDecrease = (totalCollateralInETH * avgLiquidationThreshold - amountToDecreaseInETH * liquidationThreshold)/collateralBalanceAfterDecrease;
+//                    uint256 healthFactorAfterDecrease = _wadDiv(_percentMul(collateralBalanceAfterDecrease,liquidationThreshold),totalDebtInETH);
+//                    console.log("healthFactorAfterDecrease=",healthFactorAfterDecrease);
+//                }
             }
         }
 
@@ -415,7 +424,7 @@ contract AaveStrategy is BaseStrategy {
         address _tokenCopy = _token;
         ICurveLiquidityFarmingPool _curvePool = curvePool;
         ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
-        uint256 _repayCount = borrowCount * 3;
+        uint256 _repayCount = borrowCount * 2;
         //        address _uniswapV3Pool = uniswapV3Pool;
 
         for (uint256 i = 0; i < _repayCount; i++) {
@@ -492,6 +501,7 @@ contract AaveStrategy is BaseStrategy {
                                 UNISWAP_V3_ROUTER,
                                 _receivedTokenAmount
                             );
+                            console.log("_receivedTokenAmount,_quoteAmount,_wethDebtAmountCopy=",_receivedTokenAmount,_quoteAmount,_wethDebtAmountCopy);
                             if (_quoteAmount >= _wethDebtAmountCopy) {
                                 IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
                                     IUniswapV3.ExactOutputSingleParams(
@@ -501,7 +511,7 @@ contract AaveStrategy is BaseStrategy {
                                         address(this),
                                         block.timestamp,
                                         _wethDebtAmountCopy,
-                                        0,
+                                            _receivedTokenAmount,
                                         0
                                     )
                                 );
@@ -541,6 +551,33 @@ contract AaveStrategy is BaseStrategy {
             } else {
                 break;
             }
+        }
+        uint256 _ethAmount = address(this).balance;
+        if(_ethAmount > 0){
+            IWeth(W_ETH).deposit{value: _ethAmount}();
+        }
+
+        uint256 _wethAmount = balanceOfToken(W_ETH);
+        if(_wethAmount>0){
+
+            IERC20Upgradeable(W_ETH).safeApprove(UNISWAP_V3_ROUTER, 0);
+            IERC20Upgradeable(W_ETH).safeApprove(
+                UNISWAP_V3_ROUTER,
+                    _wethAmount
+            );
+
+            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
+                IUniswapV3.ExactInputSingleParams(
+                    W_ETH,
+                    _tokenCopy,
+                    500,
+                    address(this),
+                    block.timestamp,
+                        _wethAmount,
+                    0,
+                    0
+                )
+            );
         }
     }
 
@@ -703,6 +740,7 @@ contract AaveStrategy is BaseStrategy {
         address _baseToken,
         address _quoteToken
     ) internal pure returns (uint256 _quoteAmount) {
+
         uint160 _sqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tick);
 
         // Calculate quoteAmount with better precision if it doesn't overflow when multiplied by itself
