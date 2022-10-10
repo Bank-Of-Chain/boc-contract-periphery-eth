@@ -57,6 +57,7 @@
     "coverage": "hardhat coverage",
     "docgen": "hardhat docgen",
     "topup": "hardhat run scripts/top-up.js --network localhost",
+    "map": "hardhat run scripts/modify-aave-priceoracle.js --network localhost",
     "test_adapter_add_ethi": "hardhat run scripts/test-adapter-add-ethi.js --network localhost",
     "test_adapter_remove_ethi": "hardhat run scripts/test-adapter-remove-ethi.js --network localhost",
     "test_adapter_add_usdi": "hardhat run scripts/test-adapter-add-usdi.js --network localhost",

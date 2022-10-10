@@ -1,8 +1,9 @@
 const { send } = require("@openzeppelin/test-helpers")
+const BigNumber = require('bignumber.js');
 const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
 const ILendingPoolAddressesProvider = hre.artifacts.require('ILendingPoolAddressesProvider');
 
-const USDC = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+const ST_ETH = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84';
 
 const main = async () => {
     const mockPriceOracle = await MockAavePriceOracleConsumer.new();
@@ -13,16 +14,16 @@ const main = async () => {
     await impersonates([addressPrividerOwner]);
 
     const originPriceOracleConsumer = await MockAavePriceOracleConsumer.at(await addressProvider.getPriceOracle());
-    console.log('USDC price0:%s',await originPriceOracleConsumer.getAssetPrice(USDC));
+    console.log('USDC price0:%s',await originPriceOracleConsumer.getAssetPrice(ST_ETH));
 
     const accounts = await ethers.getSigners();
     await send.ether(accounts[0].address, addressPrividerOwner, 10 * 10 ** 18)
     await addressProvider.setPriceOracle(mockPriceOracle.address,{from:addressPrividerOwner});
     console.log('AaveAddressProvider oracle:%s',await addressProvider.getPriceOracle());
     
-    console.log('USDC price1:%s',await mockPriceOracle.getAssetPrice(USDC));
-    await mockPriceOracle.setAssetPrice(USDC,await mockPriceOracle.getAssetPrice(USDC) * 2);
-    console.log('USDC price2:%s',await mockPriceOracle.getAssetPrice(USDC));
+    console.log('USDC price1:%s',await mockPriceOracle.getAssetPrice(ST_ETH));
+    await mockPriceOracle.setAssetPrice(ST_ETH,new BigNumber(await mockPriceOracle.getAssetPrice(ST_ETH)).multipliedBy(2));
+    console.log('USDC price2:%s',await mockPriceOracle.getAssetPrice(ST_ETH));
     
 };
 
