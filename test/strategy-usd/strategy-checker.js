@@ -17,6 +17,7 @@ const AggregatedDerivativePriceFeed = hre.artifacts.require('AggregatedDerivativ
 const ValueInterpreter = hre.artifacts.require('ValueInterpreter');
 const MockVault = hre.artifacts.require('contracts/usd/mock/MockVault.sol:MockVault');
 const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
+const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
 
 
 let accessControlProxy;
@@ -24,6 +25,7 @@ let valueInterpreter;
 let mockVault;
 let mockUniswapV3Router;
 let strategy;
+let mockPriceOracle;
 
 let governance;
 let keeper;
@@ -162,6 +164,8 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         investor = accounts[1].address;
         harvester = accounts[2].address;
         keeper = accounts[19].address;
+
+        mockPriceOracle = await MockAavePriceOracleConsumer.new();
 
         accessControlProxy = await AccessControlProxy.new();
         await accessControlProxy.initialize(governance, governance, governance, keeper);
@@ -341,7 +345,7 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
 
     if (uniswapV3RebalanceCallback) {
         it('[UniswapV3 rebalance]', async function () {
-            await uniswapV3RebalanceCallback(strategy.address);
+            await uniswapV3RebalanceCallback(strategy.address,[mockPriceOracle.address]);
         });
     }
 

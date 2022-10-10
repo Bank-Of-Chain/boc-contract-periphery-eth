@@ -44,7 +44,18 @@ contract MockAavePriceOracleConsumer is IPriceOracleGetter {
     /// @param _asset It is this `_asset` that gets it the price of
     /// @return the price of a `_asset` asset (scaled by 1e18).
     ///  Zero means the `_price` is unavailable.
-    function getAssetPrice(address _asset) external override view returns (uint){
+    function getAssetPrice(address _asset) public override view returns (uint){
         return priceMap[_asset];
+    }
+
+    /// @notice Gets a list of prices from a list of assets addresses
+    /// @param _assets The list of assets addresses
+    function getAssetsPrices(address[] calldata _assets) external override view returns (uint256[] memory){
+        uint256 _assetsLength = _assets.length;
+        uint256[] memory _prices = new uint256[](_assetsLength);
+        for (uint256 i = 0; i < _assetsLength; i++){
+            _prices[i] = getAssetPrice(_assets[i]);
+        }
+        return _prices;
     }
 }

@@ -192,10 +192,12 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
             _aaveLendingPool.deposit(ST_ETH, _receivedStETHAmount, address(this), 0);
             uint256 _astETHAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
             uint256 _borrowCount = borrowCount;
+            uint256 _borrowFactor = borrowFactor;
             for (uint256 i = 0; i < _borrowCount; i++) {
                 if (_astETHAmount > 10) {
                     uint256 _increaseAstEthAmount = _borrowEthAndDepositStEth(
                         _astETHAmount,
+                            _borrowFactor,
                         _stETHPrice,
                         _lendingPoolAddress
                     );
@@ -214,12 +216,13 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     /// @return _increaseAstEthAmount The amount of increase aToken
     function _borrowEthAndDepositStEth(
         uint256 _astETHAmount,
+        uint256 _borrowFactor,
         uint256 _stETHPrice,
         address _lendingPoolAddress
     ) private returns (uint256 _increaseAstEthAmount) {
         ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
         uint256 _astETHValueInEth = (_astETHAmount * _stETHPrice) / 1e18;
-        uint256 _borrowAmount = (_astETHValueInEth * borrowFactor) / BPS;
+        uint256 _borrowAmount = (_astETHValueInEth * _borrowFactor) / BPS;
         _aaveLendingPool.borrow(W_ETH, _borrowAmount, 2, 0, address(this));
         IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
         uint256 _ethAmount = address(this).balance;
@@ -244,7 +247,6 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     ) private {
         ICurveLiquidityFarmingPool _curvePool = curvePool;
         ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
-        uint256 _borrowFactorMax = borrowFactorMax;
         uint256 _repayCount = borrowCount * 2;
 
         for (uint256 i = 0; i < _repayCount; i++) {
@@ -327,10 +329,12 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(_stETHPrice);
         if (_remainingAmount > 10) {
             uint256 _borrowCount = borrowCount;
+            uint256 _borrowFactor = borrowFactor;
             for (uint256 i = 0; i < _borrowCount; i++) {
                 if (_remainingAmount > 10) {
                     uint256 _increaseAstEthAmount = _borrowEthAndDepositStEth(
                         _remainingAmount,
+                    _borrowFactor,
                         _stETHPrice,
                         _lendingPoolAddress
                     );

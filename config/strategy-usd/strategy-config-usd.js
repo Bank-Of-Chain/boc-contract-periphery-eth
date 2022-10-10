@@ -6,6 +6,7 @@ const {stargateStrategies} = require('./strategy-config-usd-stargate');
 const {sushiStrategies} = require('./strategy-config-usd-sushi');
 const {uniswapStrategies} = require('./strategy-config-usd-uniswap');
 const {yearnStrategies} = require('./strategy-config-usd-yearn');
+const {aaveStrategies} = require('./strategy-config-usd-aave');
 
 const strategiesList = [
     ...auraStrategies,
@@ -16,6 +17,7 @@ const strategiesList = [
     // ...sushiStrategies,
     ...uniswapStrategies,
     // ...yearnStrategies
+    ...aaveStrategies
 ]
 
 exports.strategiesList = strategiesList
