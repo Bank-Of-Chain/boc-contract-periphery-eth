@@ -181,16 +181,21 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         curvePool.exchange{value: _amount}(0, 1, _amount, 0);
         uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
         if (_receivedStETHAmount > 0) {
+            uint256 _astETHAmount;
+            uint256 _stETHPrice;
             address _lendingPoolAddress = aaveProvider.getLendingPool();
-            ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
-            IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
-            uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
+            {
+                ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
+                IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
+                _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
 
-            uint256 _beforeBalanceOfAStETH = balanceOfToken(A_ST_ETH);
-            IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, 0);
-            IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, _receivedStETHAmount);
-            _aaveLendingPool.deposit(ST_ETH, _receivedStETHAmount, address(this), 0);
-            uint256 _astETHAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
+                uint256 _beforeBalanceOfAStETH = balanceOfToken(A_ST_ETH);
+                IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, 0);
+                IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, _receivedStETHAmount);
+                _aaveLendingPool.deposit(ST_ETH, _receivedStETHAmount, address(this), 0);
+                _astETHAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
+            }
+
             uint256 _borrowCount = borrowCount;
             uint256 _borrowFactor = borrowFactor;
             for (uint256 i = 0; i < _borrowCount; i++) {
@@ -278,17 +283,21 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                 }
                 _aaveLendingPool.withdraw(ST_ETH, _setupWithdraw, address(this));
                 _astETHAmount = _astETHAmount - _setupWithdraw;
-                uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
-                IERC20Upgradeable(ST_ETH).safeApprove(address(_curvePool), 0);
-                IERC20Upgradeable(ST_ETH).safeApprove(address(_curvePool), _receivedStETHAmount);
-                _curvePool.exchange(1, 0, _receivedStETHAmount, 0);
+                {
+                    uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
+                    IERC20Upgradeable(ST_ETH).safeApprove(address(_curvePool), 0);
+                    IERC20Upgradeable(ST_ETH).safeApprove(address(_curvePool), _receivedStETHAmount);
+                    _curvePool.exchange(1, 0, _receivedStETHAmount, 0);
+                }
                 if (_wethDebtAmount > 0) {
-                    uint256 _ethAmount = balanceOfToken(NativeToken.NATIVE_TOKEN);
                     uint256 _setupRepay;
-                    if (_ethAmount >= _wethDebtAmount) {
-                        _setupRepay = _wethDebtAmount;
-                    } else {
-                        _setupRepay = _ethAmount;
+                    {
+                        uint256 _ethAmount = balanceOfToken(NativeToken.NATIVE_TOKEN);
+                        if (_ethAmount >= _wethDebtAmount) {
+                            _setupRepay = _wethDebtAmount;
+                        } else {
+                            _setupRepay = _ethAmount;
+                        }
                     }
                     IWeth(W_ETH).deposit{value: _setupRepay}();
                     IERC20Upgradeable(W_ETH).safeApprove(address(_aaveLendingPool), 0);
