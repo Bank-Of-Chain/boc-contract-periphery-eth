@@ -43,7 +43,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     event UpdateBorrowCount(uint256 _borrowCount);
     /// @param _remainingAmount The amount of aToken will still be used as collateral to borrow eth
     /// @param _overflowAmount The amount of debt token that exceeds the maximum allowable loan
-    event Rebalance(uint256 _remainingAmount,uint256 _overflowAmount);
+    event Rebalance(uint256 _remainingAmount, uint256 _overflowAmount);
 
     function initialize(address _vault, string memory _name) external initializer {
         curvePool = ICurveLiquidityFarmingPool(
@@ -79,7 +79,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     /// Requirements: only vault manager can call
     function setBorrowFactorMax(uint256 _borrowFactorMax) external isVaultManager {
         require(
-            _borrowFactorMax < BPS && _borrowFactorMax > borrowFactorMin,
+            _borrowFactorMax < BPS && _borrowFactorMax > borrowFactor,
             "setting output the range"
         );
         borrowFactorMax = _borrowFactorMax;
@@ -92,7 +92,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     /// Requirements: only vault manager can call
     function setBorrowFactorMin(uint256 _borrowFactorMin) external isVaultManager {
         require(
-            _borrowFactorMin < BPS && _borrowFactorMin < borrowFactorMax,
+            _borrowFactorMin < BPS && _borrowFactorMin < borrowFactor,
             "setting output the range"
         );
         borrowFactorMin = _borrowFactorMin;
@@ -202,7 +202,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                 if (_astETHAmount > 10) {
                     uint256 _increaseAstEthAmount = _borrowEthAndDepositStEth(
                         _astETHAmount,
-                            _borrowFactor,
+                        _borrowFactor,
                         _stETHPrice,
                         _lendingPoolAddress
                     );
@@ -286,7 +286,10 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                 {
                     uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
                     IERC20Upgradeable(ST_ETH).safeApprove(address(_curvePool), 0);
-                    IERC20Upgradeable(ST_ETH).safeApprove(address(_curvePool), _receivedStETHAmount);
+                    IERC20Upgradeable(ST_ETH).safeApprove(
+                        address(_curvePool),
+                        _receivedStETHAmount
+                    );
                     _curvePool.exchange(1, 0, _receivedStETHAmount, 0);
                 }
                 if (_wethDebtAmount > 0) {
@@ -343,7 +346,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                 if (_remainingAmount > 10) {
                     uint256 _increaseAstEthAmount = _borrowEthAndDepositStEth(
                         _remainingAmount,
-                    _borrowFactor,
+                        _borrowFactor,
                         _stETHPrice,
                         _lendingPoolAddress
                     );
@@ -357,8 +360,8 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
             uint256 _wethDebtAmount = _overflowAmount * 3;
             _repay(_astETHAmount, _wethDebtAmount, _stETHPrice);
         }
-        if(_remainingAmount+_overflowAmount>0){
-            emit Rebalance(_remainingAmount,_overflowAmount);
+        if (_remainingAmount + _overflowAmount > 0) {
+            emit Rebalance(_remainingAmount, _overflowAmount);
         }
     }
 
