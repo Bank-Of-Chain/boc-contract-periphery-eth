@@ -18,7 +18,7 @@ import "../../../external/curve/ICurveLiquidityFarmingPool.sol";
 import "../../../external/weth/IWeth.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 
-contract AaveStrategy is BaseStrategy {
+contract AaveLendingStEthStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;

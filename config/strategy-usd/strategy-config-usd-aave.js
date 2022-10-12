@@ -1,7 +1,7 @@
 const aaveStrategies = [
     {
-        name: "AaveDaiStrategy",
-        contract: "AaveStrategy",
+        name: "AaveDaiLendingStEthStrategy",
+        contract: "AaveLendingStEthStrategy",
         profitLimitRatio: 100,
         lossLimitRatio: 100,
         addToVault: true,
@@ -12,8 +12,8 @@ const aaveStrategies = [
         ]
     },
     {
-        name: "AaveUSDCStrategy",
-        contract: "AaveStrategy",
+        name: "AaveUSDCLendingStEthStrategy",
+        contract: "AaveLendingStEthStrategy",
         profitLimitRatio: 100,
         lossLimitRatio: 100,
         addToVault: true,
