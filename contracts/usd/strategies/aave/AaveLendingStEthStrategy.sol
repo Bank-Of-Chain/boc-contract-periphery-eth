@@ -294,16 +294,25 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                 uint256 _aTokenAmount = balanceOfToken(_aToken) - _beforeBalanceOfAToken;
                 uint256 _borrowAmount = (((_aTokenAmount * _tokenPrice) /
                     decimalUnitOfToken(_asset)) * borrowFactor) / BPS;
-                ILendingPool(_lendingPoolAddress).borrow(
-                    W_ETH,
-                    _borrowAmount,
-                    uint256(DataTypes.InterestRateMode.VARIABLE),
-                    0,
-                    address(this)
-                );
-                IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
-                uint256 _ethAmount = address(this).balance;
-                curvePool.exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
+                {
+                    (, , uint256 _availableBorrowsETH, , , ) = ILendingPool(_lendingPoolAddress)
+                        .getUserAccountData(address(this));
+                    if (_borrowAmount > _availableBorrowsETH) {
+                        _borrowAmount = _availableBorrowsETH;
+                    }
+                }
+                if (_borrowAmount > 0) {
+                    ILendingPool(_lendingPoolAddress).borrow(
+                        W_ETH,
+                        _borrowAmount,
+                        uint256(DataTypes.InterestRateMode.VARIABLE),
+                        0,
+                        address(this)
+                    );
+                    IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
+                    uint256 _ethAmount = address(this).balance;
+                    curvePool.exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
+                }
             }
         }
         uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
@@ -502,23 +511,32 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
         uint256 _astETHValueInEth = (_astETHAmount * _stETHPrice) / 1e18;
         uint256 _borrowAmount = (_astETHValueInEth * _borrowFactor) / BPS;
-        _aaveLendingPool.borrow(
-            W_ETH,
-            _borrowAmount,
-            uint256(DataTypes.InterestRateMode.VARIABLE),
-            0,
-            address(this)
-        );
-        IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
-        uint256 _ethAmount = address(this).balance;
-        curvePool.exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
-        uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
+        {
+            (, , uint256 _availableBorrowsETH, , , ) = ILendingPool(_lendingPoolAddress)
+                .getUserAccountData(address(this));
+            if (_borrowAmount > _availableBorrowsETH) {
+                _borrowAmount = _availableBorrowsETH;
+            }
+        }
+        if (_borrowAmount > 0) {
+            _aaveLendingPool.borrow(
+                W_ETH,
+                _borrowAmount,
+                uint256(DataTypes.InterestRateMode.VARIABLE),
+                0,
+                address(this)
+            );
+            IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
+            uint256 _ethAmount = address(this).balance;
+            curvePool.exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
+            uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
 
-        IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, 0);
-        IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, _receivedStETHAmount);
-        uint256 _beforeBalanceOfAStETH = balanceOfToken(A_ST_ETH);
-        _aaveLendingPool.deposit(ST_ETH, _receivedStETHAmount, address(this), 0);
-        _increaseAstEthAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
+            IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, 0);
+            IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, _receivedStETHAmount);
+            uint256 _beforeBalanceOfAStETH = balanceOfToken(A_ST_ETH);
+            _aaveLendingPool.deposit(ST_ETH, _receivedStETHAmount, address(this), 0);
+            _increaseAstEthAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
+        }
     }
 
     /// @notice get allow withdraw amount
