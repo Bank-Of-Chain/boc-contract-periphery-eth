@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "../../enums/ProtocolEnum.sol";
 import "../ETHBaseStrategy.sol";
 import "../../../external/aave/ILendingPool.sol";
+import "../../../external/aave/DataTypes.sol";
 import "../../../external/aave/ILendingPoolAddressesProvider.sol";
 import "../../../external/aave/IPriceOracleGetter.sol";
 import "../../../external/curve/ICurveLiquidityFarmingPool.sol";
@@ -349,7 +350,13 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
         uint256 _astETHValueInEth = (_astETHAmount * _stETHPrice) / 1e18;
         uint256 _borrowAmount = (_astETHValueInEth * _borrowFactor) / BPS;
-        _aaveLendingPool.borrow(W_ETH, _borrowAmount, 2, 0, address(this));
+        _aaveLendingPool.borrow(
+            W_ETH,
+            _borrowAmount,
+            DataTypes.InterestRateMode.VARIABLE,
+            0,
+            address(this)
+        );
         IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
         uint256 _ethAmount = address(this).balance;
         curvePool.exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
@@ -433,7 +440,12 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                     IWeth(W_ETH).deposit{value: _setupRepay}();
                     IERC20Upgradeable(W_ETH).safeApprove(address(_aaveLendingPool), 0);
                     IERC20Upgradeable(W_ETH).safeApprove(address(_aaveLendingPool), _setupRepay);
-                    _aaveLendingPool.repay(W_ETH, _setupRepay, 2, address(this));
+                    _aaveLendingPool.repay(
+                        W_ETH,
+                        _setupRepay,
+                        DataTypes.InterestRateMode.VARIABLE,
+                        address(this)
+                    );
                     _wethDebtAmount = _wethDebtAmount - _setupRepay;
                 }
             } else {

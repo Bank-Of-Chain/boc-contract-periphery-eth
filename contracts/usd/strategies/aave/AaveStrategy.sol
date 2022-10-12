@@ -21,11 +21,6 @@ import "../../../external/uniswap/IUniswapV3.sol";
 contract AaveStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    uint256 internal constant PERCENTAGE_FACTOR = 1e4; //percentage plus two decimals
-    uint256 internal constant HALF_PERCENT = PERCENTAGE_FACTOR / 2;
-    uint256 internal constant WAD = 1e18;
-    uint256 internal constant halfWAD = WAD / 2;
-
     address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address public constant DEBT_W_ETH = 0xF63B34710400CAd3e044cFfDcAb00a0f32E33eCf;
     address public constant W_ETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -302,7 +297,7 @@ contract AaveStrategy is BaseStrategy {
                 ILendingPool(_lendingPoolAddress).borrow(
                     W_ETH,
                     _borrowAmount,
-                    2,
+                    DataTypes.InterestRateMode.VARIABLE,
                     0,
                     address(this)
                 );
@@ -507,7 +502,7 @@ contract AaveStrategy is BaseStrategy {
         ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
         uint256 _astETHValueInEth = (_astETHAmount * _stETHPrice) / 1e18;
         uint256 _borrowAmount = (_astETHValueInEth * _borrowFactor) / BPS;
-        _aaveLendingPool.borrow(W_ETH, _borrowAmount, 2, 0, address(this));
+        _aaveLendingPool.borrow(W_ETH, _borrowAmount, DataTypes.InterestRateMode.VARIABLE, 0, address(this));
         IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
         uint256 _ethAmount = address(this).balance;
         curvePool.exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
@@ -636,7 +631,8 @@ contract AaveStrategy is BaseStrategy {
                                 address(_aaveLendingPool),
                                 _setupRepay
                             );
-                            _aaveLendingPool.repay(W_ETH, _setupRepay, 2, address(this));
+                            _aaveLendingPool.repay(W_ETH, _setupRepay,
+                            DataTypes.InterestRateMode.VARIABLE,, address(this));
                             _wethDebtAmountCopy = _wethDebtAmountCopy - _setupRepay;
                         }
                     }
@@ -715,7 +711,7 @@ contract AaveStrategy is BaseStrategy {
                                 address(_aaveLendingPool),
                                 _setupRepay
                             );
-                            _aaveLendingPool.repay(W_ETH, _setupRepay, 2, address(this));
+                            _aaveLendingPool.repay(W_ETH, _setupRepay, DataTypes.InterestRateMode.VARIABLE, address(this));
                             _wethDebtAmountCopy = _wethDebtAmountCopy - _setupRepay;
                         }
                     }
