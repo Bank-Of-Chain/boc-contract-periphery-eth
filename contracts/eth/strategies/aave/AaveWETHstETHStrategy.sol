@@ -7,6 +7,7 @@ import "../../enums/ProtocolEnum.sol";
 import "../ETHBaseStrategy.sol";
 import "../../../external/aave/ILendingPool.sol";
 import "../../../external/aave/DataTypes.sol";
+import "../../../external/aave/UserConfiguration.sol";
 import "../../../external/aave/ILendingPoolAddressesProvider.sol";
 import "../../../external/aave/IPriceOracleGetter.sol";
 import "../../../external/curve/ICurveLiquidityFarmingPool.sol";
@@ -20,6 +21,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     address public constant ST_ETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address public constant A_ST_ETH = 0x1982b2F5814301d4e9a8b0201555376e62F82428;
     address public constant A_WETH = 0x030bA81f1c18d280636F32af80b9AAd02Cf0854e;
+    uint256 public constant RESERVE_ID_OF_ST_ETH = 31;
     uint256 public constant BPS = 10000;
     /**
      * @dev Aave Lending Pool Provider
@@ -194,6 +196,23 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                 IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, 0);
                 IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, _receivedStETHAmount);
                 _aaveLendingPool.deposit(ST_ETH, _receivedStETHAmount, address(this), 0);
+
+                {
+                    uint256 _userConfigurationData = ILendingPool(_lendingPoolAddress)
+                        .getUserConfiguration(address(this))
+                        .data;
+                    if (
+                        !UserConfiguration.isUsingAsCollateral(
+                            _userConfigurationData,
+                            RESERVE_ID_OF_ST_ETH
+                        )
+                    ) {
+                        ILendingPool(_lendingPoolAddress).setUserUseReserveAsCollateral(
+                            ST_ETH,
+                            true
+                        );
+                    }
+                }
                 _astETHAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
             }
 

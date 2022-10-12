@@ -11,6 +11,7 @@ import "boc-contract-core/contracts/library/NativeToken.sol";
 import "../../enums/ProtocolEnum.sol";
 import "../../../external/aave/ILendingPool.sol";
 import "../../../external/aave/ReserveConfiguration.sol";
+import "../../../external/aave/UserConfiguration.sol";
 import "../../../external/aave/DataTypes.sol";
 import "../../../external/aave/ILendingPoolAddressesProvider.sol";
 import "../../../external/aave/IPriceOracleGetter.sol";
@@ -27,8 +28,10 @@ contract AaveLendingStEthStrategy is BaseStrategy {
     address public constant ST_ETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
     address public constant A_ST_ETH = 0x1982b2F5814301d4e9a8b0201555376e62F82428;
     address public constant A_WETH = 0x030bA81f1c18d280636F32af80b9AAd02Cf0854e;
+    uint256 public constant RESERVE_ID_OF_ST_ETH = 31;
     uint256 public constant BPS = 10000;
     address private aToken;
+    uint256 private reserveIdOfToken;
     /**
      * @dev Aave Lending Pool Provider
      */
@@ -74,6 +77,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         string memory _name,
         address _wantToken,
         address _wantAToken,
+        uint256 _reserveIdOfToken,
         address _uniswapV3Pool
     ) external initializer {
         curvePool = ICurveLiquidityFarmingPool(
@@ -82,6 +86,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         address[] memory _wants = new address[](1);
         _wants[0] = _wantToken;
         aToken = _wantAToken;
+        reserveIdOfToken = _reserveIdOfToken;
         uniswapV3Pool = _uniswapV3Pool;
         stETHBorrowFactor = 6500;
         stETHBorrowFactorMax = 6900;
@@ -279,6 +284,9 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         address _lendingPoolAddress = aaveProvider.getLendingPool();
         uint256 _stETHPrice;
         uint256 _tokenPrice;
+        uint256 _userConfigurationData = ILendingPool(_lendingPoolAddress)
+            .getUserConfiguration(address(this))
+            .data;
         {
             address _aToken = aToken;
             address _asset = _assets[0];
@@ -291,6 +299,20 @@ contract AaveLendingStEthStrategy is BaseStrategy {
             }
             (_stETHPrice, _tokenPrice) = _getAssetsPrices(ST_ETH, _asset);
             {
+                {
+                    if (
+                        !UserConfiguration.isUsingAsCollateral(
+                            _userConfigurationData,
+                            reserveIdOfToken
+                        )
+                    ) {
+                        ILendingPool(_lendingPoolAddress).setUserUseReserveAsCollateral(
+                            _asset,
+                            true
+                        );
+                    }
+                }
+
                 uint256 _aTokenAmount = balanceOfToken(_aToken) - _beforeBalanceOfAToken;
                 uint256 _borrowAmount = (((_aTokenAmount * _tokenPrice) /
                     decimalUnitOfToken(_asset)) * borrowFactor) / BPS;
@@ -327,6 +349,15 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                 address(this),
                 0
             );
+
+            if (
+                !UserConfiguration.isUsingAsCollateral(
+                    _userConfigurationData,
+                    RESERVE_ID_OF_ST_ETH
+                )
+            ) {
+                ILendingPool(_lendingPoolAddress).setUserUseReserveAsCollateral(ST_ETH, true);
+            }
             uint256 _astETHAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
             uint256 _borrowCount = borrowCount;
             uint256 _borrowFactor = stETHBorrowFactor;
