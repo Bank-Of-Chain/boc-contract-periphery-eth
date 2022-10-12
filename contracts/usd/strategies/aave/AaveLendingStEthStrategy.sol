@@ -254,7 +254,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
 
     /// @inheritdoc BaseStrategy
     function get3rdPoolAssets() external view override returns (uint256) {
-        return queryTokenValue(wants[0], IERC20Upgradeable(aToken).totalSupply());
+        return queryTokenValue(ST_ETH, curvePool.balances(1));
     }
 
     function _getAssetsPrices(address _asset1, address _asset2)
