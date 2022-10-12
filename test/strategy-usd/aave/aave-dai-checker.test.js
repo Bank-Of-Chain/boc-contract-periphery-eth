@@ -45,6 +45,7 @@ describe('【AaveDaiStrategy Strategy Checker】', function() {
         let stETHPrice = new BigNumber((await mockPriceOracle.getAssetPrice(MFC.stETH_ADDRESS)).toString());
         let daiPrice = new BigNumber((await mockPriceOracle.getAssetPrice(MFC.DAI_ADDRESS)).toString());
         console.log('stETH price1:%s',stETHPrice.toFixed(0,2));
+        console.log('DAI price1:%s',daiPrice.toFixed(0,2));
         const lendingPoolAddress = await addressProvider.getLendingPool();
         const lendingPool  = await ILendingPool.at(lendingPoolAddress);
 
@@ -58,6 +59,7 @@ describe('【AaveDaiStrategy Strategy Checker】', function() {
         // await mockPriceOracle.setAssetPrice(MFC.stETH_ADDRESS,ethPrice.multipliedBy(110).dividedBy(100).toFixed(0,2));
         await mockPriceOracle.setAssetPrice(MFC.DAI_ADDRESS,daiPrice.multipliedBy(50).dividedBy(100).toFixed(0,2));
         console.log('stETH price2:%s',await mockPriceOracle.getAssetPrice(MFC.stETH_ADDRESS));
+        console.log('DAI price2:%s',await mockPriceOracle.getAssetPrice(MFC.DAI_ADDRESS));
         userAccountData = await lendingPool.getUserAccountData(strategyAddress);
         console.log(userAccountData.totalCollateralETH.toString(),
             userAccountData.totalDebtETH.toString(),
