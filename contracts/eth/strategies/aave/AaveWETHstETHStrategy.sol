@@ -353,7 +353,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         _aaveLendingPool.borrow(
             W_ETH,
             _borrowAmount,
-            DataTypes.InterestRateMode.VARIABLE,
+            uint256(DataTypes.InterestRateMode.VARIABLE),
             0,
             address(this)
         );
@@ -443,7 +443,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                     _aaveLendingPool.repay(
                         W_ETH,
                         _setupRepay,
-                        DataTypes.InterestRateMode.VARIABLE,
+                        uint256(DataTypes.InterestRateMode.VARIABLE),
                         address(this)
                     );
                     _wethDebtAmount = _wethDebtAmount - _setupRepay;
