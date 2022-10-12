@@ -9,8 +9,8 @@ const AaveWETHstETHStrategy = hre.artifacts.require('AaveWETHstETHStrategy');
 const ILendingPoolAddressesProvider = hre.artifacts.require('ILendingPoolAddressesProvider');
 const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
 
-describe('【AaveDaiStrategy Strategy Checker】', function() {
-    checker.check('AaveDaiStrategy',async function (strategyAddress) {
+describe('【AaveDaiLendingStEthStrategy Strategy Checker】', function() {
+    checker.check('AaveDaiLendingStEthStrategy',async function (strategyAddress) {
         const aTokenContract = await ERC20.at('0x1982b2F5814301d4e9a8b0201555376e62F82428');
         const astETHAmount = new BigNumber(await aTokenContract.balanceOf(strategyAddress));
         const lidoApr = 531; //x/10000
