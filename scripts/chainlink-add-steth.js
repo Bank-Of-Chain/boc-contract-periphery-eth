@@ -293,186 +293,15 @@ const deployProxyBase = async (contractName, depends = [], customParams = [], na
     }
 }
 
-/**
- * Add strategy to vault
- */
-const addStrategiesToUSDVault = async (vault, allArray, increaseArray) => {
-    const isFirst = isEqual(allArray, increaseArray);
-    if (isFirst) {
-        console.log('All strategies:');
-        console.table(allArray);
-    } else {
-        console.log('All strategies:');
-        console.table(allArray);
-        console.log('New Strategy:');
-        console.table(increaseArray);
-    }
 
-    const questionOfAddStrategy = [{
-        type: 'list',
-        name: 'type',
-        message: 'Please select the list of policies to be added？\n',
-        choices: isFirst ? [{
-            key: 'y',
-            name: 'All strategies',
-            value: 1,
-        }, {
-            key: 'n',
-            name: 'Exit, I will not add!',
-            value: 0,
-        }] : [{
-            key: 'y',
-            name: 'All strategies',
-            value: 1,
-        }, {
-            key: 'n',
-            name: 'Add new Strategy',
-            value: 2,
-        }, {
-            key: 'n',
-            name: 'Exit, I will not add!',
-            value: 0,
-        }],
-    }];
-
-    if (isEmpty(vault)) {
-        vault = await USDVaultContract.at(addressMap[USDVault]);
-    }
-    let type = process.env.USDI_STRATEGY_TYPE_VALUE;
-    if (!type) {
-        type = await inquirer.prompt(questionOfAddStrategy).then((answers) => {
-            const {
-                type
-            } = answers;
-            return type;
-        });
-    }
-
-    if (!type) {
-        return
-    }
-
-    const nextArray = type === 1 ? allArray : increaseArray
-
-    return vault.addStrategy(nextArray.map(item => {
-        return {
-            strategy: item.strategy,
-            profitLimitRatio: item.profitLimitRatio,
-            lossLimitRatio: item.lossLimitRatio
-        }
-    }));
-}
-
-/**
- * add Strategies to eth vault
- */
-const addStrategiesToETHVault = async (vault, allArray, increaseArray) => {
-    const isFirst = isEqual(allArray, increaseArray);
-    if (isFirst) {
-        console.log('All strategies:');
-        console.table(allArray);
-    } else {
-        console.log('All strategies:');
-        console.table(allArray);
-        console.log('New Strategy:');
-        console.table(increaseArray);
-    }
-
-    const questionOfAddStrategy = [{
-        type: 'list',
-        name: 'type',
-        message: 'Please select the list of policies to be added？\n',
-        choices: isFirst ? [{
-            key: 'y',
-            name: 'All strategies',
-            value: 1,
-        }, {
-            key: 'n',
-            name: 'Exit, I will not add!',
-            value: 0,
-        }] : [{
-            key: 'y',
-            name: 'All strategies',
-            value: 1,
-        }, {
-            key: 'n',
-            name: 'Add new Strategy',
-            value: 2,
-        }, {
-            key: 'n',
-            name: 'Exit, I will not add!',
-            value: 0,
-        }],
-    }];
-
-    if (isEmpty(vault)) {
-        vault = await ETHVaultContract.at(addressMap[ETHVault]);
-    }
-    let type = process.env.ETHI_STRATEGY_TYPE_VALUE;
-    if(!type){
-        type = await inquirer.prompt(questionOfAddStrategy).then((answers) => {
-            const {
-                type
-            } = answers;
-            return type ;
-        });
-    }
-    if (!type) {
-        return
-    }
-
-    const nextArray = type === 1 ? allArray : increaseArray
-
-    return vault.addStrategy(nextArray.map(item => {
-        return {
-            strategy: item.strategy,
-            profitLimitRatio: item.profitLimitRatio,
-            lossLimitRatio: item.lossLimitRatio
-        }
-    }));
-}
 
 const main = async () => {
-    let type = process.env.VAULT_TYPE_VALUE;
-    if(!type){
-        console.log('start select');
-        type = await inquirer.prompt(questionOfWhichVault).then((answers) => {
-            const {
-                type
-            } = answers;
 
-            return type;
-        })
-    }
-    if (!type) {
-        return
-    }
-
-    const accounts = await ethers.getSigners();
-    const balanceBeforeDeploy = await ethers.provider.getBalance(accounts[0].address);
-
-    await deploy_common();
-    if (type == 1) {
-        await deploy_usd();
-    } else if (type == 2) {
-        await deploy_eth();
-    } else if (type == 3) {
-        await deploy_usd();
-        await deploy_eth();
-    }
-
-    console.table(addressMap);
-
-
-    const balanceAfterDeploy = await ethers.provider.getBalance(accounts[0].address);
-    console.log('balanceBeforeDeploy:%d,balanceAfterDeploy:%d', ethers.utils.formatEther(balanceBeforeDeploy), ethers.utils.formatEther(balanceAfterDeploy));
-}
-
-const deploy_common = async () => {
     const network = hre.network.name;
-    console.log('\n\n 📡 Deploying... At %s Network \n', network);
     const accounts = await ethers.getSigners();
+    console.log('\n\n 📡 Deploying... At %s Network \n', network);
     assert(accounts.length > 0, 'Need a Signer!');
+    const balanceBeforeDeploy = await ethers.provider.getBalance(accounts[0].address);
     const governor = accounts[0].address;
     const delegator = process.env.DELEGATOR_ADDRESS || get(accounts, '16.address', '');
     const vaultManager = process.env.VAULT_MANAGER_ADDRESS || get(accounts, '17.address', '');
@@ -481,12 +310,7 @@ const deploy_common = async () => {
     console.log('delegator address:%s',delegator);
     console.log('vaultManager address:%s',vaultManager);
     console.log('usd keeper address:%s',keeper);
-}
 
-const deploy_usd = async () => {
-    console.log('process.argv:', process.argv);
-
-    const network = hre.network.name;
     const MFC = network === 'localhost' || network === 'hardhat' ? MFC_TEST : MFC_PRODUCTION
 
     if (!isEmpty(addressMap[ChainlinkPriceFeed])) {
@@ -502,85 +326,12 @@ const deploy_usd = async () => {
         heartbeats.push(value.heartbeat);
         rateAssets.push(value.rateAsset);
         await chainlinkPriceFeedContract.addPrimitives(primitives,aggregators,heartbeats,rateAssets);
+        console.log('chain link price feed add steth success');
     }
 
-    let cVault = await USDVaultContract.at(addressMap[USDVault]);
-
-    const allArray = [];
-    const increaseArray = [];
-    for (const strategyItem of strategiesListUsd) {
-        const {
-            name,
-            contract,
-            addToVault,
-            profitLimitRatio,
-            lossLimitRatio,
-            customParams
-        } = strategyItem
-        let strategyAddress = addressMap[name];
-        if (isEmpty(strategyAddress)) {
-            const deployStrategy = await deployProxyBase(contract, [USDVault, Harvester], [name, ...customParams], name);
-            if (addToVault) {
-                strategyAddress = deployStrategy.address;
-                increaseArray.push({
-                    name,
-                    strategy: strategyAddress,
-                    profitLimitRatio,
-                    lossLimitRatio,
-                })
-            }
-        }
-        allArray.push({
-            name,
-            strategy: strategyAddress,
-            profitLimitRatio,
-            lossLimitRatio,
-        })
-    }
-
-    await addStrategiesToUSDVault(cVault, allArray, increaseArray);
-    // console.log('getStrategies=', await cVault.getStrategies());
-};
-
-const deploy_eth = async () => {
-
-    let cVault = await VaultContract.at(addressMap[ETHVault]);
-
-    const allArray = [];
-    const increaseArray = [];
-    for (const strategyItem of strategiesListEth) {
-        const {
-            name,
-            contract,
-            addToVault,
-            profitLimitRatio,
-            lossLimitRatio,
-            customParams
-        } = strategyItem
-        let strategyAddress = addressMap[name];
-        if (isEmpty(strategyAddress)) {
-            const deployStrategy = await deployProxyBase(contract, [ETHVault], [name, ...customParams], name);
-            if (addToVault) {
-                strategyAddress = deployStrategy.address;
-                increaseArray.push({
-                    name,
-                    strategy: strategyAddress,
-                    profitLimitRatio,
-                    lossLimitRatio,
-                })
-            }
-        }
-        allArray.push({
-            name,
-            strategy: strategyAddress,
-            profitLimitRatio,
-            lossLimitRatio,
-        })
-    }
-
-    await addStrategiesToETHVault(cVault, allArray, increaseArray);
-    // console.log('getStrategies=', await cVault.getStrategies());
-};
+    const balanceAfterDeploy = await ethers.provider.getBalance(accounts[0].address);
+    console.log('balanceBeforeDeploy:%d,balanceAfterDeploy:%d', ethers.utils.formatEther(balanceBeforeDeploy), ethers.utils.formatEther(balanceAfterDeploy));
+}
 
 main().then(() => process.exit(0))
     .catch(error => {

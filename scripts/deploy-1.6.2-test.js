@@ -620,23 +620,6 @@ const deploy_common = async () => {
 const deploy_usd = async () => {
     console.log('process.argv:', process.argv);
 
-    const network = hre.network.name;
-    const MFC = network === 'localhost' || network === 'hardhat' ? MFC_TEST : MFC_PRODUCTION
-
-    if (!isEmpty(addressMap[ChainlinkPriceFeed])) {
-        const chainlinkPriceFeedContract =  await ChainlinkPriceFeedContract.at(addressMap[ChainlinkPriceFeed]);
-        let primitives = new Array();
-        let aggregators = new Array();
-        let heartbeats = new Array();
-        let rateAssets = new Array();
-
-        const value = MFC.CHAINLINK.aggregators['STETH_ETH'];
-        primitives.push(value.primitive);
-        aggregators.push(value.aggregator);
-        heartbeats.push(value.heartbeat);
-        rateAssets.push(value.rateAsset);
-        await chainlinkPriceFeedContract.addPrimitives(primitives,aggregators,heartbeats,rateAssets);
-    }
     if (hre.network.name == 'localhost') {
         if (isEmpty(addressMap[MockValueInterpreter])) {
             await deployBase(MockValueInterpreter, [ChainlinkPriceFeed, AggregatedDerivativePriceFeed, AccessControlProxy]);
@@ -647,7 +630,6 @@ const deploy_usd = async () => {
     }
 
     let cVault = await USDVaultContract.at(addressMap[USDVault]);
-
 
     const allArray = [];
     const increaseArray = [];
