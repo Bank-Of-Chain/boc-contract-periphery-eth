@@ -20,6 +20,8 @@ import "../../../external/curve/ICurveLiquidityFarmingPool.sol";
 import "../../../external/weth/IWeth.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 
+import "hardhat/console.sol";
+
 contract AaveLendingStEthStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using OracleLibrary for int24;
@@ -828,6 +830,6 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         address _baseToken,
         address _quoteToken
     ) internal pure returns (uint256 _quoteAmount) {
-        return tick.getQuoteAtTick(baseAmount, baseToken, quoteToken);
+        return _tick.getQuoteAtTick(_baseAmount, _baseToken, _quoteToken);
     }
 }
