@@ -29,7 +29,7 @@ describe('【StakeWiseEthSeth23000Strategy Strategy Checker】', function () {
             await mockUniswapV3Router.swap('0x7379e81228514a1D2a6Cf7559203998E20598346', i === 0 ? true : false, new BigNumber(2).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
         }
         await topUpWant(MFC.ETH_ADDRESS, strategy.address);
-    }, async function (strategy) {}, async function (strategy) {
+    }, async function (strategy) {}, async function (strategy,customAddressArray) {
         const accounts = await ethers.getSigners();
         const investor = accounts[1].address;
         keeper = accounts[19].address;

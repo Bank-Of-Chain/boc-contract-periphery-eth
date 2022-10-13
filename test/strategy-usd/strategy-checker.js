@@ -17,6 +17,7 @@ const AggregatedDerivativePriceFeed = hre.artifacts.require('AggregatedDerivativ
 const ValueInterpreter = hre.artifacts.require('ValueInterpreter');
 const MockVault = hre.artifacts.require('contracts/usd/mock/MockVault.sol:MockVault');
 const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
+const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
 
 
 let accessControlProxy;
@@ -24,6 +25,7 @@ let valueInterpreter;
 let mockVault;
 let mockUniswapV3Router;
 let strategy;
+let mockPriceOracle;
 
 let governance;
 let keeper;
@@ -163,6 +165,8 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         harvester = accounts[2].address;
         keeper = accounts[19].address;
 
+        mockPriceOracle = await MockAavePriceOracleConsumer.new();
+
         accessControlProxy = await AccessControlProxy.new();
         await accessControlProxy.initialize(governance, governance, governance, keeper);
         // init vault
@@ -223,12 +227,12 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         assert(wants.length > 0, 'the length of wants should be greater than 0');
     });
 
-    it('[100,000USD < Third Pool Assets < 5,000,000,000USD]', async function () {
+    it('[100,000USD < Third Pool Assets < 50,000,000,000USD]', async function () {
         let thirdPoolAssets = new BigNumber(await strategy.get3rdPoolAssets());
         console.log('3rdPoolAssets: %s', thirdPoolAssets.toFixed());
         let precision = new BigNumber(10 ** 18)
         let min = new BigNumber(100_000).multipliedBy(precision);
-        let max = new BigNumber(5_000_000_000).multipliedBy(precision);
+        let max = new BigNumber(50_000_000_000).multipliedBy(precision);
         assert(thirdPoolAssets.isGreaterThan(min) && thirdPoolAssets.isLessThan(max), 'large deviation in thirdPoolAssets estimation');
     });
 
@@ -341,13 +345,16 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
 
     if (uniswapV3RebalanceCallback) {
         it('[UniswapV3 rebalance]', async function () {
-            await uniswapV3RebalanceCallback(strategy.address);
+            await uniswapV3RebalanceCallback(strategy.address,[mockPriceOracle.address]);
         });
     }
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
-        const estimatedTotalAssets0 = new BigNumber(await strategy.estimatedTotalAssets());
-        const redeemTx = await mockVault.redeem(strategy.address, estimatedTotalAssets0, outputCode);
+        const strategyParam = await mockVault.strategies(strategy.address);
+        console.log("strategyTotalDebt:%s",strategyParam.totalDebt);
+        const strategyTotalDebt = new BigNumber(strategyParam.totalDebt);
+
+        const redeemTx = await mockVault.redeem(strategy.address, strategyTotalDebt, outputCode);
         expectEvent.inTransaction(redeemTx,'Repay');
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets()).dividedBy(10 ** 18);
         console.log('After withdraw all shares,strategy assets:%s', estimatedTotalAssets1.toFixed());
