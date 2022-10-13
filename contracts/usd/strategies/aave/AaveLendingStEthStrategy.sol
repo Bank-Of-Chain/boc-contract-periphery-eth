@@ -18,8 +18,6 @@ import "../../../external/curve/ICurveLiquidityFarmingPool.sol";
 import "../../../external/weth/IWeth.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 
-import "hardhat/console.sol";
-
 contract AaveLendingStEthStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -729,15 +727,6 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                                     _receivedTokenAmount
                                 );
                                 if (_quoteAmount > _wethDebtAmountCopy) {
-                                    console.log(
-                                        "_quoteAmount,_wethDebtAmountCopy,_receivedTokenAmount="
-                                    );
-                                    console.log(
-                                        _quoteAmount,
-                                        _wethDebtAmountCopy,
-                                        _receivedTokenAmount
-                                    );
-
                                     IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
                                         IUniswapV3.ExactOutputSingleParams(
                                             _tokenAddress,
