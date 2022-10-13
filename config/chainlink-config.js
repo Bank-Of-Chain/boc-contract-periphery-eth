@@ -17,6 +17,7 @@ const {
     IBGBP_ADDRESS,
     IBJPY_ADDRESS,
     IBCHF_ADDRESS,
+    stETH_ADDRESS,
 } = address;
 const CHAINLINK_RATE_ASSETS = {
     ETH: 0,
@@ -128,6 +129,12 @@ const getChainlinkConfig = () => {
                 primitive: SUSD_ADDRESS,
                 aggregator: '0xad35Bd71b9aFE6e4bDc266B345c198eaDEf9Ad94',
                 rateAsset: CHAINLINK_RATE_ASSETS.USD,
+                heartbeat: 24 * 60 * 60
+            },
+            STETH_ETH: {
+                primitive: stETH_ADDRESS,
+                aggregator: '0x86392dC19c0b719886221c78AB11eb8Cf5c52812',
+                rateAsset: CHAINLINK_RATE_ASSETS.ETH,
                 heartbeat: 24 * 60 * 60
             },
         },

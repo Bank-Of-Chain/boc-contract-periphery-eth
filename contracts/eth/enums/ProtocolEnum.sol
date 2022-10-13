@@ -8,5 +8,6 @@ enum ProtocolEnum {
     Aura,
     UniswapV3,
     StakeWise,
-    YearnV2
+    YearnV2,
+    Aave
 }

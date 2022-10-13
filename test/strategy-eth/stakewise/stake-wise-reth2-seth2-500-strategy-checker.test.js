@@ -35,7 +35,7 @@ describe('【StakeWiseReth2Seth2500Strategy Strategy Checker】', function () {
         await mockUniswapV3Router.swap('0xa9ffb27d36901F87f1D0F20773f7072e38C5bfbA', false, new BigNumber(10).multipliedBy(new BigNumber(10).pow(sETH2TokenDecimals)), {"from": investor});
 
     }, async function (strategy) {
-    }, async function (strategy) {
+    }, async function (strategy,customAddressArray) {
         const accounts = await ethers.getSigners();
         const investor = accounts[1].address;
         keeper = accounts[19].address;

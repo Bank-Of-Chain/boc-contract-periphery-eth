@@ -17,5 +17,6 @@ enum ProtocolEnum {
     Stargate,
     DForce,
     Synapse,
-    Aura
+    Aura,
+    Aave
 }
