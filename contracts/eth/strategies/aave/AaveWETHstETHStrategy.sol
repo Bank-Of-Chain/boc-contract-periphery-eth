@@ -171,7 +171,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
 
     /// @inheritdoc ETHBaseStrategy
     function get3rdPoolAssets() external view override returns (uint256) {
-        return queryTokenValueInETH(ST_ETH, curvePool.balances(1));
+        return queryTokenValueInETH(ST_ETH, IERC20Upgradeable(ST_ETH).totalSupply());
     }
 
     /// @inheritdoc ETHBaseStrategy
