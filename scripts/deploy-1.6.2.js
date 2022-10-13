@@ -481,25 +481,6 @@ const deploy_common = async () => {
     console.log('delegator address:%s',delegator);
     console.log('vaultManager address:%s',vaultManager);
     console.log('usd keeper address:%s',keeper);
-    
-    if (isEmpty(addressMap[AccessControlProxy])) {
-        const accessControlProxy = await deployProxyBase(AccessControlProxy, [governor, delegator, vaultManager, keeper]);
-        const governorRole = await accessControlProxy.DEFAULT_ADMIN_ROLE();
-        const delegatorRole = await accessControlProxy.DELEGATE_ROLE();
-        const vaultRole = await accessControlProxy.VAULT_ROLE();
-        const keeperRole = await accessControlProxy.KEEPER_ROLE();
-        console.log('%s has governor role:%s',governor,await accessControlProxy.hasRole(governorRole,governor));
-        console.log('%s has delegator role:%s',delegator,await accessControlProxy.hasRole(delegatorRole,delegator));
-        console.log('%s has vaultManager role:%s',vaultManager,await accessControlProxy.hasRole(vaultRole,vaultManager));
-        console.log('%s has keeper role:%s',keeper,await accessControlProxy.hasRole(keeperRole,keeper));
-        
-        // const AccessControlProxyContract = hre.artifacts.require("AccessControlProxy");
-        // const accessControlProxy2 = await AccessControlProxyContract.at(accessControlProxy.address);
-        // console.log('keeperRole:%s',keeperRole);
-        
-        // await accessControlProxy2.grantRole(keeperRole,keeperForEth,{from:delegator});
-        // console.log('%s has keeper role:%s',keeperForEth,await accessControlProxy.hasRole(keeperRole,keeperForEth));
-    }
 }
 
 const deploy_usd = async () => {
