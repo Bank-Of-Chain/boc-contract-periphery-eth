@@ -227,12 +227,12 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         assert(wants.length > 0, 'the length of wants should be greater than 0');
     });
 
-    it('[100,000USD < Third Pool Assets < 5,000,000,000USD]', async function () {
+    it('[100,000USD < Third Pool Assets < 50,000,000,000USD]', async function () {
         let thirdPoolAssets = new BigNumber(await strategy.get3rdPoolAssets());
         console.log('3rdPoolAssets: %s', thirdPoolAssets.toFixed());
         let precision = new BigNumber(10 ** 18)
         let min = new BigNumber(100_000).multipliedBy(precision);
-        let max = new BigNumber(5_000_000_000).multipliedBy(precision);
+        let max = new BigNumber(50_000_000_000).multipliedBy(precision);
         assert(thirdPoolAssets.isGreaterThan(min) && thirdPoolAssets.isLessThan(max), 'large deviation in thirdPoolAssets estimation');
     });
 
