@@ -45,6 +45,8 @@ const OneInchV4Adapter = 'OneInchV4Adapter';
 const ChainlinkPriceFeed = 'ChainlinkPriceFeed';
 const ExchangeAggregator = 'ExchangeAggregator';
 const AccessControlProxy = 'AccessControlProxy';
+const MockValueInterpreter = 'MockValueInterpreter';
+const TestAdapter = 'TestAdapter';
 const AggregatedDerivativePriceFeed = 'AggregatedDerivativePriceFeed';
 const Harvester = 'Harvester';
 const Dripper = 'Dripper';
@@ -634,6 +636,14 @@ const deploy_usd = async () => {
         heartbeats.push(value.heartbeat);
         rateAssets.push(value.rateAsset);
         await chainlinkPriceFeedContract.addPrimitives(primitives,aggregators,heartbeats,rateAssets);
+    }
+    if (hre.network.name == 'localhost') {
+        if (isEmpty(addressMap[MockValueInterpreter])) {
+            await deployBase(MockValueInterpreter, [ChainlinkPriceFeed, AggregatedDerivativePriceFeed, AccessControlProxy]);
+        }
+        if (isEmpty(addressMap[TestAdapter])) {
+            await deployBase(TestAdapter, [MockValueInterpreter]);
+        }
     }
 
     let cVault = await USDVaultContract.at(addressMap[USDVault]);
