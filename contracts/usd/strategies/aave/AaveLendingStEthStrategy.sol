@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import "@uniswap/v3-core/contracts/libraries/FullMath.sol";
+import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 import "../../enums/ProtocolEnum.sol";
@@ -21,6 +22,7 @@ import "../../../external/uniswap/IUniswapV3.sol";
 
 contract AaveLendingStEthStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using OracleLibrary for int24;
 
     address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address public constant DEBT_W_ETH = 0xF63B34710400CAd3e044cFfDcAb00a0f32E33eCf;
@@ -728,6 +730,10 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                                     _receivedTokenAmount
                                 );
                                 if (_quoteAmount > _wethDebtAmountCopy) {
+
+                                    console.log("_quoteAmount,_wethDebtAmountCopy,_receivedTokenAmount=");
+                                    console.log(_quoteAmount,_wethDebtAmountCopy,_receivedTokenAmount);
+
                                     IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
                                         IUniswapV3.ExactOutputSingleParams(
                                             _tokenAddress,
@@ -822,19 +828,6 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         address _baseToken,
         address _quoteToken
     ) internal pure returns (uint256 _quoteAmount) {
-        uint160 _sqrtRatioX96 = TickMath.getSqrtRatioAtTick(_tick);
-
-        // Calculate quoteAmount with better precision if it doesn't overflow when multiplied by itself
-        if (_sqrtRatioX96 <= type(uint128).max) {
-            uint256 _ratioX192 = uint256(_sqrtRatioX96) * _sqrtRatioX96;
-            _quoteAmount = _baseToken < _quoteToken
-                ? FullMath.mulDiv(_ratioX192, _baseAmount, 1 << 192)
-                : FullMath.mulDiv(1 << 192, _baseAmount, _ratioX192);
-        } else {
-            uint256 _ratioX128 = FullMath.mulDiv(_sqrtRatioX96, _sqrtRatioX96, 1 << 64);
-            _quoteAmount = _baseToken < _quoteToken
-                ? FullMath.mulDiv(_ratioX128, _baseAmount, 1 << 128)
-                : FullMath.mulDiv(1 << 128, _baseAmount, _ratioX128);
-        }
+        return tick.getQuoteAtTick(baseAmount, baseToken, quoteToken);
     }
 }
