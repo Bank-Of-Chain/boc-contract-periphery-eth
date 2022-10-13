@@ -4,12 +4,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
-import "@uniswap/v3-core/contracts/libraries/FullMath.sol";
-import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
 import "../../enums/ProtocolEnum.sol";
+import "../../../external/uniswap/IQuoter.sol";
 import "../../../external/aave/ILendingPool.sol";
 import "../../../external/aave/ReserveConfiguration.sol";
 import "../../../external/aave/UserConfiguration.sol";
@@ -24,9 +22,9 @@ import "hardhat/console.sol";
 
 contract AaveLendingStEthStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    using OracleLibrary for int24;
 
     address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    address internal constant QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
     address public constant DEBT_W_ETH = 0xF63B34710400CAd3e044cFfDcAb00a0f32E33eCf;
     address public constant W_ETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant ST_ETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
@@ -718,13 +716,12 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                         if (_wethDebtAmountCopy > 0) {
                             {
                                 uint256 _receivedTokenAmount = balanceOfToken(_tokenAddress);
-                                (, int24 _tick, , , , , ) = IUniswapV3Pool(uniswapV3Pool).slot0();
-
-                                uint256 _quoteAmount = _getQuoteAtTick(
-                                    _tick,
-                                    uint128(_receivedTokenAmount),
+                                uint256 _quoteAmount = IQuoter(QUOTER).quoteExactInputSingle(
                                     _tokenAddress,
-                                    W_ETH
+                                    W_ETH,
+                                    500,
+                                    _receivedTokenAmount,
+                                    0
                                 );
                                 IERC20Upgradeable(_tokenAddress).safeApprove(UNISWAP_V3_ROUTER, 0);
                                 IERC20Upgradeable(_tokenAddress).safeApprove(
@@ -732,9 +729,14 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                                     _receivedTokenAmount
                                 );
                                 if (_quoteAmount > _wethDebtAmountCopy) {
-
-                                    console.log("_quoteAmount,_wethDebtAmountCopy,_receivedTokenAmount=");
-                                    console.log(_quoteAmount,_wethDebtAmountCopy,_receivedTokenAmount);
+                                    console.log(
+                                        "_quoteAmount,_wethDebtAmountCopy,_receivedTokenAmount="
+                                    );
+                                    console.log(
+                                        _quoteAmount,
+                                        _wethDebtAmountCopy,
+                                        _receivedTokenAmount
+                                    );
 
                                     IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
                                         IUniswapV3.ExactOutputSingleParams(
@@ -816,20 +818,5 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                 )
             );
         }
-    }
-
-    /// @notice Given a tick and a token amount, calculates the amount of token received in exchange
-    /// @param _tick Tick value used to calculate the quote
-    /// @param _baseAmount Amount of token to be converted
-    /// @param _baseToken Address of an ERC20 token contract used as the baseAmount denomination
-    /// @param _quoteToken Address of an ERC20 token contract used as the quoteAmount denomination
-    /// @return _quoteAmount Amount of quoteToken received for baseAmount of baseToken
-    function _getQuoteAtTick(
-        int24 _tick,
-        uint128 _baseAmount,
-        address _baseToken,
-        address _quoteToken
-    ) internal pure returns (uint256 _quoteAmount) {
-        return _tick.getQuoteAtTick(_baseAmount, _baseToken, _quoteToken);
     }
 }
