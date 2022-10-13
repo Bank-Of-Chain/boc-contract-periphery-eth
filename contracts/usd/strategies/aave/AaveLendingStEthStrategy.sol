@@ -727,7 +727,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                                     UNISWAP_V3_ROUTER,
                                     _receivedTokenAmount
                                 );
-                                if (_quoteAmount >= _wethDebtAmountCopy) {
+                                if (_quoteAmount > _wethDebtAmountCopy) {
                                     IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
                                         IUniswapV3.ExactOutputSingleParams(
                                             _tokenAddress,
