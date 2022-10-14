@@ -654,14 +654,14 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                     }
                     if (_setupWithdraw > 1) {
                         _astETHAmount = _astETHAmount - _setupWithdraw;
-                        if (_astETHAmount < 1) {
+                        if (_astETHAmount < 1e10) {
                             uint256 _userBalance = balanceOfToken(A_ST_ETH);
                             if (_setupWithdraw > _userBalance) {
                                 _setupWithdraw = _userBalance;
                             }
                         }
-                        _aaveLendingPool.withdraw(ST_ETH, _setupWithdraw, address(this));
-                        {
+                        if (_setupWithdraw > 1) {
+                            _aaveLendingPool.withdraw(ST_ETH, _setupWithdraw, address(this));
                             uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
                             IERC20Upgradeable(ST_ETH).safeApprove(address(_curvePool), 0);
                             IERC20Upgradeable(ST_ETH).safeApprove(
@@ -709,73 +709,88 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                         }
                     }
                     if (_setupWithdraw > 0) {
-                        _aaveLendingPool.withdraw(_tokenAddress, _setupWithdraw, address(this));
                         _aTokenAmount = _aTokenAmount - _setupWithdraw;
-                        if (_wethDebtAmountCopy > 0) {
-                            {
-                                uint256 _receivedTokenAmount = balanceOfToken(_tokenAddress);
-                                uint256 _quoteAmount = IQuoter(QUOTER).quoteExactInputSingle(
-                                    _tokenAddress,
-                                    W_ETH,
-                                    500,
-                                    _receivedTokenAmount,
-                                    0
-                                );
-                                IERC20Upgradeable(_tokenAddress).safeApprove(UNISWAP_V3_ROUTER, 0);
-                                IERC20Upgradeable(_tokenAddress).safeApprove(
-                                    UNISWAP_V3_ROUTER,
-                                    _receivedTokenAmount
-                                );
-                                if (_quoteAmount > _wethDebtAmountCopy) {
-                                    IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
-                                        IUniswapV3.ExactOutputSingleParams(
-                                            _tokenAddress,
-                                            W_ETH,
-                                            500,
-                                            address(this),
-                                            block.timestamp,
-                                            _wethDebtAmountCopy,
-                                            _receivedTokenAmount,
-                                            0
-                                        )
-                                    );
-                                } else {
-                                    IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
-                                        IUniswapV3.ExactInputSingleParams(
-                                            _tokenAddress,
-                                            W_ETH,
-                                            500,
-                                            address(this),
-                                            block.timestamp,
-                                            _receivedTokenAmount,
-                                            0,
-                                            0
-                                        )
-                                    );
-                                }
+                        if (_aTokenAmount < 1e5) {
+                            uint256 _userBalance = balanceOfToken(aToken);
+                            if (_setupWithdraw > _userBalance) {
+                                _setupWithdraw = _userBalance;
                             }
-
-                            uint256 _setupRepay;
-                            {
-                                uint256 _wethAmount = balanceOfToken(W_ETH);
-                                if (_wethAmount >= _wethDebtAmountCopy) {
-                                    _setupRepay = _wethDebtAmountCopy;
-                                } else {
-                                    _setupRepay = _wethAmount;
-                                }
-                            }
-                            IERC20Upgradeable(W_ETH).safeApprove(address(_aaveLendingPool), 0);
-                            IERC20Upgradeable(W_ETH).safeApprove(
-                                address(_aaveLendingPool),
-                                _setupRepay
-                            );
-                            _aaveLendingPool.repay(
-                                W_ETH,
-                                _setupRepay,
-                                uint256(DataTypes.InterestRateMode.VARIABLE),
+                        }
+                        if (_setupWithdraw > 1) {
+                            _aaveLendingPool.withdraw(
+                                _tokenAddress,
+                                _setupWithdraw,
                                 address(this)
                             );
-                            _wethDebtAmountCopy = _wethDebtAmountCopy - _setupRepay;
+                            if (_wethDebtAmountCopy > 0) {
+                                {
+                                    uint256 _receivedTokenAmount = balanceOfToken(_tokenAddress);
+                                    uint256 _needAmountIn = IQuoter(QUOTER).quoteExactOutputSingle(
+                                        _tokenAddress,
+                                        W_ETH,
+                                        500,
+                                        _wethDebtAmountCopy,
+                                        0
+                                    );
+                                    IERC20Upgradeable(_tokenAddress).safeApprove(
+                                        UNISWAP_V3_ROUTER,
+                                        0
+                                    );
+                                    IERC20Upgradeable(_tokenAddress).safeApprove(
+                                        UNISWAP_V3_ROUTER,
+                                        _receivedTokenAmount
+                                    );
+                                    if (_needAmountIn < _receivedTokenAmount) {
+                                        IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
+                                            IUniswapV3.ExactOutputSingleParams(
+                                                _tokenAddress,
+                                                W_ETH,
+                                                500,
+                                                address(this),
+                                                block.timestamp,
+                                                _wethDebtAmountCopy,
+                                                _receivedTokenAmount,
+                                                0
+                                            )
+                                        );
+                                    } else {
+                                        IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
+                                            IUniswapV3.ExactInputSingleParams(
+                                                _tokenAddress,
+                                                W_ETH,
+                                                500,
+                                                address(this),
+                                                block.timestamp,
+                                                _receivedTokenAmount,
+                                                0,
+                                                0
+                                            )
+                                        );
+                                    }
+                                }
+
+                                uint256 _setupRepay;
+                                {
+                                    uint256 _wethAmount = balanceOfToken(W_ETH);
+                                    if (_wethAmount >= _wethDebtAmountCopy) {
+                                        _setupRepay = _wethDebtAmountCopy;
+                                    } else {
+                                        _setupRepay = _wethAmount;
+                                    }
+                                }
+                                IERC20Upgradeable(W_ETH).safeApprove(address(_aaveLendingPool), 0);
+                                IERC20Upgradeable(W_ETH).safeApprove(
+                                    address(_aaveLendingPool),
+                                    _setupRepay
+                                );
+                                _aaveLendingPool.repay(
+                                    W_ETH,
+                                    _setupRepay,
+                                    uint256(DataTypes.InterestRateMode.VARIABLE),
+                                    address(this)
+                                );
+                                _wethDebtAmountCopy = _wethDebtAmountCopy - _setupRepay;
+                            }
                         }
                     }
                 }
