@@ -5,7 +5,7 @@ const {reportOracle} = require('./mock-lidoOracle');
 
 const main = async () => {
     // await advanceBlockV2(1);
-    await reportOracle(1,55)
+    await reportOracle(1,60)
 
 };
 
