@@ -14,8 +14,8 @@ const lidoOracleAddress = '0x442af784A788A5bd6F42A01Ebe9F287a871243fb';
 const wstETHAddress = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
 
 // lido holders
-const holder01 = '0x9E9F792BA171D599FCce34f4398EB3298C1E1175';//140.0618
-const holder02 = '0xb55a89d0ed2ae3267200ef216fe11c6f4ba52ebd';//141.5562
+const holder01 = '0xc45a525be77a208ef610449f30345ba5380d42dd';
+const holder02 = '0xb55a89d0ed2ae3267200ef216fe11c6f4ba52ebd';
 
 // 5 oraclers reporting // report times >= Quorum == 3
 const oraclers = [
