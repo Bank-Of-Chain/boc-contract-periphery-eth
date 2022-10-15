@@ -704,7 +704,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                         _tokenPrice,
                         _tokenConfigurationData
                     );
-                    if (_setupWithdraw >= _aTokenAmount) {
+                    if (_setupWithdraw > _aTokenAmount) {
                         _setupWithdraw = _aTokenAmount;
                     }
                 }
