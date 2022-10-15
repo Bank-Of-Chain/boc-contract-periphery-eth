@@ -1,5 +1,5 @@
 const {ethers,} = require('hardhat');
-const { send} = require("@openzeppelin/test-helpers");
+const { send, balance} = require("@openzeppelin/test-helpers");
 const { advanceBlockV2, advanceBlockOfHours} = require('../utils/block-utils');
 
 const Lido = hre.artifacts.require("ILido");
@@ -63,8 +63,10 @@ async function reportOracle(passDays, increaseRate) {
         await ethers.getImpersonatedSigner(oracler);
         // transfer eth to oracler
         const accounts = await ethers.getSigners();
-        await send.ether(accounts[0].address, oracler, 100 * 10 ** 18)
-
+        const beforeBalance = await balance.current(accounts[0].address)
+        if(beforeBalance.toString() < '10000000000000000000'){
+            await send.ether(accounts[0].address, oracler, 10 * 10 ** 18)
+        }
     }
 
     let bal01Before = await lido.balanceOf(holder01);
