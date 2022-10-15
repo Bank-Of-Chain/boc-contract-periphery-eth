@@ -62,7 +62,6 @@ const config = {
             },
             blockGasLimit: DEFAULT_BLOCK_GAS_LIMIT,
             timeout: 1800000,
-            gasMultiplier:3,
             allowUnlimitedContractSize: true,
         },
         localhost: {
