@@ -547,7 +547,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         uint256 _astETHValueInEth = (_astETHAmount * _stETHPrice) / 1e18;
         uint256 _borrowAmount = (_astETHValueInEth * _borrowFactor) / BPS;
         {
-            (, , uint256 _availableBorrowsETH, , , ) = ILendingPool(_lendingPoolAddress)
+            (, , uint256 _availableBorrowsETH, , , ) = _aaveLendingPool
                 .getUserAccountData(address(this));
             if (_borrowAmount > _availableBorrowsETH) {
                 _borrowAmount = _availableBorrowsETH;
