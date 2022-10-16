@@ -5,6 +5,8 @@
 │            (index)            │                    Values                    │
 ├───────────────────────────────┼──────────────────────────────────────────────┤
 │       Aura3PoolStrategy       │ '0xA51ED1D803B09f4d08226F9F91e6Dcc79ec0fEB7' │
+│  AaveDaiLendingStEthStrategy  │ '0x71298672cE73b85e06E0504C88A9A9f0c9dF3b9f' │
+│ AaveUSDCLendingStEthStrategy  │ '0xaEC8046c9d8F6f85F3b92B63594fAD3C4c929A6b' │
 │    ConvexIBUsdtAudStrategy    │ '0x59b8149C11678392874d79c076f497dE9D522D0C' │
 │    ConvexIBUsdtChfStrategy    │ '0x18d9eFb0e5d4FB27f3c35C55801877b2143d44CF' │
 │    ConvexIBUsdtEurStrategy    │ '0x2e7967F36bd5E73705F2DCB8c338e53127003cF0' │
@@ -55,6 +57,7 @@
 │          VaultAdmin           │ '0x2D90Cb03031a45773E95eAdd49465A636C547631' │
 │          USDPegToken          │ '0x83131242843257bc6C43771762ba467346Efb2CF' │
 │        USDVaultBuffer         │ '0x0b8D3634a05cc6b50E4D026c0eaFa8469cA98480' │
+│ AaveWETHstETHStrategy         │ '0x70C0E1B334124C7d46fC0c7a9048A802ab4C39C6' │
 │    AuraWstETHWETHStrategy     │ '0xc3C283aCc2Cf4F2917d80D496bab373f7b97D0fd' │
 │     AuraREthWEthStrategy      │ '0x34152B0eEf70423B51556e0DCA1b8d142b6EB0f9' │
 │   ConvexrETHwstETHStrategy    │ '0x1B9DeB21E39062d4Af7670719F5743909762cD09' │
@@ -69,3 +72,4 @@
 │          ETHPegToken          │ '0x1A597356E7064D4401110FAa2242bD0B51D1E4Fa' │
 │        ETHVaultBuffer         │ '0xC8915157b36ed6D0F36827a1Bb5E9b0cDd1e87Cd' │
 └───────────────────────────────┴──────────────────────────────────────────────┘
+
