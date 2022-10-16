@@ -26,7 +26,7 @@ describe('uniswapv3-reth-eth-3000-checker', function () {
             wantToken.approve(mockUniswapV3Router.address, new BigNumber(2).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
             await mockUniswapV3Router.swap('0xf0E02Cf61b31260fd5AE527d58Be16312BDA59b1', i === 0 ? true : false, new BigNumber(2).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
         }
-    }, async function(strategy){}, async function (strategy) {
+    }, async function(strategy){}, async function (strategy,customAddressArray) {
         const accounts = await ethers.getSigners();
         const investor = accounts[1].address;
         keeper = accounts[19].address;
