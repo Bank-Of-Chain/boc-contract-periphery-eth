@@ -422,7 +422,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
             for (uint256 i = 0; i < _borrowCount; i++) {
                 if (_increaseAstEthAmount > 10) {
                     _increaseAstEthAmount = _borrowEthAndDepositStEth(
-                        _remainingAmount,
+                        _increaseAstEthAmount,
                         _borrowFactor,
                         _stETHPrice,
                         _lendingPoolAddress
