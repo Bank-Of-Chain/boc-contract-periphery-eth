@@ -265,22 +265,21 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     /// Requirements: only keeper can call
     function rebalance() external isKeeper {
         address _lendingPoolAddress = aaveProvider.getLendingPool();
-        ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
         IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
         uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
         (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(_stETHPrice);
         if (_remainingAmount > 10) {
             uint256 _borrowCount = borrowCount;
             uint256 _borrowFactor = borrowFactor;
+            uint256 _increaseAstEthAmount = _remainingAmount;
             for (uint256 i = 0; i < _borrowCount; i++) {
-                if (_remainingAmount > 10) {
-                    uint256 _increaseAstEthAmount = _borrowEthAndDepositStEth(
-                        _remainingAmount,
+                if (_increaseAstEthAmount > 10) {
+                    _increaseAstEthAmount = _borrowEthAndDepositStEth(
+                        _increaseAstEthAmount,
                         _borrowFactor,
                         _stETHPrice,
                         _lendingPoolAddress
                     );
-                    _remainingAmount = _increaseAstEthAmount;
                 } else {
                     break;
                 }
@@ -371,7 +370,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         uint256 _astETHValueInEth = (_astETHAmount * _stETHPrice) / 1e18;
         uint256 _borrowAmount = (_astETHValueInEth * _borrowFactor) / BPS;
         {
-            (, , uint256 _availableBorrowsETH, , , ) = ILendingPool(_lendingPoolAddress)
+            (, , uint256 _availableBorrowsETH, , , ) = _aaveLendingPool
                 .getUserAccountData(address(this));
             if (_borrowAmount > _availableBorrowsETH) {
                 _borrowAmount = _availableBorrowsETH;
@@ -442,7 +441,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
             }
             if (_allowWithdrawAmount > 1 && _astETHAmount > 1) {
                 uint256 _setupWithdraw = _allowWithdrawAmount;
-                if (_allowWithdrawAmount >= _astETHAmount) {
+                if (_setupWithdraw > _astETHAmount) {
                     _setupWithdraw = _astETHAmount;
                 }
                 if (_astETHAmount - _setupWithdraw < 1e10) {

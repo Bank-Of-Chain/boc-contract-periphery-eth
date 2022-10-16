@@ -418,15 +418,15 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         if (_remainingAmount > 10) {
             uint256 _borrowCount = borrowCount;
             uint256 _borrowFactor = stETHBorrowFactor;
+            uint256 _increaseAstEthAmount = _remainingAmount;
             for (uint256 i = 0; i < _borrowCount; i++) {
-                if (_remainingAmount > 10) {
-                    uint256 _increaseAstEthAmount = _borrowEthAndDepositStEth(
+                if (_increaseAstEthAmount > 10) {
+                    _increaseAstEthAmount = _borrowEthAndDepositStEth(
                         _remainingAmount,
                         _borrowFactor,
                         _stETHPrice,
                         _lendingPoolAddress
                     );
-                    _remainingAmount = _increaseAstEthAmount;
                 } else {
                     break;
                 }
@@ -547,7 +547,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         uint256 _astETHValueInEth = (_astETHAmount * _stETHPrice) / 1e18;
         uint256 _borrowAmount = (_astETHValueInEth * _borrowFactor) / BPS;
         {
-            (, , uint256 _availableBorrowsETH, , , ) = ILendingPool(_lendingPoolAddress)
+            (, , uint256 _availableBorrowsETH, , , ) = _aaveLendingPool
                 .getUserAccountData(address(this));
             if (_borrowAmount > _availableBorrowsETH) {
                 _borrowAmount = _availableBorrowsETH;
