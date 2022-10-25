@@ -23,12 +23,13 @@ const EXCHANGE_PLATFORMS = {
         useHttp: true,
         network: 1,
         // protocols: 'CURVE_V2,SUSHI,CURVE,UNISWAP_V2,UNISWAP_V3'
-        // excludeProtocols: ['SHELL']
+        excludeProtocols: ['ONE_INCH_LIMIT_ORDER', 'ONE_INCH_LIMIT_ORDER_V2', 'ZEROX_LIMIT_ORDER', 'PMM1', 'PMM2', 'PMM3', 'PMM4']
     },
     paraswap: {
         network: 1,
-        // includeDEXS: 'UniswapV2,UniswapV3,SushiSwap,mStable,DODOV2,DODOV1,Curve,CurveV2,Compound,Bancor,BalancerV2,Aave2',
-        excludeContractMethods: ['swapOnZeroXv2', 'swapOnZeroXv4']
+        excludeContractMethods: ['swapOnZeroXv2', 'swapOnZeroXv4'],
+        excludeDEXS: 'acryptos',
+        includeDEXS: 'Uniswap,Kyber,Bancor,Oasis,Compound,Fulcrum,0x,MakerDAO,Chai,Aave,Aave2,MultiPath,MegaPath,Curve,Curve3,Saddle,IronV2,BDai,idle,Weth,Beth,UniswapV2,Balancer,0xRFQt,SushiSwap,LINKSWAP,Synthetix,DefiSwap,Swerve,CoFiX,Shell,DODOV1,DODOV2,OnChainPricing,PancakeSwap,PancakeSwapV2,ApeSwap,Wbnb,streetswap,bakeryswap,julswap,vswap,vpegswap,beltfi,ellipsis,QuickSwap,COMETH,Wmatic,Nerve,Dfyn,UniswapV3,Smoothy,PantherSwap,OMM1,OneInchLP,CurveV2,mStable,WaultFinance,MDEX,ShibaSwap,CoinSwap,SakeSwap,JetSwap,Biswap,BProtocol'
     }
 }
 
@@ -63,7 +64,7 @@ describe('ExchangeAggregator test.', function () {
     let vault;
     let farmer1
     let exchangeAggregator;
-    let amount = BigNumber.from(10**2);
+    let amount = BigNumber.from(10**3);
     let snapshotId;
 
     let tokenList = [
@@ -72,7 +73,7 @@ describe('ExchangeAggregator test.', function () {
         MFC.stETH_ADDRESS,
         MFC.WETH_ADDRESS,
         MFC.wstETH_ADDRESS,
-        MFC.rETH2_ADDRESS,
+        // MFC.rETH2_ADDRESS,
         MFC.sETH2_ADDRESS,
 
         // MFC.USDT_ADDRESS,
@@ -110,7 +111,7 @@ describe('ExchangeAggregator test.', function () {
         let tx;
         let dstTokenBalanceBeforeSwap = BigNumber.from((await balanceOfToken(farmer1,dstTokenAddr)).toString());
         if(dstTokenAddr == MFC.stETH_ADDRESS){
-            dstTokenBalanceBeforeSwap.sub(1);
+            dstTokenBalanceBeforeSwap = dstTokenBalanceBeforeSwap.sub(1);
         }
 
         let gasUsed = BigNumber.from(0);
@@ -123,8 +124,8 @@ describe('ExchangeAggregator test.', function () {
             tx = await exchangeAggregator.swap(SWAP_INFO.platform, SWAP_INFO.method, SWAP_INFO.encodeExchangeArgs, swapDesc, { from: farmer1,gasPrice:10* (10**9) });
             if (dstTokenAddr == NativeToken){
                 gasUsed = BigNumber.from(tx.receipt.gasUsed.toString()).mul(BigNumber.from(tx.receipt.effectiveGasPrice.toString()));
-                console.log('tx',tx);
-                console.log('gasUsed',gasUsed.toString());
+                // console.log('tx',tx);
+                console.log('gasUsed=',gasUsed.toString());
                 gasUsed = 0;
             }
         }
@@ -175,7 +176,7 @@ describe('ExchangeAggregator test.', function () {
         await topUpSTETHByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
         await topUpWETHByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
         await topUpWstEthByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
-        await topUpREth2ByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
+        // await topUpREth2ByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
         await topUpSEth2ByAddress((BigNumber.from(10).pow(18-1)).mul(2).mul(amount).toString(),farmer1);
 
         snapshotId = await hre.network.provider.send("evm_snapshot", []);
@@ -214,65 +215,14 @@ describe('ExchangeAggregator test.', function () {
                     decimals = BigNumber.from((await token.decimals()).toString());
                 }
                 let srcAmount = amount.mul(BigNumber.from(10).pow(decimals.sub(1)));
-                await swap(srcToken, dstToken, srcAmount.toString());
-                await hre.network.provider.send("evm_revert",[snapshotId]);
-                snapshotId = await hre.network.provider.send("evm_snapshot", []);
+                try{
+                    await swap(srcToken, dstToken, srcAmount.toString());
+                }
+                finally {
+                    await hre.network.provider.send("evm_revert",[snapshotId]);
+                    snapshotId = await hre.network.provider.send("evm_snapshot", []);
+                }
             });
         }
     }
-
-    // it('rETH2 to ETH',async function(){
-    //     await swap(MFC.ETH_ADDRESS, MFC.rETH2_ADDRESS,new BigNumber(100 * 1e18));
-    //     await swap(MFC.rETH2_ADDRESS, MFC.ETH_ADDRESS,new BigNumber(10 * 1e18));
-    // });
-    //
-    // it('rETH2 to rETH',async function(){
-    //     await swap(MFC.rETH2_ADDRESS, MFC.rocketPoolETH_ADDRESS,new BigNumber(10 * 1e18));
-    // });
-    //
-    // it('rETH2 to wstETH',async function(){
-    //     await swap(MFC.rETH2_ADDRESS, MFC.wstETH_ADDRESS,new BigNumber(10 * 1e18));
-    // });
-    //
-    // it('rETH2 to stETH',async function(){
-    //     await swap(MFC.rETH2_ADDRESS, MFC.stETH_ADDRESS,new BigNumber(10 * 1e18));
-    // });
-    //
-    // it('rETH2 to WETH',async function(){
-    //     await swap(MFC.rETH2_ADDRESS, MFC.WETH_ADDRESS,new BigNumber(10 * 1e18));
-    // });
-    //
-    // it('WETH to sETH2',async function(){
-    //     await swap(MFC.rETH2_ADDRESS, MFC.sETH2_ADDRESS,new BigNumber(10 * 1e18));
-    // });
-
-    // it('sETH2 to ETH',async function(){
-    //     await swap(MFC.ETH_ADDRESS, MFC.sETH2_ADDRESS,new BigNumber(650 * 1e18));
-    //     await swap(MFC.sETH2_ADDRESS, MFC.ETH_ADDRESS,new BigNumber(100 * 1e18));
-    // });
-
-    // it('sETH2 to rETH',async function(){
-    //     await swap(MFC.sETH2_ADDRESS, MFC.rocketPoolETH_ADDRESS,new BigNumber(100 * 1e18));
-    // });
-
-    // it('sETH2 to wstETH',async function(){
-    //     await swap(MFC.sETH2_ADDRESS, MFC.wstETH_ADDRESS,new BigNumber(100 * 1e18));
-    // });
-
-    // it('sETH2 to stETH',async function(){
-    //     await swap(MFC.sETH2_ADDRESS, MFC.stETH_ADDRESS,new BigNumber(100 * 1e18));
-    // });
-
-    // it('sETH2 to WETH',async function(){
-    //     await swap(MFC.sETH2_ADDRESS, MFC.WETH_ADDRESS,new BigNumber(100 * 1e18));
-    // });
-
-    // it('sETH2 to rETH2',async function(){
-    //     await swap(MFC.sETH2_ADDRESS, MFC.rETH2_ADDRESS,new BigNumber(100 * 1e18));
-    // });
-
-    // it('DAI to USDC',async function(){
-    //     await swap(MFC.ETH_ADDRESS, MFC.DAI_ADDRESS,new BigNumber(1 * 1e18));
-    //     await swap(MFC.DAI_ADDRESS, MFC.USDC_ADDRESS,await balanceOfToken(farmer1,MFC.DAI_ADDRESS));
-    // });
 });
