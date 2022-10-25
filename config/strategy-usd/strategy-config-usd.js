@@ -17,7 +17,7 @@ const strategiesList = [
     // // ...sushiStrategies,
     // ...uniswapStrategies,
     // ...yearnStrategies
-    ...aaveStrategies
+    // ...aaveStrategies
 ]
 
 exports.strategiesList = strategiesList
