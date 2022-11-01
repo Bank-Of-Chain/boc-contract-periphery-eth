@@ -1,6 +1,7 @@
 const { default: BigNumber } = require('bignumber.js');
 const { ethers } = require('hardhat');
 const { assert } = require('chai');
+const { expectEvent} = require('@openzeppelin/test-helpers');
 
 const MFC = require('../../config/mainnet-fork-test-config');
 const {strategiesList} = require('../../config/strategy-eth/strategy-config-eth')
@@ -11,14 +12,18 @@ const { send } = require('@openzeppelin/test-helpers');
 
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 const AccessControlProxy = hre.artifacts.require('AccessControlProxy');
-const PriceOracle = hre.artifacts.require('PriceOracle');
-const MockVault = hre.artifacts.require('contracts/eth/mock/MockVault.sol:MockVault');
+const PriceOracleConsumer = hre.artifacts.require('PriceOracleConsumer');
+const ILidoOracle = hre.artifacts.require('ILidoOracle');
+const ILido = hre.artifacts.require('ILido');
+const IERC20Upgradeable = hre.artifacts.require('IERC20Upgradeable');
+const MockVault = hre.artifacts.require('MockETHVault');
 const Mock3rdEthPool = hre.artifacts.require('contracts/eth/mock/Mock3rdEthPool.sol:Mock3rdEthPool');
-const MockUniswapV3Router = hre.artifacts.require('contracts/eth/mock/MockUniswapV3Router.sol:MockUniswapV3Router');
-// const ILido = hre.artifacts.require('ILido');
+const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
+const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
 
 let accessControlProxy;
-let priceOracle;
+let priceOracleConsumer;
+let mockPriceOracle;
 let mockVault;
 let mockUniswapV3Router;
 let strategy;
@@ -112,7 +117,7 @@ async function transfer(asset, amount, from, to) {
     } else {
         const tokenContract = await ERC20.at(asset);
         await tokenContract.transfer(to, amount, {
-            from
+            from: from
         });
     }
 }
@@ -128,6 +133,7 @@ function findStrategyItem(strategyName) {
 
 async function check(strategyName, beforeCallback, afterCallback, uniswapV3RebalanceCallback,outputCode = 0) {
     before(async function () {
+        BigNumber.set({ DECIMAL_PLACES: 6 });
         accounts = await ethers.getSigners();
         governance = accounts[0].address;
         investor = accounts[1].address;
@@ -135,10 +141,11 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         keeper = accounts[19].address;
 
         accessControlProxy = await AccessControlProxy.new();
-        priceOracle = await PriceOracle.new();
+        priceOracleConsumer = await PriceOracleConsumer.new();
+        mockPriceOracle = await MockAavePriceOracleConsumer.new();
         await accessControlProxy.initialize(governance, governance, governance, keeper);
         // init mockVault
-        mockVault = await MockVault.new(accessControlProxy.address, priceOracle.address);
+        mockVault = await MockVault.new(accessControlProxy.address, priceOracleConsumer.address);
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
         console.log('mock vault address:%s', mockVault.address);
@@ -182,9 +189,14 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         assert.deepEqual(name, strategyName, 'strategy name do not match the file name');
     });
 
-    it('[outputsInfo array length should bigger than zero]', async function () {
-        const ouputsInfo = await strategy.getOutputsInfo();
-        assert(ouputsInfo.length > 0);
+    it('[strategy version should not be empty]', async function () {
+        const version = await strategy.getVersion();
+        assert(version !== '', 'strategy version is empty');
+    });
+
+    it('[strategy outputsInfo should not be empty]', async function () {
+        const outputsInfo = await strategy.getOutputsInfo();
+        assert(outputsInfo.length > 0, 'The strategy did not return outputsInfo');
     });
 
     let wants;
@@ -220,7 +232,15 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         // initial parameters definition
         let initialAmount = new BigNumber(20);
         let initialRatio = wantsInfo._ratios[0];
-        let wants0Precision = new BigNumber(10 ** (await decimals(wantsInfo._assets[0])));
+        let initPrecision = new BigNumber(10 ** (await decimals(wantsInfo._assets[0])));
+        let initIndex = 0;
+        for (let i = 0; i < wants.length; i++){
+            if(initialRatio<wantsInfo._ratios[i]){
+                initIndex = i;
+                initialRatio = wantsInfo._ratios[i];
+                initPrecision = new BigNumber(10 ** (await decimals(wantsInfo._assets[i])));
+            }
+        }
 
         // is ignore want ratio
         let isIgnoreRatio = await strategy.isWantRatioIgnorable();
@@ -237,28 +257,34 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
             // calculate amount wanted to deposit
             let amount;
             
-            if (i !== 0) {
+            if (i !== initIndex) {
                 // for example,
                 // assets: [ETH, stETH]
                 // ratios: [100, 200]
                 // we assume that ETH amount is 20
                 // then, USDT amount = ETH amount * 200 / 100 = 40
-                amount = initialAmount.multipliedBy(wants0Precision).multipliedBy(ratio).dividedBy(initialRatio);
+                if(initialRatio>0){
+                    amount = new BigNumber(initialAmount.multipliedBy(initPrecision).multipliedBy(ratio).dividedBy(initialRatio).toFixed(0,1));
+                }else{
+                    amount = new BigNumber(initialAmount.multipliedBy(initPrecision).toFixed(0,1));
+                }
             } else {
                 amount = initialAmount.multipliedBy(assetPrecision);
             }
-
+            amount = amount.integerValue();
             let wantBalance = new BigNumber(await balanceOf(asset, investor));
             
             console.log('want:%s,balance:%d,amount:%d', asset, wantBalance, amount);
             // check balance enough
             if (wantBalance.gte(amount)) {
+                console.log('transfer amount:%s,%s',asset,amount);
+                
                 await transfer(asset, amount, investor, mockVault.address);
                 depositedAmounts.push(amount);
                 if (asset === MFC.ETH_ADDRESS) {
                     depositETH = depositETH.plus(amount);
                 } else {
-                    depositETH = depositETH.plus(await priceOracle.valueInEth(asset, amount));
+                    depositETH = depositETH.plus(await priceOracleConsumer.valueInEth(asset, amount));
                 }
             } else if (isIgnoreRatio) {
                 console.log('use 0');
@@ -267,15 +293,21 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         }
         console.log('Lend:', depositedAssets, depositedAmounts);
 
-        await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
-        const estimatedTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
+        const lendTx = await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
+        expectEvent.inTransaction(lendTx, 'Borrow', {
+            _assets: depositedAssets,
+            _amounts: depositedAmounts
+        });
+        depositETH = new BigNumber(ethers.utils.formatEther(depositETH.toFixed()));
+        const estimatedTotalAssets = new BigNumber(ethers.utils.formatEther(BigInt(await strategy.estimatedTotalAssets())));
         let delta = depositETH.minus(estimatedTotalAssets);
         console.log('depositETH:%d,estimatedTotalAssets:%d,delta:%d', depositETH, estimatedTotalAssets, delta);
+        
         // we can tolerate a little loss
         assertUtils.assertBNBt(
-            depositETH.multipliedBy(9995).dividedBy(10000),
+            depositETH.multipliedBy(997).dividedBy(1000),
             estimatedTotalAssets,
-            depositETH.multipliedBy(10005).dividedBy(10000),
+            depositETH.multipliedBy(1003).dividedBy(1000),
             'estimatedTotalAssets does not match depositedETH value'
         );
     });
@@ -298,16 +330,8 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         if (afterCallback) {
             await afterCallback(strategy);
         }
-        // const lido = await ILido.at("0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84");
-        // const stat = await lido.getBeaconStat();
-        // console.log('depositedValidators#:%d',stat.depositedValidators);
-        // console.log('beaconValidators#:%d',stat.beaconValidators);
-        // console.log('beaconBalance#:%d',stat.beaconBalance);
-        // const lidoOracle = "0x442af784a788a5bd6f42a01ebe9f287a871243fb";
-        // await impersonates([lidoOracle]);
-        // await send.ether(accounts[0].address,lidoOracle,1e18);
-        // await lido.pushBeacon(stat.beaconValidators,stat.beaconBalance,{from:lidoOracle});
-        await strategy.harvest({ from: keeper });
+        const harvestTx = await strategy.harvest({ from: keeper });
+        expectEvent.inTransaction(harvestTx,'StrategyReported');
         const afterTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
         console.log('beforeTotalAssets:%s, afterTotalAssets:%s', beforeTotalAssets.toFixed(), afterTotalAssets.toFixed());
         assert(afterTotalAssets.isGreaterThan(beforeTotalAssets), 'there is no profit after 3 days');
@@ -315,16 +339,21 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
 
     if (uniswapV3RebalanceCallback) {
         it('[UniswapV3 rebalance]', async function () {
-            await uniswapV3RebalanceCallback(strategy.address);
+            await uniswapV3RebalanceCallback(strategy.address,[mockPriceOracle.address]);
         });
     }
 
     it('[estimatedTotalAssets should be 0 after withdraw all assets]', async function () {
-        const estimatedTotalAssets0 = new BigNumber(await strategy.estimatedTotalAssets());
-        await mockVault.redeem(strategy.address, estimatedTotalAssets0, outputCode);
+        const strategyParam = await mockVault.strategies(strategy.address);
+        console.log("strategyTotalDebt:%s",strategyParam.totalDebt);
+        const strategyTotalDebt = new BigNumber(strategyParam.totalDebt);
+
+        const redeemTx = await mockVault.redeem(strategy.address, strategyTotalDebt, outputCode);
+        console.log("redeem gasUsed",redeemTx.receipt.gasUsed.toString())
+        expectEvent.inTransaction(redeemTx,'Repay');
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets());
         console.log('After withdraw all shares,strategy assets:%d', estimatedTotalAssets1);
-        assert.isTrue(estimatedTotalAssets1.multipliedBy(10000).isLessThan(depositETH), 'assets left in strategy should not be more than 1/10000');
+        assert.isTrue(estimatedTotalAssets1.isLessThan(depositETH), 'assets left in strategy should not be more than 1/1e18');
     });
 
     let withdrawETH = new BigNumber(0);
@@ -334,10 +363,11 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
             if (want === MFC.ETH_ADDRESS) {
                 withdrawETH = withdrawETH.plus(balance);
             } else {
-                let eth = new BigNumber(await priceOracle.valueInEth(want, balance));
+                let eth = new BigNumber(await priceOracleConsumer.valueInEth(want, balance));
                 withdrawETH = withdrawETH.plus(eth);
             }
         }
+        withdrawETH = new BigNumber(ethers.utils.formatEther(withdrawETH.toFixed()));
         console.log('depositETH:%s, withdrawETH:%s', depositETH.toFixed(), withdrawETH.toFixed());
         assert(withdrawETH.isGreaterThan(depositETH), 'the value of wants user got do not increase');
     });

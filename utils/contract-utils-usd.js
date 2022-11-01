@@ -47,7 +47,7 @@ const ValueInterpreter = hre.artifacts.require("ValueInterpreter")
 const MockValueInterpreter = hre.artifacts.require(
     "contracts/usd/mock/MockValueInterpreter.sol:MockValueInterpreter",
 )
-const TestAdapter = hre.artifacts.require("contracts/exchanges/adapters/TestAdapter.sol:TestAdapter");
+const TestAdapter = hre.artifacts.require("TestAdapter");
 const ExchangeAggregator = hre.artifacts.require("ExchangeAggregator")
 const IExchangeAdapter = hre.artifacts.require("IExchangeAdapter")
 const OneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');

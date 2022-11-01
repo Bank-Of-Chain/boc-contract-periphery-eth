@@ -13,8 +13,9 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../../external/dodo/DodoStakePool.sol';
 import '../../external/dodo/DodoVault.sol';
-import 'hardhat/console.sol';
 
+/// @title DodoPoolActionsMixin Contract
+/// @notice Mixin contract for interacting with Dodo
 contract DodoPoolActionsMixin {
     address internal lpTokenPool;
 
@@ -33,11 +34,11 @@ contract DodoPoolActionsMixin {
         DodoStakePool(STAKE_POOL_ADDRESS).withdraw(_amount);
     }
 
-    function balanceOfLpToken(address addr) internal view returns (uint256 lpAmount) {
-        lpAmount = DodoStakePool(STAKE_POOL_ADDRESS).balanceOf(addr);
+    function balanceOfLpToken(address _addr) internal view returns (uint256 _lpAmount) {
+        _lpAmount = DodoStakePool(STAKE_POOL_ADDRESS).balanceOf(_addr);
     }
 
-    function getPendingRewardByToken(address rewardToken) internal view returns(uint256 rewardAmount) {
-        rewardAmount = DodoStakePool(STAKE_POOL_ADDRESS).getPendingRewardByToken(address(this),rewardToken);
+    function getPendingRewardByToken(address _rewardToken) internal view returns(uint256 _rewardAmount) {
+        _rewardAmount = DodoStakePool(STAKE_POOL_ADDRESS).getPendingRewardByToken(address(this),_rewardToken);
     }
 }

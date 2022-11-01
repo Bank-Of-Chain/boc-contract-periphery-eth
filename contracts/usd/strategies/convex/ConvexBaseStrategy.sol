@@ -8,21 +8,28 @@ import "../../../external/convex/IConvex.sol";
 
 import "../../enums/ProtocolEnum.sol";
 
-import "hardhat/console.sol";
-
+/// @title ConvexBaseStrategy
+/// @author Bank of Chain Protocol Inc
 abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IConvex internal constant BOOSTER =
         IConvex(address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31));
-    address private constant CRV = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
-    address private constant CVX = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
+    address internal constant CRV = address(0xD533a949740bb3306d119CC777fa900bA034cd52);
+    address internal constant CVX = address(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
 
     address public curvePool;
     address public lpToken;
     address public rewardPool;
     uint256 public pid;
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
+    /// @param _wants The address list of tokens wanted
+    /// @param _curvePool The curve pool invested 
+    /// @param _rewardPool The address of the base reward pool which issue reward linearly
     function _initialize(
         address _vault,
         address _harvester,
@@ -39,50 +46,61 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
         isWantRatioIgnorable = true;
     }
 
-
+    /// @notice Add liquidity into curve pool
     /// @dev override method should allow to deposit multi tokens
+    /// @param _assets The asset list to add
+    /// @param _amounts The amount list to add
+    /// @return The amount of liquidity
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
         internal
         virtual
         returns (uint256);
 
+    /// @notice Strategy deposit funds to third party pool.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
     {
-        console.log("start to depositTo3rdPool");
         // add liquidity on curve
-        uint256 liquidity = curveAddLiquidity(_assets, _amounts);
-        console.log("curveLpAmount:%d", liquidity);
-        if (liquidity > 0) {
-            console.log("deposit into Convex, pid:%d, lp amount:%d", pid, balanceOfToken(lpToken));
+        uint256 _liquidity = curveAddLiquidity(_assets, _amounts);
+        if (_liquidity > 0) {
             IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), 0);
-            IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), liquidity);
+            IERC20Upgradeable(lpToken).safeApprove(address(BOOSTER), _liquidity);
             // deposit into convex booster and stake at reward pool automically
-            BOOSTER.deposit(pid, liquidity, true);
+            BOOSTER.deposit(pid, _liquidity, true);
         }
     }
 
+    /// @notice Remove liquidity from curve pool
     /// @dev do not remove with one coin, and return underlying
-    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal virtual;
+    /// @param _liquidity The amount of liquidity to remove
+    /// @param _outputCode The code of output
+    function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal virtual;
 
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
         uint256 _lpAmount = (balanceOfLpToken() * _withdrawShares) / _totalShares;
-        console.log("_withdrawSomeLpToken:%d", _lpAmount);
         if (_lpAmount > 0) {
             // unstaking
             IConvexReward(rewardPool).withdraw(_lpAmount, false);
             BOOSTER.withdraw(pid, _lpAmount);
-            console.log("lpBalance:%d", balanceOfToken(lpToken));
             // remove liquidity on curve
             curveRemoveLiquidity(_lpAmount, _outputCode);
         }
     }
 
+    /// @notice Collect the rewards from third party protocol
+    /// @return _rewardTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
         internal
         virtual
@@ -98,6 +116,7 @@ abstract contract ConvexBaseStrategy is BaseClaimableStrategy {
         _claimAmounts[1] = balanceOfToken(CVX);
     }
 
+    /// @notice Return the LP token's balance Of this contract
     function balanceOfLpToken() internal view returns (uint256) {
         return IConvexReward(rewardPool).balanceOf(address(this));
     }

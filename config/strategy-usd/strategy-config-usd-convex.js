@@ -200,18 +200,18 @@ const convexStrategies = [
     //         "0xFd5AbF66b003881b88567EB9Ed9c651F14Dc4771",//rewardPool
     //     ]
     // },
-    {
-        name: "ConvexMetaTusdStrategy",
-        contract: "ConvexMetaPoolStrategy",
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-        customParams: [
-            "0x0000000000085d4780B73119b644AE5ecd22b376",//pairToken
-            "0xEcd5e75AFb02eFa118AF914515D6521aaBd189F1",//curvePool
-            "0x308b48F037AAa75406426dACFACA864ebd88eDbA",//rewardPool
-        ]
-    },
+    // {
+    //     name: "ConvexMetaTusdStrategy",
+    //     contract: "ConvexMetaPoolStrategy",
+    //     profitLimitRatio: 100,
+    //     lossLimitRatio: 100,
+    //     addToVault: true,
+    //     customParams: [
+    //         "0x0000000000085d4780B73119b644AE5ecd22b376",//pairToken
+    //         "0xEcd5e75AFb02eFa118AF914515D6521aaBd189F1",//curvePool
+    //         "0x308b48F037AAa75406426dACFACA864ebd88eDbA",//rewardPool
+    //     ]
+    // },
     {
         name: "ConvexMetaUsdpStrategy",
         contract: "ConvexMetaPoolStrategy",
@@ -252,15 +252,15 @@ const convexStrategies = [
         customParams: [
         ]
     },
-    {
-        name: "ConvexPaxStrategy",
-        contract: "ConvexPaxStrategy",
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-        customParams: [
-        ]
-    },
+    // {
+    //     name: "ConvexPaxStrategy",
+    //     contract: "ConvexPaxStrategy",
+    //     profitLimitRatio: 100,
+    //     lossLimitRatio: 100,
+    //     addToVault: true,
+    //     customParams: [
+    //     ]
+    // },
     {
         name: "ConvexSaaveStrategy",
         contract: "ConvexSaaveStrategy",
@@ -270,18 +270,18 @@ const convexStrategies = [
         customParams: [
         ]
     },
+    // {
+    //     name: "ConvexUsdtStrategy",
+    //     contract: "ConvexUsdtStrategy",
+    //     profitLimitRatio: 100,
+    //     lossLimitRatio: 100,
+    //     addToVault: true,
+    //     customParams: [
+    //     ]
+    // },
     {
         name: "ConvexSusdStrategy",
         contract: "ConvexSusdStrategy",
-        profitLimitRatio: 100,
-        lossLimitRatio: 100,
-        addToVault: true,
-        customParams: [
-        ]
-    },
-    {
-        name: "ConvexUsdtStrategy",
-        contract: "ConvexUsdtStrategy",
         profitLimitRatio: 100,
         lossLimitRatio: 100,
         addToVault: true,

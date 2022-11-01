@@ -14,8 +14,9 @@ import "../../../external/aura/IAuraBooster.sol";
 import "boc-contract-core/contracts/strategy/BaseClaimableStrategy.sol";
 import "../../enums/ProtocolEnum.sol";
 
-import "hardhat/console.sol";
-
+/// @title Aura3PoolStrategy
+/// @notice Investment strategy for investing stablecoins via Aura 
+/// @author Bank of Chain Protocol Inc
 contract Aura3PoolStrategy is BaseClaimableStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -50,26 +51,29 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
 
         _initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Aura), _wants);
 
-        uint256 uintMax = type(uint256).max;
-        // (address[] memory _tokens, , ) = BALANCER_VAULT.getPoolTokens(poolKey);
+        uint256 _uintMax = type(uint256).max;
+        // (address[] memory _tokens, , ) = BALANCER_VAULT.getPoolTokens(_poolKey);
         for (uint256 i = 0; i < _wants.length; i++) {
-            address token = _wants[i];
+            address _token = _wants[i];
             // for enter balancer vault
-            IERC20Upgradeable(token).safeApprove(address(BALANCER_VAULT), uintMax);
+            IERC20Upgradeable(_token).safeApprove(address(BALANCER_VAULT), _uintMax);
         }
         //for Booster deposit
-        IERC20Upgradeable(getPoolLpToken()).safeApprove(address(AURA_BOOSTER), uintMax);
+        IERC20Upgradeable(getPoolLpToken()).safeApprove(address(AURA_BOOSTER), _uintMax);
         isWantRatioIgnorable = true;
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @notice Return the pool key
     function getPoolKey() internal pure returns (bytes32) {
         return 0x06df3b2bbb68adc8b0e302443692037ed9f91b42000000000000000000000063;
     }
 
+    /// @notice Return the pId
     function getPId() internal pure returns (uint256) {
         return 0;
     }
@@ -78,11 +82,15 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         return 0x06Df3b2bbB68adc8B0e302443692037ED9f91b42;
     }
 
+    /// @notice Return the LP token address of the rETH stable pool
     function getRewardPool() internal pure returns (address) {
         return 0x08b8a86B9498AC249bF4B86e14C5d4187085a239;
     }
 
-    /// @notice Provide the strategy need underlying token and ratio
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         external
         view
@@ -92,47 +100,52 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         (_assets, _ratios, ) = BALANCER_VAULT.getPoolTokens(getPoolKey());
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](4);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](4);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
 
-        OutputInfo memory info1 = outputsInfo[1];
-        info1.outputCode = 1;
-        info1.outputTokens = new address[](1);
-        info1.outputTokens[0] = DAI;
+        OutputInfo memory _info1 = _outputsInfo[1];
+        _info1.outputCode = 1;
+        _info1.outputTokens = new address[](1);
+        _info1.outputTokens[0] = DAI;
 
-        OutputInfo memory info2 = outputsInfo[2];
-        info2.outputCode = 2;
-        info2.outputTokens = new address[](1);
-        info2.outputTokens[0] = USDC;
+        OutputInfo memory _info2 = _outputsInfo[2];
+        _info2.outputCode = 2;
+        _info2.outputTokens = new address[](1);
+        _info2.outputTokens[0] = USDC;
 
-        OutputInfo memory info3 = outputsInfo[3];
-        info3.outputCode = 3;
-        info3.outputTokens = new address[](1);
-        info3.outputTokens[0] = USDT;
+        OutputInfo memory _info3 = _outputsInfo[3];
+        _info3.outputCode = 3;
+        _info3.outputTokens = new address[](1);
+        _info3.outputTokens[0] = USDT;
     }
 
-    /// @notice 3rd prototcol's pool total assets in USD.
+    /// @notice Return the 3rd protocol's pool total assets in USD.
     function get3rdPoolAssets() external view override returns (uint256) {
-        uint256 totalAssets;
-        (address[] memory tokens, uint256[] memory balances, ) = BALANCER_VAULT.getPoolTokens(
+        uint256 _totalAssets;
+        (address[] memory _tokens, uint256[] memory _balances, ) = BALANCER_VAULT.getPoolTokens(
             getPoolKey()
         );
-        for (uint8 i = 0; i < tokens.length; i++) {
-            totalAssets += queryTokenValue(tokens[i], balances[i]);
+        for (uint8 i = 0; i < _tokens.length; i++) {
+            _totalAssets += queryTokenValue(_tokens[i], _balances[i]);
         }
-        return totalAssets;
+        return _totalAssets;
     }
 
     /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -140,84 +153,89 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         (_tokens, _amounts, ) = BALANCER_VAULT.getPoolTokens(getPoolKey());
-        uint256 stakingAmount = getStakingAmount();
-        uint256 lpTotalSupply = IERC20Upgradeable(getPoolLpToken()).totalSupply();
+        uint256 _stakingAmount = getStakingAmount();
+        uint256 _lpTotalSupply = IERC20Upgradeable(getPoolLpToken()).totalSupply();
         for (uint256 i = 0; i < _tokens.length; i++) {
             _amounts[i] =
-                (_amounts[i] * stakingAmount) /
-                lpTotalSupply +
+                (_amounts[i] * _stakingAmount) /
+                _lpTotalSupply +
                 balanceOfToken(_tokens[i]);
         }
     }
 
+    /// @notice Return the amount staking on base reward pool
     function getStakingAmount() public view returns (uint256) {
         return IRewardPool(getRewardPool()).balanceOf(address(this));
     }
 
-    function _getPoolAssets(bytes32 _poolKey) internal view returns (IAsset[] memory poolAssets) {
-        (address[] memory tokens, , ) = BALANCER_VAULT.getPoolTokens(_poolKey);
-        poolAssets = new IAsset[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            poolAssets[i] = IAsset(tokens[i]);
+    function _getPoolAssets(bytes32 _poolKey) internal view returns (IAsset[] memory _poolAssets) {
+        (address[] memory _tokens, , ) = BALANCER_VAULT.getPoolTokens(_poolKey);
+        _poolAssets = new IAsset[](_tokens.length);
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            _poolAssets[i] = IAsset(_tokens[i]);
         }
     }
 
-    /// @notice Strategy deposit funds to 3rd pool.
+    /// @notice Strategy deposit funds to third party pool.
     /// @param _assets deposit token address
     /// @param _amounts deposit token amount
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
     {
-        uint256 receiveLpAmount = _depositToBalancer(_assets, _amounts);
-        console.log("receiveLpAmount:", receiveLpAmount);
-        AURA_BOOSTER.deposit(getPId(), receiveLpAmount, true);
+        uint256 _receiveLpAmount = _depositToBalancer(_assets, _amounts);
+        AURA_BOOSTER.deposit(getPId(), _receiveLpAmount, true);
     }
 
+    /// @notice Strategy deposit funds to the balancer protocol.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
     function _depositToBalancer(address[] memory _assets, uint256[] memory _amounts)
         internal
         virtual
-        returns (uint256 receiveLpAmount)
+        returns (uint256 _receiveLpAmount)
     {
-        bytes32 poolKey = getPoolKey();
-        IBalancerVault.JoinPoolRequest memory joinRequest = IBalancerVault.JoinPoolRequest({
-            assets: _getPoolAssets(poolKey),
+        bytes32 _poolKey = getPoolKey();
+        IBalancerVault.JoinPoolRequest memory _joinRequest = IBalancerVault.JoinPoolRequest({
+            assets: _getPoolAssets(_poolKey),
             maxAmountsIn: _amounts,
             userData: abi.encode(JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, _amounts, 0),
             fromInternalBalance: false
         });
 
-        BALANCER_VAULT.joinPool(poolKey, address(this), address(this), joinRequest);
-        receiveLpAmount = balanceOfToken(getPoolLpToken());
+        BALANCER_VAULT.joinPool(_poolKey, address(this), address(this), _joinRequest);
+        _receiveLpAmount = balanceOfToken(getPoolLpToken());
     }
 
-    /// @notice Strategy withdraw the funds from 3rd pool.
-    /// @param _withdrawShares Numerator
-    /// @param _totalShares Denominator
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-        uint256 withdrawAmount = (getStakingAmount() * _withdrawShares) / _totalShares;
-        console.log("withdrawAmount:", withdrawAmount);
+        uint256 _withdrawAmount = (getStakingAmount() * _withdrawShares) / _totalShares;
         //unstaking
-        IRewardPool(getRewardPool()).redeem(withdrawAmount, address(this), address(this));
-        console.log("lpAmount:", balanceOfToken(getPoolLpToken()));
-        _withdrawFromBalancer(withdrawAmount, _outputCode);
+        IRewardPool(getRewardPool()).redeem(_withdrawAmount, address(this), address(this));
+        _withdrawFromBalancer(_withdrawAmount, _outputCode);
     }
 
+    /// @notice Strategy withdraw the funds from the balancer protocol
+    /// @param _exitAmount The amount to withdraw
+    /// @param _outputCode The code of output
     function _withdrawFromBalancer(uint256 _exitAmount, uint256 _outputCode) internal virtual {
-        bytes32 poolKey = getPoolKey();
-        address payable recipient = payable(address(this));
-        IAsset[] memory poolAssets = _getPoolAssets(poolKey);
-        uint256[] memory minAmountsOut = new uint256[](poolAssets.length);
-        IBalancerVault.ExitPoolRequest memory exitRequest;
+        bytes32 _poolKey = getPoolKey();
+        address payable _recipient = payable(address(this));
+        IAsset[] memory _poolAssets = _getPoolAssets(_poolKey);
+        uint256[] memory _minAmountsOut = new uint256[](_poolAssets.length);
+        IBalancerVault.ExitPoolRequest memory _exitRequest;
         if (_outputCode > 0 && _outputCode < 4) {
             uint256 index;
             if (_outputCode == 1) {
@@ -227,48 +245,47 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
             } else if (_outputCode == 3) {
                 index = 2;
             }
-            exitRequest = IBalancerVault.ExitPoolRequest({
-                assets: poolAssets,
-                minAmountsOut: minAmountsOut,
+            _exitRequest = IBalancerVault.ExitPoolRequest({
+                assets: _poolAssets,
+                minAmountsOut: _minAmountsOut,
                 userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_ONE_TOKEN_OUT, _exitAmount, index),
                 toInternalBalance: false
             });
         } else {
-            exitRequest = IBalancerVault.ExitPoolRequest({
-                assets: poolAssets,
-                minAmountsOut: minAmountsOut,
+            _exitRequest = IBalancerVault.ExitPoolRequest({
+                assets: _poolAssets,
+                minAmountsOut: _minAmountsOut,
                 userData: abi.encode(ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, _exitAmount),
                 toInternalBalance: false
             });
         }
-        BALANCER_VAULT.exitPool(poolKey, address(this), recipient, exitRequest);
-        console.log('after withdraw want0 balancer:%d',balanceOfToken(wants[0]));
-        console.log('after withdraw want1 balancer:%d',balanceOfToken(wants[1]));
-        console.log('after withdraw want2 balancer:%d',balanceOfToken(wants[2]));
+        BALANCER_VAULT.exitPool(_poolKey, address(this), _recipient, _exitRequest);
     }
 
+    /// @notice Collect the rewards from 3rd protocol
+    /// @return _rewardsTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
     function claimRewards()
         internal
         override
         returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
-        address rewardPool = getRewardPool();
-        IRewardPool(rewardPool).getReward();
-        uint256 extraRewardsLen = IRewardPool(rewardPool).extraRewardsLength();
-        _rewardsTokens = new address[](2 + extraRewardsLen);
+        address _rewardPool = getRewardPool();
+        IRewardPool(_rewardPool).getReward();
+        uint256 _extraRewardsLen = IRewardPool(_rewardPool).extraRewardsLength();
+        _rewardsTokens = new address[](2 + _extraRewardsLen);
         _rewardsTokens[0] = BAL;
         _rewardsTokens[1] = AURA_TOKEN;
-        _claimAmounts = new uint256[](2 + extraRewardsLen);
+        _claimAmounts = new uint256[](2 + _extraRewardsLen);
         _claimAmounts[0] = balanceOfToken(BAL);
         _claimAmounts[1] = balanceOfToken(AURA_TOKEN);
-        console.log("extraRewardsLen:", extraRewardsLen);
-        if (extraRewardsLen > 0) {
-            for (uint256 i = 0; i < extraRewardsLen; i++) {
-                address extraReward = IRewardPool(rewardPool).extraRewards(i);
-                address rewardToken = IRewardPool(extraReward).rewardToken();
-                // IRewardPool(extraReward).getReward();
-                _rewardsTokens[2 + i] = rewardToken;
-                _claimAmounts[2 + i] = balanceOfToken(rewardToken);
+        if (_extraRewardsLen > 0) {
+            for (uint256 i = 0; i < _extraRewardsLen; i++) {
+                address _extraReward = IRewardPool(_rewardPool).extraRewards(i);
+                address _rewardToken = IRewardPool(_extraReward).rewardToken();
+                // IRewardPool(_extraReward).getReward();
+                _rewardsTokens[2 + i] = _rewardToken;
+                _claimAmounts[2 + i] = balanceOfToken(_rewardToken);
             }
         }
     }

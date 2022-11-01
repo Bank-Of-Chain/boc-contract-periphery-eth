@@ -9,12 +9,19 @@ import "../../../utils/actions/UniswapV2LiquidityActionsMixin.sol";
 import "../../../external/uniswap/IUniswapV2Pair.sol";
 import "./../../enums/ProtocolEnum.sol";
 import "../ETHBaseStrategy.sol";
-import "hardhat/console.sol";
 
+/// @title ETHUniswapV2Strategy
+/// @notice Investment strategy for investing ETH via UniswapV2
+/// @author Bank of Chain Protocol Inc
 contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IUniswapV2Pair public uniswapV2Pair;
+
+    /// @notice Initialize this contract
+    /// @param _vault The ETH vaults
+    /// @param _name The name of strategy
+    /// @param _pair One uniswapV2 pair address
     function initialize(address _vault,string memory _name,address _pair) external initializer {
         uniswapV2Pair = IUniswapV2Pair(_pair);
         address[] memory _wants = new address[](2);
@@ -24,26 +31,29 @@ contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin
         _initializeUniswapV2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getVersion() external pure virtual override returns (string memory) {
         return "1.0.0";
     }
 
-
+    /// @inheritdoc ETHBaseStrategy
     function getWantsInfo() external view virtual override returns (address[] memory _assets, uint256[] memory _ratios) {
-        (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
+        (uint112 _reserve0, uint112 _reserve1, ) = uniswapV2Pair.getReserves();
         _assets = wants;
         _ratios = new uint256[](2);
-        _ratios[0] = reserve0;
-        _ratios[1] = reserve1;
+        _ratios[0] = _reserve0;
+        _ratios[1] = _reserve1;
     }
 
-    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory outputsInfo){
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info = outputsInfo[0];
-        info.outputCode = 0;
-        info.outputTokens = wants;
+    /// @inheritdoc ETHBaseStrategy
+    function getOutputsInfo() external view virtual override returns (OutputInfo[] memory _outputsInfo){
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info = _outputsInfo[0];
+        _info.outputCode = 0;
+        _info.outputTokens = wants;
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function getPositionDetail()
         public
         view
@@ -52,47 +62,50 @@ contract ETHUniswapV2Strategy is ETHBaseStrategy, UniswapV2LiquidityActionsMixin
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isETH,
-            uint256 ethValue
+            bool _isETH,
+            uint256 _ethValue
         )
     {
-        (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
-        uint256 totalSupply = uniswapV2Pair.totalSupply();
-        uint256 lpAmount = balanceOfToken(address(uniswapV2Pair));
+        (uint112 _reserve0, uint112 _reserve1, ) = uniswapV2Pair.getReserves();
+        uint256 _totalSupply = uniswapV2Pair.totalSupply();
+        uint256 _lpAmount = balanceOfToken(address(uniswapV2Pair));
         _tokens = wants;
         _amounts = new uint256[](2);
-        _amounts[0] = (lpAmount * reserve0) / totalSupply + balanceOfToken(_tokens[0]);
-        _amounts[1] = (lpAmount * reserve1) / totalSupply + balanceOfToken(_tokens[1]);
+        _amounts[0] = (_lpAmount * _reserve0) / _totalSupply + balanceOfToken(_tokens[0]);
+        _amounts[1] = (_lpAmount * _reserve1) / _totalSupply + balanceOfToken(_tokens[1]);
     }
 
-    function lpValueInEth() internal view returns (uint256 lpValue) {
-        uint256 totalSupply = uniswapV2Pair.totalSupply();
-        (uint112 reserve0, uint112 reserve1, ) = uniswapV2Pair.getReserves();
-        console.log('reserve0:%d,reserve1:%d',reserve0,reserve1);
-        uint256 lpDecimalUnit = 1e18;
-        uint256 part0 = (uint256(reserve0) * (lpDecimalUnit)) / totalSupply;
-        uint256 part1 = (uint256(reserve1) * (lpDecimalUnit)) / totalSupply;
-        uint256 partValue0 = priceOracle.valueInEth(wants[0], part0);
-        uint256 partValue1 = priceOracle.valueInEth(wants[1], part1);
-        lpValue = partValue0 + partValue1;
+    /// @notice Return The value in ETH of all ``uniswapV2Pair``'s total LP
+    function lpValueInEth() internal view returns (uint256 _lpValue) {
+        uint256 _totalSupply = uniswapV2Pair.totalSupply();
+        (uint112 _reserve0, uint112 _reserve1, ) = uniswapV2Pair.getReserves();
+        uint256 _lpDecimalUnit = 1e18;
+        uint256 _part0 = (uint256(_reserve0) * (_lpDecimalUnit)) / _totalSupply;
+        uint256 _part1 = (uint256(_reserve1) * (_lpDecimalUnit)) / _totalSupply;
+        uint256 _partValue0 = priceOracleConsumer.valueInEth(wants[0], _part0);
+        uint256 _partValue1 = priceOracleConsumer.valueInEth(wants[1], _part1);
+        _lpValue = _partValue0 + _partValue1;
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function get3rdPoolAssets() external view virtual override returns (uint256) {
         
-        uint256 totalSupply = uniswapV2Pair.totalSupply();
-        uint256 lpValue = lpValueInEth();
+        uint256 _totalSupply = uniswapV2Pair.totalSupply();
+        uint256 _lpValue = lpValueInEth();
 
-        return (totalSupply * lpValue) / 1e18;
+        return (_totalSupply * _lpValue) / 1e18;
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts) internal virtual override {
         __uniswapV2Lend(address(this), _assets[0], _assets[1], _amounts[0], _amounts[1], 0, 0);
     }
 
+    /// @inheritdoc ETHBaseStrategy
     function withdrawFrom3rdPool(uint256 _withdrawShares, uint256 _totalShares,uint256 _outputCode) internal virtual override {
-        uint256 withdrawAmount = (balanceOfToken(address(uniswapV2Pair)) * _withdrawShares) / _totalShares;
-        if (withdrawAmount > 0) {
-            __uniswapV2Redeem(address(this), address(uniswapV2Pair), withdrawAmount, wants[0], wants[1], 0, 0);
+        uint256 _withdrawAmount = (balanceOfToken(address(uniswapV2Pair)) * _withdrawShares) / _totalShares;
+        if (_withdrawAmount > 0) {
+            __uniswapV2Redeem(address(this), address(uniswapV2Pair), _withdrawAmount, wants[0], wants[1], 0, 0);
         }
     }
 

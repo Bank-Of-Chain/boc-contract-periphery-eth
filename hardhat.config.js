@@ -4,6 +4,9 @@ require('@nomiclabs/hardhat-truffle5');
 require('hardhat-gas-reporter');
 require('hardhat-contract-sizer');
 require('@openzeppelin/hardhat-upgrades');
+require('hardhat-log-remover');
+require('dotenv').config();
+
 const {
     removeConsoleLog
 } = require('hardhat-preprocessor');
@@ -55,7 +58,7 @@ const config = {
             },
             forking: {
                 url: 'https://eth-mainnet.alchemyapi.io/v2/' + keys.alchemyKey.dev,
-                blockNumber: 15312629, // <-- edit here
+                blockNumber: 15823054, // <-- edit here
             },
             blockGasLimit: DEFAULT_BLOCK_GAS_LIMIT,
             timeout: 1800000,
@@ -86,10 +89,10 @@ const config = {
             accounts: process.env.ACCOUNT_PRIVATE_KEY ? [`${process.env.ACCOUNT_PRIVATE_KEY}`] : undefined,
         },
         mainnet: {
-            url: `https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161`,
+            url: `https://eth-mainnet.g.alchemy.com/v2/ZYgaLj6aguvs_FkgM-2dKhBR9ZXEGC9X`,
             accounts: process.env.ACCOUNT_PRIVATE_KEY ? [`${process.env.ACCOUNT_PRIVATE_KEY}`] : undefined,
             // The gasPrice used when performing the blocking, in wei, for the release, 80Gwei is used
-            // gasPrice: 80 * 10 ** 9,
+            gasPrice: 10 * 10 ** 9,
             timeout: 2000000000,
             timeoutBlocks: 10000
         },

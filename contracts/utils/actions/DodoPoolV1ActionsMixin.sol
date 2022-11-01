@@ -13,6 +13,8 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../../external/dodo/DodoStakePoolV1.sol';
 
+/// @title DodoPoolV1ActionsMixin Contract
+/// @notice Mixin contract for interacting with Dodo V1
 contract DodoPoolV1ActionsMixin {
     address internal STAKE_POOL_V1_ADDRESS;
 
@@ -32,16 +34,16 @@ contract DodoPoolV1ActionsMixin {
         DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).withdraw(_lpToken, _amount);
     }
 
-    function balanceOfBaseLpToken() internal view returns (uint256 lpAmount) {
-        lpAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getUserLpBalance(BASE_LP_TOKEN, address(this));
+    function balanceOfBaseLpToken() internal view returns (uint256 _lpAmount) {
+        _lpAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getUserLpBalance(BASE_LP_TOKEN, address(this));
     }
 
-    function balanceOfQuoteLpToken() internal view returns (uint256 lpAmount) {
-        lpAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getUserLpBalance(QUOTE_LP_TOKEN, address(this));
+    function balanceOfQuoteLpToken() internal view returns (uint256 _lpAmount) {
+        _lpAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getUserLpBalance(QUOTE_LP_TOKEN, address(this));
     }
 
-    function getPendingReward() internal view returns(uint256 rewardAmount) {
-        rewardAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getPendingReward(BASE_LP_TOKEN, address(this));
-        rewardAmount += DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getPendingReward(QUOTE_LP_TOKEN, address(this));
+    function getPendingReward() internal view returns(uint256 _rewardAmount) {
+        _rewardAmount = DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getPendingReward(BASE_LP_TOKEN, address(this));
+        _rewardAmount += DodoStakePoolV1(STAKE_POOL_V1_ADDRESS).getPendingReward(QUOTE_LP_TOKEN, address(this));
     }
 }

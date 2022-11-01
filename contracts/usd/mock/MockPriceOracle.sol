@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import '../../external/cream/IPriceOracle.sol';
+import "../../external/cream/IPriceOracle.sol";
 
+/// @title MockPriceOracle
+/// @notice The mock contract of PriceOracle contract
 contract MockPriceOracle is IPriceOracle {
 
-    mapping (address => uint) priceMap;
-    address constant originPriceOracleAddr = 0xE4e9F6cfe8aC8C75A3dBeF809dbe4fc40e6FDc4b;
+    mapping(address => uint) private priceMap;
+    address private constant originPriceOracleAddr = 0xE4e9F6cfe8aC8C75A3dBeF809dbe4fc40e6FDc4b;
 
     constructor(){
         IPriceOracle originPriceOracle = IPriceOracle(originPriceOracleAddr);
@@ -36,17 +38,18 @@ contract MockPriceOracle is IPriceOracle {
         priceMap[cKRW] = originPriceOracle.getUnderlyingPrice(cKRW);
     }
 
-    function setUnderlyingPrice(address cToken,uint256 price) external {
-        priceMap[cToken] = price;
+    /// @notice Sets the underlying _price of a `_cToken` asset
+    /// @param _cToken The `_cToken` to get the underlying `_price` of
+    /// @param _price The new value of ``_cToken``'s price
+    function setUnderlyingPrice(address _cToken,uint256 _price) external {
+        priceMap[_cToken] = _price;
     }
 
-    /**
-      * @notice Get the underlying price of a cToken asset
-      * @param cToken The cToken to get the underlying price of
-      * @return The underlying asset price mantissa (scaled by 1e18).
-      *  Zero means the price is unavailable.
-      */
-    function getUnderlyingPrice(address cToken) external override view returns (uint){
-        return priceMap[cToken];
+    /// @notice Gets the price of a `_cToken` asset
+    /// @param _cToken It is this `_cToken` that gets it the price of
+    /// @return the price of a `_cToken` asset (scaled by 1e18).
+    ///  Zero means the `_price` is unavailable.
+    function getUnderlyingPrice(address _cToken) external override view returns (uint){
+        return priceMap[_cToken];
     }
 }

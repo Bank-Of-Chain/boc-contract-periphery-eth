@@ -61,7 +61,7 @@ const ETHVault = 'ETHVault';
 const ETHVaultAdmin = 'ETHVaultAdmin';
 const ETHVaultBuffer = 'ETHVaultBuffer';
 const ETHPegToken = 'ETHPegToken';
-const PriceOracle = 'PriceOracle';
+const PriceOracleConsumer = 'PriceOracleConsumer';
 const HarvestHelper = 'HarvestHelper';
 const ETH_INITIAL_ASSET_LIST = [
     MFC_PRODUCTION.ETH_ADDRESS,
@@ -74,31 +74,35 @@ const addressMap = {
         rs[i.name] = '';
         return rs
     }, {}),
-
-    //----------------USD---------------------------
+    //----------------Common---------------------------
     [Verification]: '0x3eBd354DF4134951a5AFde008E63BfC93D2b6F59',
-    [AccessControlProxy]: '',
-    [ChainlinkPriceFeed]: '',
-    [AggregatedDerivativePriceFeed]: '',
-    [ValueInterpreter]: '',
-    [OneInchV4Adapter]: '',
-    [ParaSwapV5Adapter]: '',
-    [ExchangeAggregator]: '',
-    [Treasury]: '',
-    [USDVault]: '',
-    [Harvester]: '',
+    [AccessControlProxy]: '0x94c0AA94Ef3aD19E3947e58a855636b38aDe53e0',
+    [OneInchV4Adapter]: '0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5',
+    [ParaSwapV5Adapter]: '0x9a020e23814be9980D64357aE9aEa44Fc3f6A51f',
+    [ExchangeAggregator]: '0x921FE3dF4F2073f0d4d0B839B6068460397a04f9',
+    [Treasury]: '0xc156E56402D0A2C8924e87ff8195A4635B44BD6a',
+    //----------------USD---------------------------
+    [ChainlinkPriceFeed]: '0xA92C91Fe965D7497A423d951fCDFA221fC354B5a',
+    [AggregatedDerivativePriceFeed]: '0xFee7b64EB3A80B80D22193BA317a39D7F40c55F3',
+    [ValueInterpreter]: '0xE4153088577C2D634CB4b3451Aa4ab7E7281ef1f',
+    [USDVault]: '0x30D120f80D60E7b58CA9fFaf1aaB1815f000B7c3',
+    [Harvester]: '0x238ECCBf7532B9e622372981e6707B7e88392e60',
     [Dripper]: '',
     [USDT_ADDRESS]: MFC_PRODUCTION.USDT_ADDRESS,
-    [USDVaultAdmin]: '',
+    [USDVaultAdmin]: '0x2D90Cb03031a45773E95eAdd49465A636C547631',
+    [USDPegToken]: '0x83131242843257bc6C43771762ba467346Efb2CF',
+    [USDVaultBuffer]: '0x0b8D3634a05cc6b50E4D026c0eaFa8469cA98480',
     //----------------ETH---------------------------
     ...reduce(strategiesListEth, (rs, i) => {
         rs[i.name] = '';
         return rs
     }, {}),
-    [PriceOracle]: '',
-    [ETHVault]: '',
-    [ETHVaultAdmin]: '',
-    [HarvestHelper]: '',
+    [PriceOracleConsumer]: '0xc542b8c1b38BD87D6aFc0346f041b2FAC8301467',
+    [ETHVault]: '0x8f0Cb368C63fbEDF7a90E43fE50F7eb8B9411746',
+    [ETHVaultAdmin]: '0x78eE089276194a8C3D278ca46B29ce40Ea62613b',
+    [HarvestHelper]: '0xdcE94fDbAB4a65FEC92C69a4b78e0d8476ADE040',
+    [ETHPegToken]: '0x1A597356E7064D4401110FAa2242bD0B51D1E4Fa',
+    [ETHVaultBuffer]: '0xC8915157b36ed6D0F36827a1Bb5E9b0cDd1e87Cd'
 }
 const questionOfWhichVault = [{
     type: 'list',
@@ -334,13 +338,14 @@ const addStrategiesToUSDVault = async (vault, allArray, increaseArray) => {
     }
     let type = process.env.USDI_STRATEGY_TYPE_VALUE;
     if (!type) {
-        type = inquirer.prompt(questionOfAddStrategy).then((answers) => {
+        type = await inquirer.prompt(questionOfAddStrategy).then((answers) => {
             const {
                 type
             } = answers;
             return type;
         });
     }
+
     if (!type) {
         return
     }
@@ -403,7 +408,7 @@ const addStrategiesToETHVault = async (vault, allArray, increaseArray) => {
     }
     let type = process.env.ETHI_STRATEGY_TYPE_VALUE;
     if(!type){
-        type = inquirer.prompt(questionOfAddStrategy).then((answers) => {
+        type = await inquirer.prompt(questionOfAddStrategy).then((answers) => {
             const {
                 type
             } = answers;
@@ -427,7 +432,6 @@ const addStrategiesToETHVault = async (vault, allArray, increaseArray) => {
 
 const main = async () => {
     let type = process.env.VAULT_TYPE_VALUE;
-    console.log('type=',type);
     if(!type){
         console.log('start select');
         type = await inquirer.prompt(questionOfWhichVault).then((answers) => {
@@ -456,9 +460,10 @@ const main = async () => {
     }
 
     console.table(addressMap);
+
+
     const balanceAfterDeploy = await ethers.provider.getBalance(accounts[0].address);
     console.log('balanceBeforeDeploy:%d,balanceAfterDeploy:%d', ethers.utils.formatEther(balanceBeforeDeploy), ethers.utils.formatEther(balanceAfterDeploy));
-
 }
 
 const deploy_common = async () => {
@@ -466,15 +471,48 @@ const deploy_common = async () => {
     console.log('\n\n 📡 Deploying... At %s Network \n', network);
     const accounts = await ethers.getSigners();
     assert(accounts.length > 0, 'Need a Signer!');
-    const management = accounts[0].address;
-    const keeper = process.env.KEEPER_ACCOUNT_ADDRESS || get(accounts, '19.address', '');
-
+    const governor = accounts[0].address;
+    const delegator = process.env.DELEGATOR_ADDRESS || get(accounts, '16.address', '');
+    const vaultManager = process.env.VAULT_MANAGER_ADDRESS || get(accounts, '17.address', '');
+    const keeper = process.env.KEEPER_ACCOUNT_ADDRESS || get(accounts, '18.address', '');
+    console.log('governor address:%s',governor);
+    console.log('delegator address:%s',delegator);
+    console.log('vaultManager address:%s',vaultManager);
+    console.log('usd keeper address:%s',keeper);
+    
     if (isEmpty(addressMap[AccessControlProxy])) {
-        await deployProxyBase(AccessControlProxy, [management, management, management, keeper]);
+        const accessControlProxy = await deployProxyBase(AccessControlProxy, [governor, delegator, vaultManager, keeper]);
+        const governorRole = await accessControlProxy.DEFAULT_ADMIN_ROLE();
+        const delegatorRole = await accessControlProxy.DELEGATE_ROLE();
+        const vaultRole = await accessControlProxy.VAULT_ROLE();
+        const keeperRole = await accessControlProxy.KEEPER_ROLE();
+        console.log('%s has governor role:%s',governor,await accessControlProxy.hasRole(governorRole,governor));
+        console.log('%s has delegator role:%s',delegator,await accessControlProxy.hasRole(delegatorRole,delegator));
+        console.log('%s has vaultManager role:%s',vaultManager,await accessControlProxy.hasRole(vaultRole,vaultManager));
+        console.log('%s has keeper role:%s',keeper,await accessControlProxy.hasRole(keeperRole,keeper));
+        
+        // const AccessControlProxyContract = hre.artifacts.require("AccessControlProxy");
+        // const accessControlProxy2 = await AccessControlProxyContract.at(accessControlProxy.address);
+        // console.log('keeperRole:%s',keeperRole);
+        
+        // await accessControlProxy2.grantRole(keeperRole,keeperForEth,{from:delegator});
+        // console.log('%s has keeper role:%s',keeperForEth,await accessControlProxy.hasRole(keeperRole,keeperForEth));
     }
 
     if (isEmpty(addressMap[Treasury])) {
         await deployProxyBase(Treasury, [AccessControlProxy]);
+    }
+
+    if (isEmpty(addressMap[OneInchV4Adapter])) {
+        oneInchV4Adapter = await deployBase(OneInchV4Adapter);
+    }
+    if (isEmpty(addressMap[ParaSwapV5Adapter])) {
+        paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
+    }
+
+    if (isEmpty(addressMap[ExchangeAggregator])) {
+        const adapterArray = [addressMap[OneInchV4Adapter], addressMap[ParaSwapV5Adapter]];
+        exchangeAggregator = await deployBase(ExchangeAggregator, [adapterArray, AccessControlProxy]);
     }
 }
 
@@ -530,17 +568,6 @@ const deploy_usd = async () => {
     if (isEmpty(addressMap[ValueInterpreter])) {
         valueInterpreter = await deployBase(ValueInterpreter, [ChainlinkPriceFeed, AggregatedDerivativePriceFeed, AccessControlProxy]);
     }
-    if (isEmpty(addressMap[OneInchV4Adapter])) {
-        oneInchV4Adapter = await deployBase(OneInchV4Adapter);
-    }
-    if (isEmpty(addressMap[ParaSwapV5Adapter])) {
-        paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
-    }
-
-    if (isEmpty(addressMap[ExchangeAggregator])) {
-        const adapterArray = [addressMap[OneInchV4Adapter], addressMap[ParaSwapV5Adapter]];
-        exchangeAggregator = await deployBase(ExchangeAggregator, [adapterArray, AccessControlProxy]);
-    }
 
     if (isEmpty(addressMap[USDVaultAdmin])) {
         vaultAdmin = await deployBase(USDVaultAdmin);
@@ -580,13 +607,13 @@ const deploy_usd = async () => {
         await cVault.setVaultBufferAddress(addressMap[USDVaultBuffer]);
     }
 
-    if (isEmpty(addressMap[Dripper])) {
-        dripper = await deployProxyBase(Dripper, [AccessControlProxy, USDVault, USDT_ADDRESS]);
-        await dripper.setDripDuration(7 * 24 * 60 * 60);
-    }
+    // if (isEmpty(addressMap[Dripper])) {
+    //     dripper = await deployProxyBase(Dripper, [AccessControlProxy, USDVault, USDT_ADDRESS]);
+    //     await dripper.setDripDuration(7 * 24 * 60 * 60);
+    // }
 
     if (isEmpty(addressMap[Harvester])) {
-        harvester = await deployProxyBase(Harvester, [AccessControlProxy, Dripper, USDT_ADDRESS, USDVault]);
+        harvester = await deployProxyBase(Harvester, [AccessControlProxy, USDVault, USDT_ADDRESS, USDVault]);
     }
 
     const allArray = [];
@@ -635,20 +662,8 @@ const deploy_eth = async () => {
     let harvestHelper;
 
 
-    if (isEmpty(addressMap[PriceOracle])) {
-        priceOracle = await deployProxyBase(PriceOracle, []);
-    }
-
-    if (isEmpty(addressMap[OneInchV4Adapter])) {
-        oneInchV4Adapter = await deployBase(OneInchV4Adapter);
-    }
-    if (isEmpty(addressMap[ParaSwapV5Adapter])) {
-        paraSwapV5Adapter = await deployBase(ParaSwapV5Adapter);
-    }
-
-    const adapterArray = [addressMap[OneInchV4Adapter], addressMap[ParaSwapV5Adapter]];
-    if (isEmpty(addressMap[ExchangeAggregator])) {
-        await deployBase(ExchangeAggregator, [adapterArray, AccessControlProxy]);
+    if (isEmpty(addressMap[PriceOracleConsumer])) {
+        priceOracle = await deployProxyBase(PriceOracleConsumer, []);
     }
 
     if (isEmpty(addressMap[ETHVaultAdmin])) {
@@ -657,7 +672,7 @@ const deploy_eth = async () => {
 
     let cVault;
     if (isEmpty(addressMap[ETHVault])) {
-        vault = await deployProxyBase(ETHVault, [AccessControlProxy, Treasury, ExchangeAggregator, PriceOracle]);
+        vault = await deployProxyBase(ETHVault, [AccessControlProxy, Treasury, ExchangeAggregator, PriceOracleConsumer]);
         cVault = await VaultContract.at(addressMap[ETHVault]);
         await vault.setAdminImpl(vaultAdmin.address);
         for (let i = 0; i < ETH_INITIAL_ASSET_LIST.length; i++) {
@@ -675,9 +690,9 @@ const deploy_eth = async () => {
         await pegToken.deployed();
         addressMap[ETHPegToken] = pegToken.address;
         await cVault.setPegTokenAddress(addressMap[ETHPegToken]);
-        await cVault.setRebaseThreshold(1);
+        // await cVault.setRebaseThreshold(1);
         // await cVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
-        await cVault.setMaxTimestampBetweenTwoReported(604800);
+        // await cVault.setMaxTimestampBetweenTwoReported(604800);
         console.log("maxTimestampBetweenTwoReported:", new BigNumber(await cVault.maxTimestampBetweenTwoReported()).toFixed());
     }
 

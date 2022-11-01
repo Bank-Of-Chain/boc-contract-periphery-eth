@@ -4,18 +4,25 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-import "hardhat/console.sol";
 import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
 import "./../../../enums/ProtocolEnum.sol";
 import "../../../../external/yearn/IYearnVault.sol";
 
+/// @title YearnEarnStrategy
+/// @notice Investment strategy for investing stablecoins via Yearn
+/// @author Bank of Chain Protocol Inc
 contract YearnEarnStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address underlyingToken;
     IYearnVault yVault;
 
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
+    /// @param _yVault The yearn vault address
+    /// @param _underlyingToken The lending asset of the Vault contract
     function initialize(
         address _vault,
         address _harvester,
@@ -32,16 +39,20 @@ contract YearnEarnStrategy is BaseStrategy {
         isWantRatioIgnorable = true;
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
-    // ==== External === //
+    /// @notice Return the third party protocol's pool total assets in USD.
     function get3rdPoolAssets() external view override returns (uint256 targetPoolTotalAssets) {
         targetPoolTotalAssets = queryTokenValue(wants[0], yVault.calcPoolValueInToken());
     }
 
-    // ==== Public ==== //
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
@@ -54,19 +65,25 @@ contract YearnEarnStrategy is BaseStrategy {
         _ratios[0] = 1e18;
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
-        outputsInfo = new OutputInfo[](1);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = wants;
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -74,38 +91,33 @@ contract YearnEarnStrategy is BaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;
         _amounts = new uint256[](1);
 
         _amounts[0] = _estimatedDepositedAssets() + balanceOfToken(underlyingToken);
-
-        console.log("[%s] getPositionDetail: %s", this.name(), _amounts[0]);
     }
 
-    /**
-     *   estimated Deposited Assets(in usd)
-     */
+    /// @notice Estimates deposited assets(in usd)
     function estimatedDepositedAssets() public view returns (uint256 depositedAssets) {
         depositedAssets = queryTokenValue(wants[0], _estimatedDepositedAssets());
-        console.log("[%s] estimatedDepositedAssets:%s", this.name(), depositedAssets);
     }
 
-    /**
-        estimated deposited assets in wants[0]
-     */
+    /// @notice Estimates deposited assets in wants[0]
     function _estimatedDepositedAssets() public view returns (uint256 depositedAssets) {
         IYearnVault _yVault = yVault;
         depositedAssets =
             (_yVault.calcPoolValueInToken() * balanceOfToken(address(_yVault))) /
             _yVault.totalSupply();
-        console.log("[%s] _estimatedDepositedAssets:%s", this.name(), depositedAssets);
     }
 
-    // ==== Internal ==== //
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,
@@ -118,8 +130,9 @@ contract YearnEarnStrategy is BaseStrategy {
         }
     }
 
-    // ==== Private ==== //
-
+    /// @notice Strategy deposit funds to third party pool.
+    /// @param _assets deposit token address
+    /// @param _amounts deposit token amount
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override

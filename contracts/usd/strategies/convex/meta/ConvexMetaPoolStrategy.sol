@@ -9,6 +9,9 @@ import "../../../../external/yearn/IYearnVault.sol";
 
 import "../ConvexBaseStrategy.sol";
 
+/// @title ConvexMetaPoolStrategy
+/// @notice Investment strategy for investing stablecoins to curve meta pool via Convex
+/// @author Bank of Chain Protocol Inc
 contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -18,8 +21,21 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
     uint256 private constant USD_INDEX = 0;
     uint256 private constant CRV3_INDEX = 1;
 
+    /// @notice One of wanted tokens(stablecoins)
     address public pairToken;
 
+    ////// fallback and receive //////
+    receive() external payable {}
+
+    fallback() external payable {}
+
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
+    /// @param _pairToken One of wanted tokens(stablecoins)
+    /// @param _curvePool The curve pool invested 
+    /// @param _rewardPool The address of the base reward pool which issue reward linearly
     function initialize(
         address _vault,
         address _harvester,
@@ -41,61 +57,72 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         super._initialize(_vault, _harvester, _name, _wants, _curvePool, _rewardPool);
     }
 
+    /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
         return "1.0.0";
     }
 
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`. 
+    ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
         public
         view
         override
         returns (address[] memory _assets, uint256[] memory _ratios)
     {
-        ICurveLiquidityPool curveLiquidityPool = ICurveLiquidityPool(curvePool);
+        ICurveLiquidityPool _curveLiquidityPool = ICurveLiquidityPool(curvePool);
         _assets = wants;
         _ratios = new uint256[](_assets.length);
-        _ratios[3] = curveLiquidityPool.balances(USD_INDEX);
-        uint256 crv3Amount = curveLiquidityPool.balances(CRV3_INDEX);
-        uint256 crv3Supply = IERC20Upgradeable(CRV3).totalSupply();
+        _ratios[3] = _curveLiquidityPool.balances(USD_INDEX);
+        uint256 _crv3Amount = _curveLiquidityPool.balances(CRV3_INDEX);
+        uint256 _crv3Supply = IERC20Upgradeable(CRV3).totalSupply();
         for (uint256 i = 0; i < 3; i++) {
-            _ratios[i] = (ICurveLiquidityPool(POOL3).balances(i) * crv3Amount) / crv3Supply;
+            _ratios[i] = (ICurveLiquidityPool(POOL3).balances(i) * _crv3Amount) / _crv3Supply;
         }
     }
 
+    /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
         external
         view
         virtual
         override
-        returns (OutputInfo[] memory outputsInfo)
+        returns (OutputInfo[] memory _outputsInfo)
     {
         address[] memory _wants = wants;
-        outputsInfo = new OutputInfo[](5);
-        OutputInfo memory info0 = outputsInfo[0];
-        info0.outputCode = 0;
-        info0.outputTokens = _wants; //other
+        _outputsInfo = new OutputInfo[](5);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = _wants; //other
 
-        OutputInfo memory info1 = outputsInfo[1];
-        info1.outputCode = 1;
-        info1.outputTokens = new address[](1);
-        info1.outputTokens[0] = _wants[0];
+        OutputInfo memory _info1 = _outputsInfo[1];
+        _info1.outputCode = 1;
+        _info1.outputTokens = new address[](1);
+        _info1.outputTokens[0] = _wants[0];
 
-        OutputInfo memory info2 = outputsInfo[2];
-        info2.outputCode = 2;
-        info2.outputTokens = new address[](1);
-        info2.outputTokens[0] = _wants[1];
+        OutputInfo memory _info2 = _outputsInfo[2];
+        _info2.outputCode = 2;
+        _info2.outputTokens = new address[](1);
+        _info2.outputTokens[0] = _wants[1];
 
-        OutputInfo memory info3 = outputsInfo[3];
-        info3.outputCode = 3;
-        info3.outputTokens = new address[](1);
-        info3.outputTokens[0] = _wants[2];
+        OutputInfo memory _info3 = _outputsInfo[3];
+        _info3.outputCode = 3;
+        _info3.outputTokens = new address[](1);
+        _info3.outputTokens[0] = _wants[2];
 
-        OutputInfo memory info4 = outputsInfo[4];
-        info4.outputCode = 4;
-        info4.outputTokens = new address[](1);
-        info4.outputTokens[0] = _wants[3];
+        OutputInfo memory _info4 = _outputsInfo[4];
+        _info4.outputCode = 4;
+        _info4.outputTokens = new address[](1);
+        _info4.outputTokens[0] = _wants[3];
     }
 
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
     function getPositionDetail()
         public
         view
@@ -103,66 +130,71 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool isUsd,
-            uint256 usdValue
+            bool _isUsd,
+            uint256 _usdValue
         )
     {
         _tokens = wants;
         // curve LP token amount = convex LP token amount
-        uint256 lpAmount = balanceOfLpToken();
+        uint256 _lpAmount = balanceOfLpToken();
         // curve LP total supply
-        uint256 totalSupply = IERC20Upgradeable(lpToken).totalSupply();
+        uint256 _totalSupply = IERC20Upgradeable(lpToken).totalSupply();
         // calc balances
         _amounts = new uint256[](_tokens.length);
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
-        uint256 crv3Amount = pool.balances(CRV3_INDEX);
-        uint256 crv3Supply = IERC20Upgradeable(CRV3).totalSupply();
-        _amounts[3] = (pool.balances(USD_INDEX) * lpAmount) / totalSupply;
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
+        uint256 _crv3Amount = _pool.balances(CRV3_INDEX);
+        uint256 _crv3Supply = IERC20Upgradeable(CRV3).totalSupply();
+        _amounts[3] = (_pool.balances(USD_INDEX) * _lpAmount) / _totalSupply;
         for (uint256 i = 0; i < 3; i++) {
             _amounts[i] =
-                (((ICurveLiquidityPool(POOL3).balances(i) * crv3Amount) / crv3Supply) * lpAmount) /
-                totalSupply;
+                (ICurveLiquidityPool(POOL3).balances(i) * _crv3Amount * _lpAmount) /
+                _crv3Supply /
+                _totalSupply;
         }
     }
 
+    /// @notice Return the third party protocol's pool total assets in USD(1e18).
     function get3rdPoolAssets() external view override returns (uint256) {
         address[] memory _assets = wants;
-        uint256 crv3Amount = ICurveLiquidityPool(curvePool).balances(CRV3_INDEX);
-        uint256 crv3Supply = IERC20Upgradeable(CRV3).totalSupply();
-        uint256 thirdPoolAssets = queryTokenValue(
+        uint256 _crv3Amount = ICurveLiquidityPool(curvePool).balances(CRV3_INDEX);
+        uint256 _crv3Supply = IERC20Upgradeable(CRV3).totalSupply();
+        uint256 _thirdPoolAssets = queryTokenValue(
             _assets[3],
             ICurveLiquidityPool(curvePool).balances(USD_INDEX)
         );
         for (uint256 i = 0; i < 3; i++) {
-            thirdPoolAssets += queryTokenValue(
+            _thirdPoolAssets += queryTokenValue(
                 _assets[i],
-                (ICurveLiquidityPool(POOL3).balances(i) * crv3Amount) / crv3Supply
+                (ICurveLiquidityPool(POOL3).balances(i) * _crv3Amount) / _crv3Supply
             );
         }
-        return thirdPoolAssets;
+        return _thirdPoolAssets;
     }
 
+    /// @notice Add liquidity into curve pool
+    /// @param _assets The asset list to add
+    /// @param _amounts The amount list to add
+    /// @return The amount of liquidity
     function curveAddLiquidity(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
         returns (uint256)
     {
-        console.log("start adding liquidity");
         address _curvePool = curvePool;
-        bool has3Crv;
+        bool _has3Crv = false;
         for (uint256 i = 0; i < 3; i++) {
             if (_amounts[i] > 0) {
-                has3Crv = true;
+                _has3Crv = true;
                 IERC20Upgradeable(_assets[i]).safeApprove(POOL3, 0);
                 IERC20Upgradeable(_assets[i]).safeApprove(POOL3, _amounts[i]);
             }
         }
-        uint256 balanceOf3Crv = 0;
-        if (has3Crv) {
+        uint256 _balanceOf3Crv = 0;
+        if (_has3Crv) {
             ICurveLiquidityPool(POOL3).add_liquidity([_amounts[0], _amounts[1], _amounts[2]], 0);
-            balanceOf3Crv = balanceOfToken(CRV3);
+            _balanceOf3Crv = balanceOfToken(CRV3);
             IERC20Upgradeable(CRV3).safeApprove(_curvePool, 0);
-            IERC20Upgradeable(CRV3).safeApprove(_curvePool, balanceOf3Crv);
+            IERC20Upgradeable(CRV3).safeApprove(_curvePool, _balanceOf3Crv);
         }
 
         if (_amounts[3] > 0) {
@@ -170,37 +202,36 @@ contract ConvexMetaPoolStrategy is ConvexBaseStrategy {
             IERC20Upgradeable(_assets[3]).safeApprove(_curvePool, _amounts[3]);
         }
 
-        ICurveLiquidityPool(curvePool).add_liquidity([_amounts[3], balanceOf3Crv], 0);
+        ICurveLiquidityPool(curvePool).add_liquidity([_amounts[3], _balanceOf3Crv], 0);
         return balanceOfToken(lpToken);
     }
 
-    function curveRemoveLiquidity(uint256 liquidity, uint256 _outputCode) internal override {
-        ICurveLiquidityPool pool = ICurveLiquidityPool(curvePool);
+    /// @notice Remove liquidity from curve pool
+    /// @param _liquidity The amount of liquidity to remove
+    /// @param _outputCode The code of output
+    function curveRemoveLiquidity(uint256 _liquidity, uint256 _outputCode) internal override {
+        ICurveLiquidityPool _pool = ICurveLiquidityPool(curvePool);
         if (_outputCode == 4) {
-            pool.remove_liquidity_one_coin(liquidity, 0, 0);
+            _pool.remove_liquidity_one_coin(_liquidity, 0, 0);
         } else if (_outputCode > 0 && _outputCode < 4) {
-            int128 index;
+            int128 _index;
             if (_outputCode == 1) {
-                index = 0;
+                _index = 0;
             } else if (_outputCode == 2) {
-                index = 1;
+                _index = 1;
             } else if (_outputCode == 3) {
-                index = 2;
+                _index = 2;
             }
-            pool.remove_liquidity_one_coin(liquidity, 1, 0);
-            uint256 balanceOf3Crv = balanceOfToken(CRV3);
-            ICurveLiquidityPool(POOL3).remove_liquidity_one_coin(balanceOf3Crv, index, 0);
+            _pool.remove_liquidity_one_coin(_liquidity, 1, 0);
+            uint256 _balanceOf3Crv = balanceOfToken(CRV3);
+            ICurveLiquidityPool(POOL3).remove_liquidity_one_coin(_balanceOf3Crv, _index, 0);
         } else {
-            pool.remove_liquidity(liquidity, [uint256(0), uint256(0)]);
-            uint256 balanceOf3Crv = balanceOfToken(CRV3);
+            _pool.remove_liquidity(_liquidity, [uint256(0), uint256(0)]);
+            uint256 _balanceOf3Crv = balanceOfToken(CRV3);
             ICurveLiquidityPool(POOL3).remove_liquidity(
-                balanceOf3Crv,
+                _balanceOf3Crv,
                 [uint256(0), uint256(0), uint256(0)]
             );
         }
-        console.log('want0 balance:',balanceOfToken(wants[0]));
-        console.log('want1 balance:',balanceOfToken(wants[1]));
-        console.log('want2 balance:',balanceOfToken(wants[2]));
-        console.log('want3 balance:',balanceOfToken(wants[3]));
     }
 }

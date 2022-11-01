@@ -3,14 +3,16 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 
+/// @title IERC20_USDC
+/// @notice The simple interface of USDC token
 interface IERC20_USDC is IERC20MetadataUpgradeable {
     function owner() external view returns (address);
 
-    function mint(address _to, uint256 amount) external;
+    function mint(address _to, uint256 _amount) external;
 
-    function isMinter(address account) external view returns (bool);
+    function isMinter(address _account) external view returns (bool);
 
     function masterMinter() external view returns (address);
 
-    function configureMinter(address minter, uint256 minterAllowedAmount) external returns (bool);
+    function configureMinter(address _minter, uint256 _minterAllowedAmount) external returns (bool);
 }
