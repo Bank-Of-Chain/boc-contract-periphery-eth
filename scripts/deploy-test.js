@@ -25,7 +25,12 @@ const {
 const axios = require('axios');
 const os = require('os')
 const hardhatConfig = require('../hardhat.config');
-
+// node fs
+const fs = require('fs');
+// node path
+const path = require('path');
+// 被读取的文件夹地址
+const filePath = path.resolve('/deploy-env.txt');
 
 const {
     deploy,
@@ -577,23 +582,32 @@ const get_apollo_cluster_name = async () =>{
     let host = '172.31.30.50:8070';
     const osType = os.type();
     const netInfo = os.networkInterfaces();
-    if (osType === 'Windows_NT'){
-        host = '13.215.137.222:8070';
-        for (let devName  in netInfo) {
-            const iface = netInfo[devName];
-            for (let i = 0; i < iface.length; i++) {
-                const alias = iface[i];
-                if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
-                    localIp = alias.address;
+    const existFile = fs.existsSync(filePath);
+    console.log('existFile =',existFile);
+    console.log('filePath =',filePath);
+    if(existFile == true){
+        host = '54.179.161.168:8070';
+        localIp = fs.readFileSync(filePath,{encoding:'utf8', flag:'r'});
+        console.log('env = ',localIp);
+    }else{
+        if (osType === 'Windows_NT'){
+            host = '13.215.137.222:8070';
+            for (let devName  in netInfo) {
+                const iface = netInfo[devName];
+                for (let i = 0; i < iface.length; i++) {
+                    const alias = iface[i];
+                    if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+                        localIp = alias.address;
+                        break;
+                    }
+                }
+                if(localIp != windowsIp){
                     break;
                 }
             }
-            if(localIp != windowsIp){
-                break;
-            }
+        } else{
+            localIp = netInfo && netInfo.eth0 && netInfo.eth0.length>0 && netInfo.eth0[0].address || windowsIp;
         }
-    } else{
-        localIp = netInfo && netInfo.eth0 && netInfo.eth0.length>0 && netInfo.eth0[0].address || windowsIp;
     }
     console.log('localIp',localIp);
     let url = `http://${host}/openapi/v1/envs/DEV/apps/boc-common/clusters/default/namespaces/boc1.application`;
