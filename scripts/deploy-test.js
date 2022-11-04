@@ -583,8 +583,8 @@ const get_apollo_cluster_name = async () =>{
     const osType = os.type();
     const netInfo = os.networkInterfaces();
     const existFile = fs.existsSync(filePath);
-    console.log('existFile =',existFile);
-    console.log('filePath =',filePath);
+    // console.log('existFile =',existFile);
+    // console.log('filePath =',filePath);
     if(existFile == true){
         host = '13.215.137.222:8070';
         localIp = fs.readFileSync(filePath,{encoding:'utf8', flag:'r'});
@@ -622,9 +622,6 @@ const get_apollo_cluster_name = async () =>{
     };
     let resp =  await axios.get(url, config);
     const itemData =  resp.data?.items.find(function (item) {
-        console.log(item.key,localIp);
-        console.log(item.key.toString().trim(),localIp.toString().trim());
-        console.log(item.key.toString().trim() == localIp.toString().trim());
         return item.key.toString().trim() == localIp.toString().trim();
     });
     let clusterName = 'local';
