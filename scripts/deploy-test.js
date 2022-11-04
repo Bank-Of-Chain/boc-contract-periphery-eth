@@ -30,7 +30,7 @@ const fs = require('fs');
 // node path
 const path = require('path');
 // 被读取的文件夹地址
-const filePath = path.resolve('/deploy-env.txt');
+const filePath = path.resolve('./deploy-env.txt');
 
 const {
     deploy,
