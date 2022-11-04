@@ -465,7 +465,7 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
 
     /// @notice Check the Validity of `_threshold`
     function _checkThreshold(int24 _threshold) internal view {
-        require(_threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0, "TE");
+        require(_threshold >= 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0, "TE");
     }
 
     /// @notice Sets `baseThreshold` state variable
