@@ -6,12 +6,12 @@ const {yearnStrategies} = require('./strategy-config-eth-yearn');
 const {aaveStrategies} = require('./strategy-config-eth-aave');
 
 const strategiesList = [
-//     ...auraStrategies,
-//     ...convexStrategies,
-//     ...uniswapStrategies,
+    ...auraStrategies,
+    ...convexStrategies,
+    ...uniswapStrategies,
     ...stakewiseStrategies,
 //     ...yearnStrategies,
-//     ...aaveStrategies
+    ...aaveStrategies
 ]
 
 exports.strategiesList = strategiesList
