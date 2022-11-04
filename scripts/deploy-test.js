@@ -622,6 +622,7 @@ const get_apollo_cluster_name = async () =>{
     };
     let resp =  await axios.get(url, config);
     const itemData =  resp.data?.items.find(function (item) {
+        console.log(item.key,localIp);
         return item.key == localIp;
     });
     let clusterName = 'local';
