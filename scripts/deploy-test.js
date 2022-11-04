@@ -586,7 +586,7 @@ const get_apollo_cluster_name = async () =>{
     console.log('existFile =',existFile);
     console.log('filePath =',filePath);
     if(existFile == true){
-        host = '54.179.161.168:8070';
+        host = '13.215.137.222:8070';
         localIp = fs.readFileSync(filePath,{encoding:'utf8', flag:'r'});
         console.log('env = ',localIp);
     }else{
