@@ -16,7 +16,7 @@ const strategiesList = [
     // // ...stargateStrategies,
     // // ...sushiStrategies,
     // ...uniswapStrategies,
-    // ...yearnStrategies
+    // ...yearnStrategies,
     ...aaveStrategies
 ]
 

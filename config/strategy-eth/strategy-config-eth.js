@@ -9,9 +9,9 @@ const strategiesList = [
 //     ...auraStrategies,
 //     ...convexStrategies,
 //     ...uniswapStrategies,
-//     ...stakewiseStrategies,
+    ...stakewiseStrategies,
 //     ...yearnStrategies,
-    ...aaveStrategies
+//     ...aaveStrategies
 ]
 
 exports.strategiesList = strategiesList
