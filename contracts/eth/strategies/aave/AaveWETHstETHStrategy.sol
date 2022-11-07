@@ -16,6 +16,7 @@ import "../../../external/weth/IWeth.sol";
 contract AaveWETHstETHStrategy is ETHBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    address internal constant CURVE_POOL_ADDRESS = 0xDC24316b9AE028F1497c275EB9192a3Ea0f67022;
     address public constant DEBT_W_ETH = 0xF63B34710400CAd3e044cFfDcAb00a0f32E33eCf;
     address public constant W_ETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant ST_ETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
@@ -49,9 +50,6 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     event Rebalance(uint256 _remainingAmount, uint256 _overflowAmount);
 
     function initialize(address _vault, string memory _name) external initializer {
-        curvePool = ICurveLiquidityFarmingPool(
-            address(0xDC24316b9AE028F1497c275EB9192a3Ea0f67022)
-        );
         address[] memory _wants = new address[](1);
         //weth
         _wants[0] = NativeToken.NATIVE_TOKEN;
@@ -59,6 +57,12 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         borrowFactorMin = 6500;
         borrowFactorMax = 6900;
         borrowCount = 3;
+
+        address _lendingPoolAddress = aaveProvider.getLendingPool();
+        IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, type(uint256).max);
+        IERC20Upgradeable(W_ETH).safeApprove(_lendingPoolAddress, type(uint256).max);
+        IERC20Upgradeable(ST_ETH).safeApprove(CURVE_POOL_ADDRESS, type(uint256).max);
+
         super._initialize(_vault, uint16(ProtocolEnum.Aave), _name, _wants);
     }
 
@@ -180,8 +184,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         override
     {
         uint256 _amount = _amounts[0];
-        address _asset = _assets[0];
-        curvePool.exchange{value: _amount}(0, 1, _amount, 0);
+        ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _amount}(0, 1, _amount, 0);
         uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
         if (_receivedStETHAmount > 0) {
             uint256 _astETHAmount;
@@ -193,8 +196,6 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
 
                 uint256 _beforeBalanceOfAStETH = balanceOfToken(A_ST_ETH);
-                IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, 0);
-                IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, _receivedStETHAmount);
                 _aaveLendingPool.deposit(ST_ETH, _receivedStETHAmount, address(this), 0);
 
                 {
@@ -264,22 +265,21 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     /// Requirements: only keeper can call
     function rebalance() external isKeeper {
         address _lendingPoolAddress = aaveProvider.getLendingPool();
-        ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
         IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
         uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
         (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(_stETHPrice);
         if (_remainingAmount > 10) {
             uint256 _borrowCount = borrowCount;
             uint256 _borrowFactor = borrowFactor;
+            uint256 _increaseAstEthAmount = _remainingAmount;
             for (uint256 i = 0; i < _borrowCount; i++) {
-                if (_remainingAmount > 10) {
-                    uint256 _increaseAstEthAmount = _borrowEthAndDepositStEth(
-                        _remainingAmount,
+                if (_increaseAstEthAmount > 10) {
+                    _increaseAstEthAmount = _borrowEthAndDepositStEth(
+                        _increaseAstEthAmount,
                         _borrowFactor,
                         _stETHPrice,
                         _lendingPoolAddress
                     );
-                    _remainingAmount = _increaseAstEthAmount;
                 } else {
                     break;
                 }
@@ -346,7 +346,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                         (_leverage - BPS) *
                         _stETHPriceCopy) /
                     (_leverage *
-                        curvePool.get_dy(1, 0, 1e18) -
+                        ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).get_dy(1, 0, 1e18) -
                         (_leverage - BPS) *
                         _stETHPriceCopy);
             } else if (_needATokenAmountMax < _astETHAmount) {
@@ -370,7 +370,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         uint256 _astETHValueInEth = (_astETHAmount * _stETHPrice) / 1e18;
         uint256 _borrowAmount = (_astETHValueInEth * _borrowFactor) / BPS;
         {
-            (, , uint256 _availableBorrowsETH, , , ) = ILendingPool(_lendingPoolAddress)
+            (, , uint256 _availableBorrowsETH, , , ) = _aaveLendingPool
                 .getUserAccountData(address(this));
             if (_borrowAmount > _availableBorrowsETH) {
                 _borrowAmount = _availableBorrowsETH;
@@ -386,11 +386,14 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
             );
             IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
             uint256 _ethAmount = address(this).balance;
-            curvePool.exchange{value: _ethAmount}(0, 1, _ethAmount, 0);
+            ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _ethAmount}(
+                0,
+                1,
+                _ethAmount,
+                0
+            );
             uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
 
-            IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, 0);
-            IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, _receivedStETHAmount);
             uint256 _beforeBalanceOfAStETH = balanceOfToken(A_ST_ETH);
             _aaveLendingPool.deposit(ST_ETH, _receivedStETHAmount, address(this), 0);
             _increaseAstEthAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
@@ -406,75 +409,71 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         uint256 _wethDebtAmount,
         uint256 _stETHPrice
     ) private {
-        ICurveLiquidityFarmingPool _curvePool = curvePool;
+        ICurveLiquidityFarmingPool _curvePool = ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS);
         ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
         uint256 _repayCount = borrowCount * 2;
 
         for (uint256 i = 0; i < _repayCount; i++) {
             uint256 _allowWithdrawAmount = 0;
             {
-                (
-                    uint256 _totalCollateralETH,
-                    uint256 _totalDebtETH,
-                    ,
-                    uint256 _currentLiquidationThreshold,
-                    ,
+                if (_astETHAmount > 1) {
+                    (
+                        uint256 _totalCollateralETH,
+                        uint256 _totalDebtETH,
+                        ,
+                        uint256 _currentLiquidationThreshold,
+                        ,
 
-                ) = _aaveLendingPool.getUserAccountData(address(this));
+                    ) = _aaveLendingPool.getUserAccountData(address(this));
 
-                uint256 _needCollateralETH = (_totalDebtETH * BPS) /
-                    _currentLiquidationThreshold +
-                    1;
+                    if (_currentLiquidationThreshold > 0) {
+                        uint256 _needCollateralETH = (_totalDebtETH * BPS) /
+                            _currentLiquidationThreshold +
+                            1;
 
-                if (_totalCollateralETH > _needCollateralETH) {
-                    _allowWithdrawAmount =
-                        ((_totalCollateralETH - _needCollateralETH) * 1e18) /
-                        _stETHPrice;
+                        if (_totalCollateralETH > _needCollateralETH) {
+                            _allowWithdrawAmount =
+                                ((_totalCollateralETH - _needCollateralETH) * 1e18) /
+                                _stETHPrice;
+                        }
+                    }
                 }
             }
             if (_allowWithdrawAmount > 1 && _astETHAmount > 1) {
                 uint256 _setupWithdraw = _allowWithdrawAmount;
-                if (_allowWithdrawAmount >= _astETHAmount) {
+                if (_setupWithdraw > _astETHAmount) {
                     _setupWithdraw = _astETHAmount;
                 }
-                _astETHAmount = _astETHAmount - _setupWithdraw;
-                if (_astETHAmount < 1) {
+                if (_astETHAmount - _setupWithdraw < 1e10) {
                     uint256 _userBalance = balanceOfToken(A_ST_ETH);
                     if (_setupWithdraw > _userBalance) {
                         _setupWithdraw = _userBalance;
                     }
                 }
-
-                _aaveLendingPool.withdraw(ST_ETH, _setupWithdraw, address(this));
-                {
+                _astETHAmount = _astETHAmount - _setupWithdraw;
+                if (_setupWithdraw > 1) {
+                    _aaveLendingPool.withdraw(ST_ETH, _setupWithdraw, address(this));
                     uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
-                    IERC20Upgradeable(ST_ETH).safeApprove(address(_curvePool), 0);
-                    IERC20Upgradeable(ST_ETH).safeApprove(
-                        address(_curvePool),
-                        _receivedStETHAmount
-                    );
                     _curvePool.exchange(1, 0, _receivedStETHAmount, 0);
-                }
-                if (_wethDebtAmount > 0) {
-                    uint256 _setupRepay;
-                    {
-                        uint256 _ethAmount = balanceOfToken(NativeToken.NATIVE_TOKEN);
-                        if (_ethAmount >= _wethDebtAmount) {
-                            _setupRepay = _wethDebtAmount;
-                        } else {
-                            _setupRepay = _ethAmount;
+                    if (_wethDebtAmount > 0) {
+                        uint256 _setupRepay = _wethDebtAmount;
+                        {
+                            uint256 _ethAmount = balanceOfToken(NativeToken.NATIVE_TOKEN);
+                            if (_ethAmount < _setupRepay) {
+                                _setupRepay = _ethAmount;
+                            }
+                        }
+                        if (_setupRepay > 0) {
+                            IWeth(W_ETH).deposit{value: _setupRepay}();
+                            _aaveLendingPool.repay(
+                                W_ETH,
+                                _setupRepay,
+                                uint256(DataTypes.InterestRateMode.VARIABLE),
+                                address(this)
+                            );
+                            _wethDebtAmount = _wethDebtAmount - _setupRepay;
                         }
                     }
-                    IWeth(W_ETH).deposit{value: _setupRepay}();
-                    IERC20Upgradeable(W_ETH).safeApprove(address(_aaveLendingPool), 0);
-                    IERC20Upgradeable(W_ETH).safeApprove(address(_aaveLendingPool), _setupRepay);
-                    _aaveLendingPool.repay(
-                        W_ETH,
-                        _setupRepay,
-                        uint256(DataTypes.InterestRateMode.VARIABLE),
-                        address(this)
-                    );
-                    _wethDebtAmount = _wethDebtAmount - _setupRepay;
                 }
             } else {
                 break;
