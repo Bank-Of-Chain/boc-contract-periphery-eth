@@ -23,6 +23,7 @@ contract RiskOnVault is AaveLendActionMixin, AccessControlMixin, Initializable, 
     using SafeMath for uint256;
 
     event BorrowRebalance();
+    event BorrowRebalance(address[] _account);
 
     /// @param _wantToken The want token
     /// @param _amount The amount list of token wanted
@@ -157,7 +158,7 @@ contract RiskOnVault is AaveLendActionMixin, AccessControlMixin, Initializable, 
         if (manageFeeBps > 0 && address(treasury) != address(0)) {
             uint256 manageFee = _amount * manageFeeBps / 10000;
             treasury.receiveManageFeeFromVault(wantToken, manageFee);
-            _amount -= manageFee;
+            _amount -= manageFee;//// 100% => 99%
         }
 
         uint256 _collateralAmount = _amount.mul(2).div(3);
@@ -169,11 +170,11 @@ contract RiskOnVault is AaveLendActionMixin, AccessControlMixin, Initializable, 
         // calculate and mint 3 shares
         uint256 _collateralShares = _sharesForCollateral(_collateralAmount);
         uint256 _debtShares = _sharesForDebt(_debtAmount); 
-        uint256 _lpShares = _sharesForLP(_amount);
+        uint256 _lpShares = _sharesForLP(_amount.mul(2).div(3));// equal to 66% wantToken
 
-        _mintCollateralShares(_collateralShares, _msgSender());
-        _mintDebtShares(_debtShares, _msgSender());
-        _mintLPShares(_lpShares, _msgSender());
+        _mintCollateralShares(_msgSender(), _collateralShares);
+        _mintDebtShares( _msgSender(), _debtShares);
+        _mintLPShares(_msgSender(), _lpShares);
 
 
         netMarketMakingAmount += _amount;
@@ -285,7 +286,6 @@ contract RiskOnVault is AaveLendActionMixin, AccessControlMixin, Initializable, 
     /// @notice Rebalance the position of this strategy
     /// Requirements: only keeper can call
     function borrowRebalance() external whenNotEmergency nonReentrant isKeeper {
-        // TODO share: by user
         (uint256 _totalCollateral, uint256 _totalDebt, , , ,) = riskOnHelper.borrowInfo(address(this));
         require(_totalCollateral > 0 || _totalDebt > 0, "CNBR");
         if (_totalDebt.mul(10000).div(_totalCollateral) >= 7500) {
@@ -302,6 +302,80 @@ contract RiskOnVault is AaveLendActionMixin, AccessControlMixin, Initializable, 
             riskOnUniswapV3Strategy.forceRebalance();
         }
         emit BorrowRebalance();
+    }
+
+    /// @notice Rebalance the position of this strategy
+    /// @param _adjustAccounts accounts need be adjusted
+    /// Requirements: only keeper can call
+    function borrowRebalance(address[] memory _adjustAccounts) external whenNotEmergency nonReentrant isKeeper {
+        require(_adjustAccounts.length >0, "The len of _adjustAccounts must GT 0");
+        bool _isRepay = false;
+        uint256 _totalRepayAmount = 0;
+        for(uint256 i = 0; i < _adjustAccounts.length; i++) {
+            (uint256 _userCollateral, uint256 _userDebt) = getUserBorrowInfo(_adjustAccounts[i]);
+            require(_userCollateral > 0 || _userDebt > 0, "CNBR");
+            if (_userDebt.mul(10000).div(_userCollateral) >= 7500) {
+                
+                uint256 _repayAmount = riskOnHelper.calcAaveBaseCurrencyValueInAsset((_userDebt - _userCollateral.mul(5000).div(10000)), borrowToken);
+                uint256 _sharesAmount = _sharesForDebt(_repayAmount);
+                _burnDebtShares(_adjustAccounts[i], _sharesAmount);
+            
+                uint256 _repayAmountInWantToken = _riskOnHelper.calcCanonicalAssetValue(borrowToken, _repayAmount, wantToken);
+                uint256 _lpSharesAmount = _sharesForLP(_repayAmountInWantToken);
+                _burnLPShares(_adjustAccounts[i], _lpSharesAmount);
+
+                _totalRepayAmount += repayAmount;
+                
+            }
+            if (_userDebt.mul(10000).div(_userCollateral) <= 4000) {
+                uint256 _borrowAmount = riskOnHelper.calcAaveBaseCurrencyValueInAsset((_userCollateral.mul(5000).div(10000) - _userDebt), borrowToken);
+                __borrow(_borrowAmount);
+                uint256 _sharesAmount = _sharesForDebt(_borrowAmount);
+                _mintDebtShares(_adjustAccounts[i], _sharesAmount);
+
+                uint256 _borrowAmountInWantToken = _riskOnHelper.calcCanonicalAssetValue(borrowToken, _borrowAmount, wantToken);
+                uint256 _lpSharesAmount = _sharesForLP(_borrowAmountInWantToken);
+                _mintLPShares(_adjustAccounts[i], _lpSharesAmount);
+                
+            }
+            
+        }
+
+        if(_totalRepayAmount >0) _isRepay = true;
+        
+        if (_isRepay) {// reach the upper and lower the bar
+            redeemFromStrategy(100, 100);
+            if (balanceOfToken(borrowToken) < _totalRepayAmount) {
+                IUniswapV3(RiskOnConstant.UNISWAP_V3_ROUTER).exactOutputSingle(
+                    IUniswapV3.ExactOutputSingleParams(
+                        wantToken, 
+                        borrowToken, 
+                        500, 
+                        address(this), 
+                        block.timestamp, 
+                        _totalRepayAmount - balanceOfToken(borrowToken), 
+                        type(uint256).max, 
+                        0
+                ));
+            }
+
+            __repay(_totalRepayAmount);
+            riskOnUniswapV3Strategy.deposit(balanceOfToken(token0), balanceOfToken(token1));
+            
+        }else {// // reach the lower and increase bar
+        
+            riskOnUniswapV3Strategy.forceRebalance();
+        }
+
+        emit BorrowRebalance(_adjustAccounts);
+        
+    }
+
+    function getUserBorrowInfo(address _account) public view returns(uint256 _userCollateral, uint256 _userDebt) {
+        uint256 _collateralAmountPerShares = getCollateralAmountPerShares();
+        uint256 _debtAmountPerShares = getDebtAmountPerShares();
+        _userCollateral = collateralShares[_account] * _collateralAmountPerShares;
+        _userDebt = debtShares[_account] * _debtAmountPerShares;
     }
 
     /// @notice Return the token's balance Of this contract
@@ -339,19 +413,19 @@ contract RiskOnVault is AaveLendActionMixin, AccessControlMixin, Initializable, 
         token1MinLendAmount = _minLendAmount;
     }
 
-    function _mintCollateralShares(uint256 _sharesAmount, address _account) internal {
+    function _mintCollateralShares(address _account, uint256 _sharesAmount) internal {
         totalCollateralShares += _sharesAmount;
         collateralShares[account] += _sharesAmount;
         emit MintShares(_recipient,_sharesAmount, uint8(0));
     }
 
-    function _mintDebtShares(uint256 _sharesAmount, address _account) internal {
+    function _mintDebtShares(address _account, uint256 _sharesAmount) internal {
         totalDebtShares += _sharesAmount;
         debtShares[account] += _sharesAmount;
         emit MintShares(_recipient,_sharesAmount, uint8(1));
     }
 
-    function _mintLPShares(uint256 _sharesAmount, address _account) internal {
+    function _mintLPShares(address _account, uint256 _sharesAmount) internal {
         totalLPShares += _sharesAmount;
         lpShares[account] += _sharesAmount;
         emit MintShares(_recipient,_sharesAmount, uint8(2));
@@ -381,7 +455,7 @@ contract RiskOnVault is AaveLendActionMixin, AccessControlMixin, Initializable, 
         // shares decamals is 27, Token is decimals()
         _collateralAmountPerShares = 10 ** IERC20MetadataUpgradeable(wantToken).decimals();
         uint256 _totalCollateralTokenAmount = riskOnHelper.getTotalCollateralTokenAmount(address(this), wantToken);
-        if(_totalCollateralShares > 0) {
+        if(totalCollateralShares > 0) {
             _collateralAmountPerShares = _totalCollateralTokenAmount * 1e27 / totalCollateralShares;
         }
     }
