@@ -11,13 +11,13 @@ const {aaveStrategies} = require('./strategy-config-usd-aave');
 const strategiesList = [
     // ...auraStrategies,
     // ...convexStrategies,
-    // ...dForceStrategies,
+    ...dForceStrategies,
     // ...dodoStrategies,
     // // ...stargateStrategies,
     // // ...sushiStrategies,
     // ...uniswapStrategies,
     // ...yearnStrategies,
-    ...aaveStrategies
+    // ...aaveStrategies
 ]
 
 exports.strategiesList = strategiesList

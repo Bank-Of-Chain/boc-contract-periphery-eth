@@ -1,0 +1,594 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+
+import "boc-contract-core/contracts/strategy/BaseClaimableStrategy.sol";
+
+import "./../../enums/ProtocolEnum.sol";
+//import "../../../external/aave/ILendingPool.sol";
+import "../../../external/dforce/DFiToken.sol";
+import "../../../external/dforce/IDForceController.sol";
+import "../../../external/dforce/IDForcePriceOracle.sol";
+import "../../../external/dforce/IRewardDistributorV3.sol";
+
+//import "hardhat/console.sol";
+
+/// @title DForceRevolvingLoanStrategy
+/// @notice Investment strategy of investing in stablecoins and revolving lending through post-staking via DForceRevolvingLoan
+/// @author Bank of Chain Protocol Inc
+contract DForceRevolvingLoanStrategy is BaseClaimableStrategy {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    address internal constant DF = 0x431ad2ff6a9C365805eBaD47Ee021148d6f7DBe0;
+    uint256 public constant BPS = 10000;
+
+    address public iToken;
+    address public iController;
+    address public rewardDistributorV3;
+    address public priceOracle;
+    uint256 public borrowFactor;
+    uint256 public borrowFactorMax;
+    uint256 public borrowFactorMin;
+    uint256 public borrowCount;
+    uint256 public leverage;
+    uint256 public leverageMax;
+    uint256 public leverageMin;
+
+    /// @param _borrowFactor The new borrow factor
+    event UpdateBorrowFactor(uint256 _borrowFactor);
+    /// @param _borrowFactorMax The new max borrow factor
+    event UpdateBorrowFactorMax(uint256 _borrowFactorMax);
+    /// @param _borrowFactorMin The new min borrow factor
+    event UpdateBorrowFactorMin(uint256 _borrowFactorMin);
+    /// @param _borrowCount The new count Of borrow
+    event UpdateBorrowCount(uint256 _borrowCount);
+    /// @param _remainingAmount The amount of aToken will still be used as collateral to borrow eth
+    /// @param _overflowAmount The amount of debt token that exceeds the maximum allowable loan
+    event Rebalance(uint256 _remainingAmount, uint256 _overflowAmount);
+
+    //    event ExecuteOperation(
+    //        address[] assets,
+    //        uint256[] amounts,
+    //        uint256[] premiums,
+    //        address initiator,
+    //        bytes params
+    //    );
+
+    /// @notice Initialize this contract
+    /// @param _vault The Vault contract
+    /// @param _harvester The harvester contract address
+    /// @param _name The name of strategy
+    /// @param _underlyingToken The lending asset of the Vault contract
+    /// @param _iToken The iToken which wrap `_underlyingToken`.
+    /// @param _iController The controller which control `_underlyingToken`.
+    /// @param _rewardDistributorV3 The df which wrap `_underlyingToken`.
+    function initialize(
+        address _vault,
+        address _harvester,
+        string memory _name,
+        address _underlyingToken,
+        address _iToken,
+        address _iController,
+        address _priceOracle,
+        address _rewardDistributorV3
+    ) external initializer {
+        borrowCount = 10;
+        borrowFactor = 8000;
+        borrowFactorMax = 8500;
+        borrowFactorMin = 7500;
+        leverage = _getNewLeverage(8000);
+        leverageMax = _getNewLeverage(8500);
+        leverageMin = _getNewLeverage(7500);
+
+        address[] memory _wants = new address[](1);
+        _wants[0] = _underlyingToken;
+        iToken = _iToken;
+        iController = _iController;
+        priceOracle = _priceOracle;
+        rewardDistributorV3 = _rewardDistributorV3;
+        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.DForce), _wants);
+        IERC20Upgradeable(_underlyingToken).safeApprove(_iToken, type(uint256).max);
+    }
+
+    /// @notice Sets `_borrowFactor` to `borrowFactor`
+    /// @param _borrowFactor The new value of `borrowFactor`
+    /// Requirements: only vault manager can call
+    function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
+        require(
+            _borrowFactor < BPS &&
+                _borrowFactor >= borrowFactorMin &&
+                _borrowFactor <= borrowFactorMax,
+            "setting output the range"
+        );
+        borrowFactor = _borrowFactor;
+        leverage = _getNewLeverage(_borrowFactor);
+
+        emit UpdateBorrowFactor(_borrowFactor);
+    }
+
+    /// @notice Sets `_borrowFactorMax` to `borrowFactorMax`
+    /// @param _borrowFactorMax The new value of `borrowFactorMax`
+    /// Requirements: only vault manager can call
+    function setBorrowFactorMax(uint256 _borrowFactorMax) external isVaultManager {
+        require(
+            _borrowFactorMax < BPS && _borrowFactorMax > borrowFactor,
+            "setting output the range"
+        );
+        borrowFactorMax = _borrowFactorMax;
+        leverageMax = _getNewLeverage(_borrowFactorMax);
+
+        emit UpdateBorrowFactorMax(_borrowFactorMax);
+    }
+
+    /// @notice Sets `_borrowFactorMin` to `borrowFactorMin`
+    /// @param _borrowFactorMin The new value of `borrowFactorMin`
+    /// Requirements: only vault manager can call
+    function setBorrowFactorMin(uint256 _borrowFactorMin) external isVaultManager {
+        require(
+            _borrowFactorMin < BPS && _borrowFactorMin < borrowFactor,
+            "setting output the range"
+        );
+        borrowFactorMin = _borrowFactorMin;
+        leverageMin = _getNewLeverage(_borrowFactorMin);
+
+        emit UpdateBorrowFactorMin(_borrowFactorMin);
+    }
+
+    /// @notice Sets `_borrowCount` to `borrowCount`
+    /// @param _borrowCount The new value of `borrowCount`
+    /// Requirements: only keeper can call
+    function setBorrowCount(uint256 _borrowCount) external isKeeper {
+        require(_borrowCount <= 20, "setting output the range");
+        borrowCount = _borrowCount;
+        _updateAllLeverage();
+        emit UpdateBorrowCount(_borrowCount);
+    }
+
+    /// @notice Return the version of strategy
+    function getVersion() external pure override returns (string memory) {
+        return "1.0.0";
+    }
+
+    /// @notice Return the underlying token list and ratio list needed by the strategy
+    /// @return _assets the address list of token to deposit
+    /// @return _ratios the ratios list of `_assets`.
+    ///     The ratio is the proportion of each asset to total assets
+    function getWantsInfo()
+        public
+        view
+        override
+        returns (address[] memory _assets, uint256[] memory _ratios)
+    {
+        _assets = wants;
+        _ratios = new uint256[](1);
+        _ratios[0] = 1e18;
+    }
+
+    /// @notice Return the output path list of the strategy when withdraw.
+    function getOutputsInfo()
+        external
+        view
+        virtual
+        override
+        returns (OutputInfo[] memory _outputsInfo)
+    {
+        _outputsInfo = new OutputInfo[](1);
+        OutputInfo memory _info0 = _outputsInfo[0];
+        _info0.outputCode = 0;
+        _info0.outputTokens = wants;
+    }
+
+    /// @notice Returns the position details of the strategy.
+    /// @return _tokens The list of the position token
+    /// @return _amounts The list of the position amount
+    /// @return _isUsd Whether to count in USD
+    /// @return _usdValue The USD value of positions held
+    function getPositionDetail()
+        public
+        view
+        override
+        returns (
+            address[] memory _tokens,
+            uint256[] memory _amounts,
+            bool _isUsd,
+            uint256 _usdValue
+        )
+    {
+        address _iTokenTmp = iToken;
+        _tokens = wants;
+        _amounts = new uint256[](1);
+        _amounts[0] =
+            (balanceOfToken(_iTokenTmp) * DFiToken(_iTokenTmp).exchangeRateStored()) /
+            1e18 +
+            balanceOfToken(_tokens[0]) -
+            DFiToken(_iTokenTmp).borrowBalanceStored(address(this));
+
+//        console.log("leverage,leverageMax,leverageMin");
+//        console.log(leverage,leverageMax,leverageMin);
+//        console.log(balanceOfToken(_tokens[0]),(balanceOfToken(_iTokenTmp) * DFiToken(_iTokenTmp).exchangeRateStored()) /
+//        1e18,DFiToken(_iTokenTmp).borrowBalanceStored(address(this)));
+    }
+
+    /// @notice Return the third party protocol's pool total assets in USD.
+    function get3rdPoolAssets() external view override returns (uint256) {
+        address _iTokenTmp = iToken;
+        uint256 _iTokenTotalSupply = (DFiToken(_iTokenTmp).totalSupply() *
+            DFiToken(_iTokenTmp).exchangeRateStored()) / 1e18;
+        return _iTokenTotalSupply != 0 ? queryTokenValue(wants[0], _iTokenTotalSupply) : 0;
+    }
+
+    /// @notice Collect the rewards from third party protocol
+    /// @return _rewardTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
+    function claimRewards()
+        internal
+        override
+        returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
+    {
+        address[] memory _holders = new address[](1);
+        _holders[0] = address(this);
+        address[] memory _iTokens = new address[](1);
+        _iTokens[0] = iToken;
+        IRewardDistributorV3(rewardDistributorV3).claimReward(_holders, _iTokens);
+        _rewardTokens = new address[](1);
+        _rewardTokens[0] = DF;
+        _claimAmounts = new uint256[](1);
+        _claimAmounts[0] = balanceOfToken(_rewardTokens[0]);
+    }
+
+    /// @notice Rebalance the collateral of this strategy
+    /// Requirements: only keeper can call
+    function rebalance() external isKeeper {
+        address _iToken = iToken;
+        uint256 _borrowCount = borrowCount;
+        (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(_iToken, _borrowCount);
+        _rebalance(_remainingAmount, _overflowAmount, _iToken, _borrowCount);
+    }
+
+    /// @notice Returns the info of borrow.
+    /// @return _remainingAmount The amount of aToken will still be used as collateral to borrow
+    /// @return _overflowAmount The amount of aToken that exceeds the maximum allowable loan
+    function borrowInfo() public view returns (uint256 _remainingAmount, uint256 _overflowAmount) {
+        (_remainingAmount, _overflowAmount) = _borrowInfo(iToken, borrowCount);
+    }
+
+    /// @notice Strategy deposit funds to third party pool.
+    /// @param _assets the address list of token to deposit
+    /// @param _amounts the amount list of token to deposit
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        override
+    {
+        uint256 _amount = _amounts[0];
+        if (_amount > 0) {
+            address _iToken = iToken;
+            DFiToken(_iToken).mint(address(this), _amount);
+            IDForceController _iController = IDForceController(iController);
+            if (!_iController.hasEnteredMarket(address(this), _iToken)) {
+                address[] memory _iTokens = new address[](1);
+                _iTokens[0] = _iToken;
+                _iController.enterMarkets(_iTokens);
+            }
+            uint256 _borrowCount = borrowCount;
+            (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowStandardInfo(
+                _iToken,
+                _borrowCount
+            );
+            _rebalance(_remainingAmount, _overflowAmount, _iToken, _borrowCount);
+        }
+    }
+
+    /// @notice Strategy withdraw the funds from third party pool
+    /// @param _withdrawShares The amount of shares to withdraw
+    /// @param _totalShares The total amount of shares owned by this strategy
+    /// @param _outputCode The code of output
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
+        address _iToken = iToken;
+        uint256 _collateralITokenAmount = balanceOfToken(_iToken);
+        uint256 _redeemAmount = (_collateralITokenAmount * _withdrawShares) / _totalShares;
+        DFiToken _dFiToken = DFiToken(_iToken);
+        uint256 _debtAmount = _dFiToken.borrowBalanceCurrent(address(this));
+        uint256 _repayBorrowAmount = (_debtAmount * _withdrawShares) / _totalShares;
+        if (_redeemAmount > 0) {
+            uint256 _exchangeRateStored = _dFiToken.exchangeRateStored();
+            uint256 _collateralAmount = (_collateralITokenAmount * _exchangeRateStored) / 1e18;
+            uint256 _leverage = leverage;
+            uint256 _newDebtAmount = (_debtAmount - _repayBorrowAmount) * _leverage;
+            uint256 _newCollateralAmount = (((_collateralITokenAmount - _redeemAmount) *
+                _exchangeRateStored) / 1e18) * (_leverage - BPS);
+            if (_newDebtAmount > _newCollateralAmount) {
+                uint256 _decreaseAmount = (_newDebtAmount - _newCollateralAmount) / BPS;
+                _redeemAmount = _redeemAmount + (_decreaseAmount * 1e18) / _exchangeRateStored;
+                _repayBorrowAmount = _repayBorrowAmount + _decreaseAmount;
+            } else {
+                uint256 _increaseAmount = (_newCollateralAmount - _newDebtAmount) / BPS;
+
+                _redeemAmount = _redeemAmount - (_increaseAmount * 1e18) / _exchangeRateStored;
+                _repayBorrowAmount = _repayBorrowAmount - _increaseAmount;
+            }
+            _repay(_redeemAmount, _repayBorrowAmount, false, _iToken, borrowCount);
+        }
+    }
+
+    //
+    //    /// @notice Strategy withdraw the funds from third party pool
+    //    /// @param _withdrawShares The amount of shares to withdraw
+    //    /// @param _totalShares The total amount of shares owned by this strategy
+    //    /// @param _outputCode The code of output
+    //    function withdrawFrom3rdPool(
+    //        uint256 _withdrawShares,
+    //        uint256 _totalShares,
+    //        uint256 _outputCode
+    //    ) internal override {
+    //        address _iTokenTmp = iToken;
+    //        uint256 _redeemAmount = (balanceOfToken(_iTokenTmp) * _withdrawShares) / _totalShares;
+    //        uint256 _repayAmount = (DFiToken(_iTokenTmp).borrowBalanceCurrent(address(this)) * _withdrawShares) /
+    //        _totalShares;
+    //        if (_redeemAmount > 0) {
+    //            {
+    //
+    //                address[] memory _assets = new address[](1);
+    //                _assets[0] = wants[0];
+    //                uint256[] memory _amounts = new uint256[](1);
+    //                _amounts[0] = _repayAmount;
+    //                uint256[] memory _modes = new uint256[](1);
+    //                _modes[0] = 0;
+    ////                address _onBehalfOf =  address(this);
+    //                bytes memory _params = abi.encodePacked(_redeemAmount, _repayAmount);
+    ////                uint16 _referralCode = 0;
+    //                ILendingPool(LENDING_POOL).flashLoan(address(this), _assets,_amounts,_modes,address(this),_params,0);
+    //            }
+    //
+    //
+    //        }
+    //    }
+
+    //    function executeOperation(
+    //        address[] calldata assets,
+    //        uint256[] calldata amounts,
+    //        uint256[] calldata premiums,
+    //        address initiator,
+    //        bytes calldata params
+    //    ) external returns (bool) {
+    //        address _lendingPoolAddress = LENDING_POOL;
+    //        if (msg.sender != _lendingPoolAddress) {
+    //            return false;
+    //        }
+    //
+    //        {
+    //            emit ExecuteOperation(assets, amounts, premiums, initiator, params);
+    //            (uint256 _redeemAmount, uint256 _repayAmount) = abi.decode(params, (uint256, uint256));
+    //
+    //            DFiToken _dFiToken = DFiToken(iToken);
+    //            _dFiToken.repayBorrow(_repayAmount);
+    //            _dFiToken.redeem(address(this), _redeemAmount);
+    //        }
+    //        // Approve the LendingPool contract allowance to *pull* the owed amount
+    //        for (uint256 i = 0; i < assets.length; i++) {
+    //            address _asset = assets[i];
+    //            IERC20Upgradeable(_asset).safeApprove(_lendingPoolAddress, 0);
+    //            IERC20Upgradeable(_asset).safeApprove(_lendingPoolAddress, amounts[i] + premiums[i]);
+    //        }
+    //
+    //        return true;
+    //    }
+
+    /// @notice repayBorrow and redeem collateral
+    function _repay(
+        uint256 _redeemAmount,
+        uint256 _repayBorrowAmount,
+        bool _allRepayBorrow,
+        address _iToken,
+        uint256 _borrowCount
+    ) internal {
+        address _want = wants[0];
+        address _iTokenTemp = _iToken;
+        uint256 _redeemAmountTemp = _redeemAmount;
+        uint256 _repayBorrowAmountTemp = _repayBorrowAmount;
+        uint256 _repayCount = _borrowCount + 2;
+        DFiToken _dFiToken = DFiToken(_iTokenTemp);
+        IDForceController _iController = IDForceController(iController);
+        uint256 _collateralFactorMantissa = _iController
+            .markets(_iTokenTemp)
+            .collateralFactorMantissa;
+        uint256 _underlyingPrice = IDForcePriceOracle(priceOracle).getUnderlyingPrice(_iTokenTemp);
+        for (uint256 i = 0; i < _repayCount; i++) {
+            (uint256 _equity, , , uint256 _borrowedValue) = _iController.calcAccountEquity(
+                address(this)
+            );
+            if (_equity > 0 && _redeemAmountTemp > 0) {
+                uint256 _allowRedeemAmount = 0;
+                {
+                    uint256 _exchangeRateStored = _dFiToken.exchangeRateStored();
+                    uint256 _balanceOfIToken = balanceOfToken(_iTokenTemp);
+                    uint256 _newBalanceOfIToken = (((_borrowedValue *
+                        1e18 +
+                        _collateralFactorMantissa -
+                        1) / _collateralFactorMantissa) *
+                        1e18 +
+                        (_underlyingPrice * _exchangeRateStored) -
+                        1) / (_underlyingPrice * _exchangeRateStored);
+                    if (_balanceOfIToken > _newBalanceOfIToken) {
+                        _allowRedeemAmount = _balanceOfIToken - _newBalanceOfIToken;
+                    }
+                }
+                if (_allowRedeemAmount > 0) {
+                    {
+                        uint256 _setupRedeemAmount = _allowRedeemAmount;
+                        if (_setupRedeemAmount > _redeemAmountTemp) {
+                            _setupRedeemAmount = _redeemAmountTemp;
+                        }
+                        _dFiToken.redeem(address(this), _setupRedeemAmount);
+                        _redeemAmountTemp = _redeemAmountTemp - _setupRedeemAmount;
+                    }
+                    if (_allRepayBorrow) {
+                        uint256 _setupRepayAmount = balanceOfToken(_want);
+                        if (_setupRepayAmount > 0) {
+                            _dFiToken.repayBorrow(_setupRepayAmount);
+                        }
+                    } else if (_repayBorrowAmountTemp > 0) {
+                        uint256 _setupRepayAmount = balanceOfToken(_want);
+                        if (_setupRepayAmount > _repayBorrowAmountTemp) {
+                            _setupRepayAmount = _repayBorrowAmountTemp;
+                        }
+                        _dFiToken.repayBorrow(_setupRepayAmount);
+                        _repayBorrowAmountTemp = _repayBorrowAmountTemp - _setupRepayAmount;
+                    }
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    /// @notice Rebalance the collateral of this strategy
+    function _rebalance(
+        uint256 _remainingAmount,
+        uint256 _overflowAmount,
+        address _iToken,
+        uint256 _borrowCount
+    ) internal {
+        IDForceController _iController = IDForceController(iController);
+        address _want = wants[0];
+        DFiToken _dFiToken = DFiToken(_iToken);
+        if (_remainingAmount > 0) {
+            uint256 _increaseDebtAmount = (_remainingAmount * (leverage - BPS)) / BPS;
+            uint256 _borrowFactorMantissa = _iController.markets(_iToken).borrowFactorMantissa;
+            uint256 _underlyingPrice = IDForcePriceOracle(priceOracle).getUnderlyingPrice(_iToken);
+            for (uint256 i = 0; i < _borrowCount; i++) {
+                (uint256 _equity, , , ) = _iController.calcAccountEquity(address(this));
+                if (_equity > 0 && _increaseDebtAmount > 0) {
+                    uint256 _allowBorrowAmount = (_equity * _borrowFactorMantissa) /
+                        (_underlyingPrice * 1e18);
+                    if (_allowBorrowAmount > 0) {
+                        uint256 _setupBorrowAmount = _allowBorrowAmount;
+                        if (_increaseDebtAmount < _setupBorrowAmount) {
+                            _setupBorrowAmount = _increaseDebtAmount;
+                        }
+                        _dFiToken.borrow(_setupBorrowAmount);
+                        uint256 _setupAmount = balanceOfToken(_want);
+                        if (_setupAmount > 0) {
+                            _dFiToken.mint(address(this), _setupAmount);
+                        }
+                        _increaseDebtAmount = _increaseDebtAmount - _setupBorrowAmount;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+        } else if (_overflowAmount > 0) {
+            _repay(0, _overflowAmount, true, _iToken, _borrowCount);
+        }
+        if (_remainingAmount + _overflowAmount > 0) {
+            emit Rebalance(_remainingAmount, _overflowAmount);
+        }
+    }
+
+    /// @notice Returns the info of borrow.
+    /// @return _remainingAmount The amount of aToken will still be used as collateral to borrow eth
+    /// @return _overflowAmount The amount of debt token that exceeds the maximum allowable loan
+    function _borrowInfo(address _iToken, uint256 _borrowCount)
+        private
+        view
+        returns (uint256 _remainingAmount, uint256 _overflowAmount)
+    {
+        if (_borrowCount == 0) {
+            _overflowAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
+        } else {
+            uint256 _debtAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
+            uint256 _collateralAmount = (balanceOfToken(_iToken) *
+                DFiToken(_iToken).exchangeRateStored()) / 1e18;
+            uint256 _leverage = leverage;
+            uint256 _leverageMax = leverageMax;
+            uint256 _leverageMin = leverageMin;
+            uint256 _needCollateralAmount = (_debtAmount * _leverage) / (_leverage - BPS);
+            uint256 _needCollateralAmountMin = (_debtAmount * _leverageMax) / (_leverageMax - BPS);
+            uint256 _needCollateralAmountMax = (_debtAmount * _leverageMin) / (_leverageMin - BPS);
+            if (_needCollateralAmountMin > _collateralAmount) {
+                _overflowAmount =
+                    (_leverage * _debtAmount - (_leverage - BPS) * _collateralAmount) /
+                    BPS;
+            } else if (_needCollateralAmountMax < _collateralAmount) {
+                _remainingAmount =
+                    ((_leverage - BPS) * _collateralAmount - _leverage * _debtAmount) /
+                    BPS;
+            }
+        }
+    }
+
+    /// @notice Returns the info of borrow with default borrowFactor
+    /// @return _remainingAmount The amount of aToken will still be used as collateral to borrow
+    /// @return _overflowAmount The amount of debt token that exceeds the maximum allowable loan
+    function _borrowStandardInfo(address _iToken, uint256 _borrowCount)
+        private
+        view
+        returns (uint256 _remainingAmount, uint256 _overflowAmount)
+    {
+        if (_borrowCount == 0) {
+            _overflowAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
+        } else {
+            uint256 _debtAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
+            uint256 _collateralAmount = (balanceOfToken(_iToken) *
+                DFiToken(_iToken).exchangeRateStored()) / 1e18;
+            uint256 _capitalAmount = _collateralAmount - _debtAmount;
+            uint256 _leverage = leverage;
+            uint256 _needCollateralAmount = (_debtAmount * _leverage) / (_leverage - BPS);
+            if (_needCollateralAmount > _collateralAmount) {
+                _overflowAmount =
+                    (_leverage * _debtAmount - (_leverage - BPS) * _collateralAmount) /
+                    BPS;
+            } else if (_needCollateralAmount < _collateralAmount) {
+                _remainingAmount =
+                    ((_leverage - BPS) * _collateralAmount - _leverage * _debtAmount) /
+                    BPS;
+            }
+        }
+    }
+
+    /// @notice Returns the new leverage with the fix borrowFactor
+    /// @return _borrowFactor The borrow factor
+    function _getNewLeverage(uint256 _borrowFactor) internal view returns (uint256) {
+        uint256 _currentBorrowFactor = BPS;
+        uint256 _leverage = BPS;
+        uint256 _borrowCount = borrowCount;
+        for (uint256 i = 0; i < _borrowCount; i++) {
+            _currentBorrowFactor = (_currentBorrowFactor * _borrowFactor) / BPS;
+            _leverage = _leverage + _currentBorrowFactor;
+        }
+        return _leverage;
+    }
+
+    /// @notice update all leverage (leverage leverageMax leverageMin)
+    function _updateAllLeverage() internal {
+        uint256 _currentBorrowFactor = BPS;
+        uint256 _currentBorrowFactorMax = BPS;
+        uint256 _currentBorrowFactorMin = BPS;
+        uint256 _borrowFactor = borrowFactor;
+        uint256 _borrowFactorMax = borrowFactorMax;
+        uint256 _borrowFactorMin = borrowFactorMin;
+        uint256 _borrowCount = borrowCount;
+        uint256 _leverage = BPS;
+        uint256 _leverageMax = BPS;
+        uint256 _leverageMin = BPS;
+        for (uint256 i = 0; i < _borrowCount; i++) {
+            _currentBorrowFactor = (_currentBorrowFactor * _borrowFactor) / BPS;
+            _leverage = _leverage + _currentBorrowFactor;
+            _currentBorrowFactorMax = (_currentBorrowFactorMax * _borrowFactorMax) / BPS;
+            _leverageMax = _leverageMax + _currentBorrowFactorMax;
+            _currentBorrowFactorMin = (_currentBorrowFactorMin * _borrowFactorMin) / BPS;
+            _leverageMin = _leverageMin + _currentBorrowFactorMin;
+        }
+        leverage = _leverage;
+        leverageMax = _leverageMax;
+        leverageMin = _leverageMin;
+    }
+}

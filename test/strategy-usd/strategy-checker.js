@@ -1,7 +1,7 @@
 const { default: BigNumber } = require('bignumber.js');
 const { ethers } = require('hardhat');
 const { assert } = require('chai');
-const { expectEvent} = require('@openzeppelin/test-helpers');
+const { expectEvent, balance, send} = require('@openzeppelin/test-helpers');
 
 const MFC = require('../../config/mainnet-fork-test-config');
 const addressConfig = require('../../config/address-config');
@@ -17,13 +17,17 @@ const AggregatedDerivativePriceFeed = hre.artifacts.require('AggregatedDerivativ
 const ValueInterpreter = hre.artifacts.require('ValueInterpreter');
 const MockVault = hre.artifacts.require('contracts/usd/mock/MockVault.sol:MockVault');
 const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
+const MockPriceModel = hre.artifacts.require('MockPriceModel');
 const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
+const IDForcePriceOracle = hre.artifacts.require('IDForcePriceOracle');
+const IDForceController = hre.artifacts.require('IDForceController');
 
 
 let accessControlProxy;
 let valueInterpreter;
 let mockVault;
 let mockUniswapV3Router;
+let mockPriceModel;
 let strategy;
 let mockPriceOracle;
 
@@ -177,6 +181,8 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         mockVault = await MockVault.new(accessControlProxy.address, valueInterpreter.address);
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
+
+        mockPriceModel = await MockPriceModel.new();
         console.log('mock vault address:%s,strategyName:%s', mockVault.address, strategyName);
         const strategyItem = findStrategyItem(strategyName);
         console.log('strategyItem:', strategyItem);
@@ -282,6 +288,7 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         console.log('Lend:', depositedAssets, depositedAmounts.map(i => i.toFormat()));
 
         const lendTx = await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
+        console.log("lend gas used=",lendTx.receipt.gasUsed);
         expectEvent.inTransaction(lendTx, 'Borrow', {
             _assets: depositedAssets,
             _amounts: depositedAmounts
@@ -323,7 +330,27 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         if (callback) {
             await callback(strategy.address, keeper);
         }
+
+        let priceOracle = await IDForcePriceOracle.at("0xb4De37b03f7AcE98FB795572B18aE3CFae85A628");
+        let _controller = await IDForceController.at("0x8B53Ab2c0Df3230EA327017C91Eb909f815Ad113");
+        // let oldPrice =  new BigNumber(await priceOracle.getUnderlyingPrice("0x2f956b2f801c6dad74E87E7f45c94f6283BF0f45"));
+        // const poster = '0x5c5bFFdB161E637B7f555CC122831126e02270d5';
+        const owner = '0x17e66B1e0260C930bfA567ff3ab5c71794279b94';
+        // mock owner
+        await ethers.getImpersonatedSigner(owner);
+        const accounts = await ethers.getSigners();
+        // const beforeBalance = await balance.current(owner);
+        await send.ether(accounts[0].address, owner, 10 * 10 ** 18)
+        // console.log("owner eth balance = ",(await balance.current(owner)).toString());
+
+        const _alliTokens = await _controller.getAlliTokens();
+        for(let i=0;i<_alliTokens.length;i++){
+            // console.log(i,_alliTokens[i]);
+            await priceOracle._setAssetPriceModel(_alliTokens[i],mockPriceModel.address,{from: owner});
+        }
+
         await advanceBlock(3);
+
         pendingRewards = await strategy.harvest.call({
             from: keeper,
         });
@@ -355,6 +382,7 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         const strategyTotalDebt = new BigNumber(strategyParam.totalDebt);
 
         const redeemTx = await mockVault.redeem(strategy.address, strategyTotalDebt, outputCode);
+        console.log("redeem gas used=",redeemTx.receipt.gasUsed);
         expectEvent.inTransaction(redeemTx,'Repay');
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets()).dividedBy(10 ** 18);
         console.log('After withdraw all shares,strategy assets:%s', estimatedTotalAssets1.toFixed());

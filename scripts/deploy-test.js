@@ -50,6 +50,7 @@ const ChainlinkPriceFeed = 'ChainlinkPriceFeed';
 const ExchangeAggregator = 'ExchangeAggregator';
 const AccessControlProxy = 'AccessControlProxy';
 const MockValueInterpreter = 'MockValueInterpreter';
+const MockPriceModel = 'MockPriceModel';
 const TestAdapter = 'TestAdapter';
 const AggregatedDerivativePriceFeed = 'AggregatedDerivativePriceFeed';
 const Harvester = 'Harvester';
@@ -743,6 +744,9 @@ const deploy_usd = async () => {
         }
         if (isEmpty(addressMap[TestAdapter])) {
             await deployBase(TestAdapter, [MockValueInterpreter]);
+        }
+        if (isEmpty(addressMap[MockPriceModel])) {
+            await deployBase(MockPriceModel, []);
         }
     }
 
