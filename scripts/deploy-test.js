@@ -31,11 +31,14 @@ const {
     deploy,
     deployProxy
 } = require('../utils/deploy-utils');
+const {send} = require("@openzeppelin/test-helpers");
 
 // === Utils === //
 const USDVaultContract = hre.artifacts.require("IVault");
 const ValueInterpreterContract = hre.artifacts.require("ValueInterpreter");
 const ChainlinkPriceFeedContract = hre.artifacts.require("ChainlinkPriceFeed");
+const IDForcePriceOracle = hre.artifacts.require('IDForcePriceOracle');
+const IDForceController = hre.artifacts.require('IDForceController');
 
 // === USD Constants === //
 const USDVault = 'Vault';
@@ -747,6 +750,19 @@ const deploy_usd = async () => {
         }
         if (isEmpty(addressMap[MockPriceModel])) {
             await deployBase(MockPriceModel, []);
+        }
+
+        let priceOracle = await IDForcePriceOracle.at("0xb4De37b03f7AcE98FB795572B18aE3CFae85A628");
+        let _controller = await IDForceController.at("0x8B53Ab2c0Df3230EA327017C91Eb909f815Ad113");
+        const owner = '0x17e66B1e0260C930bfA567ff3ab5c71794279b94';
+        // mock owner
+        await ethers.getImpersonatedSigner(owner);
+        const accounts = await ethers.getSigners();
+        await send.ether(accounts[0].address, owner, 10 * 10 ** 18);
+
+        const _alliTokens = await _controller.getAlliTokens();
+        for(let i=0;i<_alliTokens.length;i++){
+            await priceOracle._setAssetPriceModel(_alliTokens[i],addressMap[MockPriceModel],{from: owner});
         }
     }
 
