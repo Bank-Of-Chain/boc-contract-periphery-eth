@@ -584,6 +584,10 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     }
 
     /// @notice Returns the info of borrow.
+    /// @dev _needCollateralAmount = (_debtAmount * _leverage) / (_leverage - BPS);
+    /// _debtAmount_now / _needCollateralAmount = （_leverage - 10000) / _leverage;
+    /// _leverage = (capitalAmount + _debtAmount_now) *10000 / capitalAmount;
+    /// _debtAmount_now = capitalAmount * (_leverage - 10000)
     /// @return _remainingAmount The amount of aToken will still be used as collateral to borrow eth
     /// @return _overflowAmount The amount of debt token that exceeds the maximum allowable loan
     function _borrowInfo(address _iToken, uint256 _borrowCount)
