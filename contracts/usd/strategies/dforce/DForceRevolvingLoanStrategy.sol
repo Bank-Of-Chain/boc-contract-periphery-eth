@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "boc-contract-core/contracts/strategy/BaseClaimableStrategy.sol";
+import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
 
 import "./../../enums/ProtocolEnum.sol";
 //import "../../../external/aave/ILendingPool.sol";
@@ -12,14 +12,20 @@ import "../../../external/dforce/DFiToken.sol";
 import "../../../external/dforce/IDForceController.sol";
 import "../../../external/dforce/IDForcePriceOracle.sol";
 import "../../../external/dforce/IRewardDistributorV3.sol";
+import "../../../external/uniswap/IUniswapV2Router2.sol";
+import "../../../external/uniswap/IUniswapV3.sol";
 
 //import "hardhat/console.sol";
 
 /// @title DForceRevolvingLoanStrategy
 /// @notice Investment strategy of investing in stablecoins and revolving lending through post-staking via DForceRevolvingLoan
 /// @author Bank of Chain Protocol Inc
-contract DForceRevolvingLoanStrategy is BaseClaimableStrategy {
+contract DForceRevolvingLoanStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    IUniswapV2Router2 public constant UNIROUTER2 =
+        IUniswapV2Router2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    address public constant W_ETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant DF = 0x431ad2ff6a9C365805eBaD47Ee021148d6f7DBe0;
     uint256 public constant BPS = 10000;
 
@@ -46,6 +52,19 @@ contract DForceRevolvingLoanStrategy is BaseClaimableStrategy {
     /// @param _remainingAmount The amount of aToken will still be used as collateral to borrow eth
     /// @param _overflowAmount The amount of debt token that exceeds the maximum allowable loan
     event Rebalance(uint256 _remainingAmount, uint256 _overflowAmount);
+
+    /// @param _strategy The specified strategy emitted this event
+    /// @param _rewards The address list of reward tokens
+    /// @param _rewardAmounts The amount list of of reward tokens
+    /// @param _wants The address list of wantted tokens
+    /// @param _wantAmounts The amount list of wantted tokens
+    event SwapRewardsToWants(
+        address _strategy,
+        address[] _rewards,
+        uint256[] _rewardAmounts,
+        address[] _wants,
+        uint256[] _wantAmounts
+    );
 
     //    event ExecuteOperation(
     //        address[] assets,
@@ -89,6 +108,7 @@ contract DForceRevolvingLoanStrategy is BaseClaimableStrategy {
         rewardDistributorV3 = _rewardDistributorV3;
         super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.DForce), _wants);
         IERC20Upgradeable(_underlyingToken).safeApprove(_iToken, type(uint256).max);
+        IERC20Upgradeable(W_ETH).safeApprove(UNISWAP_V3_ROUTER, type(uint256).max);
     }
 
     /// @notice Sets `_borrowFactor` to `borrowFactor`
@@ -204,10 +224,10 @@ contract DForceRevolvingLoanStrategy is BaseClaimableStrategy {
             balanceOfToken(_tokens[0]) -
             DFiToken(_iTokenTmp).borrowBalanceStored(address(this));
 
-//        console.log("leverage,leverageMax,leverageMin");
-//        console.log(leverage,leverageMax,leverageMin);
-//        console.log(balanceOfToken(_tokens[0]),(balanceOfToken(_iTokenTmp) * DFiToken(_iTokenTmp).exchangeRateStored()) /
-//        1e18,DFiToken(_iTokenTmp).borrowBalanceStored(address(this)));
+        //        console.log("leverage,leverageMax,leverageMin");
+        //        console.log(leverage,leverageMax,leverageMin);
+        //        console.log(balanceOfToken(_tokens[0]),(balanceOfToken(_iTokenTmp) * DFiToken(_iTokenTmp).exchangeRateStored()) /
+        //        1e18,DFiToken(_iTokenTmp).borrowBalanceStored(address(this)));
     }
 
     /// @notice Return the third party protocol's pool total assets in USD.
@@ -218,13 +238,48 @@ contract DForceRevolvingLoanStrategy is BaseClaimableStrategy {
         return _iTokenTotalSupply != 0 ? queryTokenValue(wants[0], _iTokenTotalSupply) : 0;
     }
 
-    /// @notice Collect the rewards from third party protocol
+    /// @inheritdoc BaseStrategy
+    function harvest()
+        public
+        virtual
+        override
+        returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
+    {
+        // sell reward token
+        (
+            bool _claimIsWorth,
+            address[] memory _rewardsTokens,
+            uint256[] memory _claimAmounts,
+            address[] memory _wantTokens,
+            uint256[] memory _wantAmounts
+        ) = _claimRewardsAndReInvest();
+        if (_claimIsWorth) {
+            vault.report(_rewardsTokens, _claimAmounts);
+            emit SwapRewardsToWants(
+                address(this),
+                _rewardsTokens,
+                _claimAmounts,
+                _wantTokens,
+                _wantAmounts
+            );
+        }
+    }
+
+    /// @notice Collect the rewards from third party protocol,then swap from the reward tokens to wanted tokens and reInvest
+    /// @return _claimIsWorth The boolean value to check the claim action is worth or not
     /// @return _rewardTokens The list of the reward token
     /// @return _claimAmounts The list of the reward amount claimed
-    function claimRewards()
+    /// @return _wantTokens The address list of the wanted token
+    /// @return _wantAmounts The amount list of the wanted token
+    function _claimRewardsAndReInvest()
         internal
-        override
-        returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
+        returns (
+            bool _claimIsWorth,
+            address[] memory _rewardTokens,
+            uint256[] memory _claimAmounts,
+            address[] memory _wantTokens,
+            uint256[] memory _wantAmounts
+        )
     {
         address[] memory _holders = new address[](1);
         _holders[0] = address(this);
@@ -234,7 +289,42 @@ contract DForceRevolvingLoanStrategy is BaseClaimableStrategy {
         _rewardTokens = new address[](1);
         _rewardTokens[0] = DF;
         _claimAmounts = new uint256[](1);
-        _claimAmounts[0] = balanceOfToken(_rewardTokens[0]);
+        _wantTokens = wants;
+        _wantAmounts = new uint256[](1);
+        uint256 _balanceOfDF = balanceOfToken(_rewardTokens[0]);
+        _claimAmounts[0] = _balanceOfDF;
+        if (_balanceOfDF > 0) {
+            _claimIsWorth = true;
+            // swap from DF to WETH
+            IERC20Upgradeable(DF).safeApprove(address(UNIROUTER2), 0);
+            IERC20Upgradeable(DF).safeApprove(address(UNIROUTER2), _balanceOfDF);
+            //set up sell reward path
+            address[] memory _dfSellPath = new address[](2);
+            _dfSellPath[0] = DF;
+            _dfSellPath[1] = W_ETH;
+            UNIROUTER2.swapExactTokensForTokens(
+                _balanceOfDF,
+                0,
+                _dfSellPath,
+                address(this),
+                block.timestamp
+            );
+            uint256 _balanceOfWETH = balanceOfToken(W_ETH);
+            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
+                IUniswapV3.ExactInputSingleParams(
+                    W_ETH,
+                    _wantTokens[0],
+                    500,
+                    address(this),
+                    block.timestamp,
+                    _balanceOfWETH,
+                    0,
+                    0
+                )
+            );
+            _wantAmounts[0] = balanceOfToken(_wantTokens[0]);
+            depositTo3rdPool(_wantTokens, _wantAmounts);
+        }
     }
 
     /// @notice Rebalance the collateral of this strategy
