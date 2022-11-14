@@ -203,6 +203,25 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
     }
 
     /// @inheritdoc ETHBaseStrategy
+    function repay(
+        uint256 _repayShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    )
+        public
+        virtual
+        override
+        onlyVault
+        returns (address[] memory _assets, uint256[] memory _amounts)
+    {
+        // if withdraw all need claim rewards
+        if (_repayShares == _totalShares) {
+            harvest();
+        }
+        return super.repay(_repayShares, _totalShares, _outputCode);
+    }
+
+    /// @inheritdoc ETHBaseStrategy
     function harvest()
         public
         virtual
@@ -228,7 +247,6 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
             );
         }
     }
-
 
     /// @notice Rebalance the collateral of this strategy
     /// Requirements: only keeper can call

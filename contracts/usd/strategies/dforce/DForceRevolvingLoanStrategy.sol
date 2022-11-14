@@ -240,6 +240,25 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     }
 
     /// @inheritdoc BaseStrategy
+    function repay(
+        uint256 _repayShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    )
+        public
+        virtual
+        override
+        onlyVault
+        returns (address[] memory _assets, uint256[] memory _amounts)
+    {
+        // if withdraw all need claim rewards
+        if (_repayShares == _totalShares) {
+            harvest();
+        }
+        return super.repay(_repayShares, _totalShares, _outputCode);
+    }
+
+    /// @inheritdoc BaseStrategy
     function harvest()
         public
         virtual
