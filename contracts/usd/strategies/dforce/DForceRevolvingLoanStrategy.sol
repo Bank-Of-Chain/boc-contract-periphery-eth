@@ -434,7 +434,7 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
             (uint256 _equity, , , uint256 _borrowedValue) = _iController.calcAccountEquity(
                 address(this)
             );
-            if (_equity > 0 && (_allRepayBorrow || _redeemAmountTemp > 0)) {
+            if (_equity > 0 && _redeemAmountTemp > 0) {
                 uint256 _allowRedeemAmount = 0;
                 {
                     uint256 _exchangeRateStored = _dFiToken.exchangeRateStored();
@@ -453,13 +453,11 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
                 if (_allowRedeemAmount > 0) {
                     {
                         uint256 _setupRedeemAmount = _allowRedeemAmount;
-                        if ((!_allRepayBorrow) && _setupRedeemAmount > _redeemAmountTemp) {
+                        if (_setupRedeemAmount > _redeemAmountTemp) {
                             _setupRedeemAmount = _redeemAmountTemp;
                         }
                         _dFiToken.redeem(address(this), _setupRedeemAmount);
-                        if (!_allRepayBorrow) {
-                            _redeemAmountTemp = _redeemAmountTemp - _setupRedeemAmount;
-                        }
+                        _redeemAmountTemp = _redeemAmountTemp - _setupRedeemAmount;
                     }
                     if (_allRepayBorrow) {
                         uint256 _setupRepayAmount = balanceOfToken(_want);
@@ -521,7 +519,7 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
                 }
             }
         } else if (_overflowAmount > 0) {
-            _repay(0, _overflowAmount, true, _iToken, _borrowCount);
+            _repay(_overflowAmount, 0, true, _iToken, _borrowCount);
         }
         if (_remainingAmount + _overflowAmount > 0) {
             emit Rebalance(_remainingAmount, _overflowAmount);
