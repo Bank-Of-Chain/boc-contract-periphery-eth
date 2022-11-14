@@ -14,8 +14,6 @@ import "../../../external/dforce/IRewardDistributorV3.sol";
 import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../../../external/weth/IWeth.sol";
 
-//import "hardhat/console.sol";
-
 /// @title ETHDForceRevolvingLoanStrategy
 /// @notice Investment strategy of investing in eth/wsteth and revolving lending through post-staking via DForceRevolvingLoan
 /// @author Bank of Chain Protocol Inc
@@ -253,6 +251,7 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
     function rebalance() external isKeeper {
         address _iToken = iToken;
         uint256 _borrowCount = borrowCount;
+        DFiToken(_iToken).borrowBalanceCurrent(address(this));
         (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(_iToken, _borrowCount);
         _rebalance(_remainingAmount, _overflowAmount, _iToken, _borrowCount);
     }
@@ -279,6 +278,7 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
                 _iTokens[0] = _iToken;
                 _iController.enterMarkets(_iTokens);
             }
+            DFiToken(_iToken).borrowBalanceCurrent(address(this));
             uint256 _borrowCount = borrowCount;
             (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowStandardInfo(
                 _iToken,
@@ -385,18 +385,18 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
         address _iTokenTemp = _iToken;
         uint256 _redeemAmountTemp = _redeemAmount;
         uint256 _repayBorrowAmountTemp = _repayBorrowAmount;
-        uint256 _repayCount = _borrowCount + 2;
         DFiToken _dFiToken = DFiToken(_iTokenTemp);
         IDForceController _iController = IDForceController(iController);
         uint256 _collateralFactorMantissa = _iController
             .markets(_iTokenTemp)
             .collateralFactorMantissa;
         uint256 _underlyingPrice = IDForcePriceOracle(priceOracle).getUnderlyingPrice(_iTokenTemp);
-        for (uint256 i = 0; i < _repayCount; i++) {
+        // max borrowCount + 2
+        for (uint256 i = 0; i < 22; i++) {
             (uint256 _equity, , , uint256 _borrowedValue) = _iController.calcAccountEquity(
                 address(this)
             );
-            if (_equity > 0 && _redeemAmountTemp > 0) {
+            if (_equity > 0 && (_allRepayBorrow || _redeemAmountTemp > 0)) {
                 uint256 _allowRedeemAmount = 0;
                 {
                     uint256 _exchangeRateStored = _dFiToken.exchangeRateStored();
@@ -415,11 +415,13 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
                 if (_allowRedeemAmount > 0) {
                     {
                         uint256 _setupRedeemAmount = _allowRedeemAmount;
-                        if (_setupRedeemAmount > _redeemAmountTemp) {
+                        if ((!_allRepayBorrow) && _setupRedeemAmount > _redeemAmountTemp) {
                             _setupRedeemAmount = _redeemAmountTemp;
                         }
                         _dFiToken.redeem(address(this), _setupRedeemAmount);
-                        _redeemAmountTemp = _redeemAmountTemp - _setupRedeemAmount;
+                        if (!_allRepayBorrow) {
+                            _redeemAmountTemp = _redeemAmountTemp - _setupRedeemAmount;
+                        }
                     }
                     if (_allRepayBorrow) {
                         uint256 _setupRepayAmount = balanceOfToken(_want);
@@ -454,7 +456,7 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
         address _want = wants[0];
         DFiToken _dFiToken = DFiToken(_iToken);
         if (_remainingAmount > 0) {
-            uint256 _increaseDebtAmount = (_remainingAmount * (leverage - BPS)) / BPS;
+            uint256 _increaseDebtAmount = _remainingAmount;
             uint256 _borrowFactorMantissa = _iController.markets(_iToken).borrowFactorMantissa;
             uint256 _underlyingPrice = IDForcePriceOracle(priceOracle).getUnderlyingPrice(_iToken);
             for (uint256 i = 0; i < _borrowCount; i++) {
@@ -552,9 +554,6 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
     /// @notice Returns the new leverage with the fix borrowFactor
     /// @return _borrowFactor The borrow factor
     function _getNewLeverage(uint256 _borrowFactor) internal view returns (uint256) {
-        // q = borrowFactor/bps
-        // n = borrowCount + 1;
-        // _leverage = (1-q^n)/(1-q),(n>=1, q=0.8)
         uint256 _bps = BPS;
         uint256 _borrowCount = borrowCount;
         return _calLeverage(_borrowFactor, _bps, _borrowCount);
@@ -562,9 +561,6 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
 
     /// @notice update all leverage (leverage leverageMax leverageMin)
     function _updateAllLeverage() internal {
-        // q = borrowFactor/bps
-        // n = borrowCount + 1;
-        // _leverage = (1-q^n)/(1-q),(n>=1, q=0.8)
         uint256 _bps = BPS;
         uint256 _borrowCount = borrowCount;
         leverage = _calLeverage(borrowFactor, _bps, _borrowCount);
@@ -579,8 +575,15 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
         uint256 _bps,
         uint256 _borrowCount
     ) private pure returns (uint256) {
-        return
-            (_bps * _bps - (_borrowFactor**(_borrowCount + 1)) / (_bps**(_borrowCount - 1))) /
-            (_bps - _borrowFactor);
+        // q = borrowFactor/bps
+        // n = borrowCount + 1;
+        // _leverage = (1-q^n)/(1-q),(n>=1, q=0.8)
+        uint256 _leverage = _bps;
+        if (_borrowCount >= 1) {
+            _leverage =
+                (_bps * _bps - (_borrowFactor**(_borrowCount + 1)) / (_bps**(_borrowCount - 1))) /
+                (_bps - _borrowFactor);
+        }
+        return _leverage;
     }
 }
