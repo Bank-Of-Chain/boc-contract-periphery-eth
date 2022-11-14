@@ -109,6 +109,7 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
         super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.DForce), _wants);
         IERC20Upgradeable(_underlyingToken).safeApprove(_iToken, type(uint256).max);
         IERC20Upgradeable(W_ETH).safeApprove(UNISWAP_V3_ROUTER, type(uint256).max);
+        IERC20Upgradeable(DF).safeApprove(address(UNIROUTER2), type(uint256).max);
     }
 
     /// @notice Sets `_borrowFactor` to `borrowFactor`
@@ -265,68 +266,6 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
         }
     }
 
-    /// @notice Collect the rewards from third party protocol,then swap from the reward tokens to wanted tokens and reInvest
-    /// @return _claimIsWorth The boolean value to check the claim action is worth or not
-    /// @return _rewardTokens The list of the reward token
-    /// @return _claimAmounts The list of the reward amount claimed
-    /// @return _wantTokens The address list of the wanted token
-    /// @return _wantAmounts The amount list of the wanted token
-    function _claimRewardsAndReInvest()
-        internal
-        returns (
-            bool _claimIsWorth,
-            address[] memory _rewardTokens,
-            uint256[] memory _claimAmounts,
-            address[] memory _wantTokens,
-            uint256[] memory _wantAmounts
-        )
-    {
-        address[] memory _holders = new address[](1);
-        _holders[0] = address(this);
-        address[] memory _iTokens = new address[](1);
-        _iTokens[0] = iToken;
-        IRewardDistributorV3(rewardDistributorV3).claimReward(_holders, _iTokens);
-        _rewardTokens = new address[](1);
-        _rewardTokens[0] = DF;
-        _claimAmounts = new uint256[](1);
-        _wantTokens = wants;
-        _wantAmounts = new uint256[](1);
-        uint256 _balanceOfDF = balanceOfToken(_rewardTokens[0]);
-        _claimAmounts[0] = _balanceOfDF;
-        if (_balanceOfDF > 0) {
-            _claimIsWorth = true;
-            // swap from DF to WETH
-            IERC20Upgradeable(DF).safeApprove(address(UNIROUTER2), 0);
-            IERC20Upgradeable(DF).safeApprove(address(UNIROUTER2), _balanceOfDF);
-            //set up sell reward path
-            address[] memory _dfSellPath = new address[](2);
-            _dfSellPath[0] = DF;
-            _dfSellPath[1] = W_ETH;
-            UNIROUTER2.swapExactTokensForTokens(
-                _balanceOfDF,
-                0,
-                _dfSellPath,
-                address(this),
-                block.timestamp
-            );
-            uint256 _balanceOfWETH = balanceOfToken(W_ETH);
-            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
-                IUniswapV3.ExactInputSingleParams(
-                    W_ETH,
-                    _wantTokens[0],
-                    500,
-                    address(this),
-                    block.timestamp,
-                    _balanceOfWETH,
-                    0,
-                    0
-                )
-            );
-            _wantAmounts[0] = balanceOfToken(_wantTokens[0]);
-            depositTo3rdPool(_wantTokens, _wantAmounts);
-        }
-    }
-
     /// @notice Rebalance the collateral of this strategy
     /// Requirements: only keeper can call
     function rebalance() external isKeeper {
@@ -405,68 +344,65 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
         }
     }
 
-    //
-    //    /// @notice Strategy withdraw the funds from third party pool
-    //    /// @param _withdrawShares The amount of shares to withdraw
-    //    /// @param _totalShares The total amount of shares owned by this strategy
-    //    /// @param _outputCode The code of output
-    //    function withdrawFrom3rdPool(
-    //        uint256 _withdrawShares,
-    //        uint256 _totalShares,
-    //        uint256 _outputCode
-    //    ) internal override {
-    //        address _iTokenTmp = iToken;
-    //        uint256 _redeemAmount = (balanceOfToken(_iTokenTmp) * _withdrawShares) / _totalShares;
-    //        uint256 _repayAmount = (DFiToken(_iTokenTmp).borrowBalanceCurrent(address(this)) * _withdrawShares) /
-    //        _totalShares;
-    //        if (_redeemAmount > 0) {
-    //            {
-    //
-    //                address[] memory _assets = new address[](1);
-    //                _assets[0] = wants[0];
-    //                uint256[] memory _amounts = new uint256[](1);
-    //                _amounts[0] = _repayAmount;
-    //                uint256[] memory _modes = new uint256[](1);
-    //                _modes[0] = 0;
-    ////                address _onBehalfOf =  address(this);
-    //                bytes memory _params = abi.encodePacked(_redeemAmount, _repayAmount);
-    ////                uint16 _referralCode = 0;
-    //                ILendingPool(LENDING_POOL).flashLoan(address(this), _assets,_amounts,_modes,address(this),_params,0);
-    //            }
-    //
-    //
-    //        }
-    //    }
-
-    //    function executeOperation(
-    //        address[] calldata assets,
-    //        uint256[] calldata amounts,
-    //        uint256[] calldata premiums,
-    //        address initiator,
-    //        bytes calldata params
-    //    ) external returns (bool) {
-    //        address _lendingPoolAddress = LENDING_POOL;
-    //        if (msg.sender != _lendingPoolAddress) {
-    //            return false;
-    //        }
-    //
-    //        {
-    //            emit ExecuteOperation(assets, amounts, premiums, initiator, params);
-    //            (uint256 _redeemAmount, uint256 _repayAmount) = abi.decode(params, (uint256, uint256));
-    //
-    //            DFiToken _dFiToken = DFiToken(iToken);
-    //            _dFiToken.repayBorrow(_repayAmount);
-    //            _dFiToken.redeem(address(this), _redeemAmount);
-    //        }
-    //        // Approve the LendingPool contract allowance to *pull* the owed amount
-    //        for (uint256 i = 0; i < assets.length; i++) {
-    //            address _asset = assets[i];
-    //            IERC20Upgradeable(_asset).safeApprove(_lendingPoolAddress, 0);
-    //            IERC20Upgradeable(_asset).safeApprove(_lendingPoolAddress, amounts[i] + premiums[i]);
-    //        }
-    //
-    //        return true;
-    //    }
+    /// @notice Collect the rewards from third party protocol,then swap from the reward tokens to wanted tokens and reInvest
+    /// @return _claimIsWorth The boolean value to check the claim action is worth or not
+    /// @return _rewardTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
+    /// @return _wantTokens The address list of the wanted token
+    /// @return _wantAmounts The amount list of the wanted token
+    function _claimRewardsAndReInvest()
+        internal
+        returns (
+            bool _claimIsWorth,
+            address[] memory _rewardTokens,
+            uint256[] memory _claimAmounts,
+            address[] memory _wantTokens,
+            uint256[] memory _wantAmounts
+        )
+    {
+        address[] memory _holders = new address[](1);
+        _holders[0] = address(this);
+        address[] memory _iTokens = new address[](1);
+        _iTokens[0] = iToken;
+        IRewardDistributorV3(rewardDistributorV3).claimReward(_holders, _iTokens);
+        _rewardTokens = new address[](1);
+        _rewardTokens[0] = DF;
+        _claimAmounts = new uint256[](1);
+        _wantTokens = wants;
+        _wantAmounts = new uint256[](1);
+        uint256 _balanceOfDF = balanceOfToken(_rewardTokens[0]);
+        _claimAmounts[0] = _balanceOfDF;
+        if (_balanceOfDF > 0) {
+            _claimIsWorth = true;
+            // swap from DF to WETH
+            //set up sell reward path
+            address[] memory _dfSellPath = new address[](2);
+            _dfSellPath[0] = DF;
+            _dfSellPath[1] = W_ETH;
+            UNIROUTER2.swapExactTokensForTokens(
+                _balanceOfDF,
+                0,
+                _dfSellPath,
+                address(this),
+                block.timestamp
+            );
+            uint256 _balanceOfWETH = balanceOfToken(W_ETH);
+            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
+                IUniswapV3.ExactInputSingleParams(
+                    W_ETH,
+                    _wantTokens[0],
+                    500,
+                    address(this),
+                    block.timestamp,
+                    _balanceOfWETH,
+                    0,
+                    0
+                )
+            );
+            _wantAmounts[0] = balanceOfToken(_wantTokens[0]);
+            DFiToken(_iTokens[0]).mint(address(this), _wantAmounts[0]);
+        }
+    }
 
     /// @notice repayBorrow and redeem collateral
     function _repay(

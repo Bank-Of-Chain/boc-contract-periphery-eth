@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "../ETHBaseClaimableStrategy.sol";
+import "../ETHBaseStrategy.sol";
 
 import "./../../enums/ProtocolEnum.sol";
 import "../../../external/dforce/DFiToken.sol";
@@ -19,7 +19,7 @@ import "../../../external/weth/IWeth.sol";
 /// @title ETHDForceRevolvingLoanStrategy
 /// @notice Investment strategy of investing in eth/wsteth and revolving lending through post-staking via DForceRevolvingLoan
 /// @author Bank of Chain Protocol Inc
-contract ETHDForceRevolvingLoanStrategy is ETHBaseClaimableStrategy {
+contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address internal constant DF = 0x431ad2ff6a9C365805eBaD47Ee021148d6f7DBe0;
     address public constant W_ETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -84,9 +84,7 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseClaimableStrategy {
         priceOracle = _priceOracle;
         rewardDistributorV3 = _rewardDistributorV3;
         super._initialize(_vault, uint16(ProtocolEnum.DForce), _name, _wants);
-        if (_underlyingToken != NativeToken.NATIVE_TOKEN) {
-            IERC20Upgradeable(_underlyingToken).safeApprove(_iToken, type(uint256).max);
-        }
+        IERC20Upgradeable(DF).safeApprove(address(UNIROUTER2), type(uint256).max);
     }
 
     /// @notice Sets `_borrowFactor` to `borrowFactor`
@@ -204,53 +202,33 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseClaimableStrategy {
         return _iTokenTotalSupply != 0 ? queryTokenValueInETH(wants[0], _iTokenTotalSupply) : 0;
     }
 
-    /// @inheritdoc ETHBaseClaimableStrategy
-    function claimRewards()
-        internal
+    /// @inheritdoc ETHBaseStrategy
+    function harvest()
+        public
+        virtual
         override
-        returns (
+        returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
+    {
+        // sell reward token
+        (
             bool _claimIsWorth,
-            address[] memory _rewardTokens,
-            uint256[] memory _claimAmounts
-        )
-    {
-        _claimIsWorth = true;
-        address[] memory _holders = new address[](1);
-        _holders[0] = address(this);
-        address[] memory _iTokens = new address[](1);
-        _iTokens[0] = iToken;
-        IRewardDistributorV3(rewardDistributorV3).claimReward(_holders, _iTokens);
-        _rewardTokens = new address[](1);
-        _rewardTokens[0] = DF;
-        _claimAmounts = new uint256[](1);
-        _claimAmounts[0] = balanceOfToken(_rewardTokens[0]);
-    }
-
-    /// @inheritdoc ETHBaseClaimableStrategy
-    function swapRewardsToWants()
-        internal
-        override
-        returns (address[] memory _wantTokens, uint256[] memory _wantAmounts)
-    {
-        uint256 _balanceOfDF = balanceOfToken(DF);
-        if (_balanceOfDF > 0) {
-            // swap from DF to WETH
-            IERC20Upgradeable(DF).safeApprove(address(UNIROUTER2), 0);
-            IERC20Upgradeable(DF).safeApprove(address(UNIROUTER2), _balanceOfDF);
-            //set up sell reward path
-            address[] memory _dfSellPath = new address[](2);
-            _dfSellPath[0] = DF;
-            _dfSellPath[1] = W_ETH;
-            UNIROUTER2.swapExactTokensForTokens(
-                _balanceOfDF,
-                0,
-                _dfSellPath,
+            address[] memory _rewardsTokens,
+            uint256[] memory _claimAmounts,
+            address[] memory _wantTokens,
+            uint256[] memory _wantAmounts
+        ) = _claimRewardsAndReInvest();
+        if (_claimIsWorth) {
+            vault.report(_rewardsTokens, _claimAmounts);
+            emit SwapRewardsToWants(
                 address(this),
-                block.timestamp
+                _rewardsTokens,
+                _claimAmounts,
+                _wantTokens,
+                _wantAmounts
             );
-            IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
         }
     }
+
 
     /// @notice Rebalance the collateral of this strategy
     /// Requirements: only keeper can call
@@ -322,6 +300,58 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseClaimableStrategy {
                 _repayBorrowAmount = _repayBorrowAmount - _increaseAmount;
             }
             _repay(_redeemAmount, _repayBorrowAmount, false, _iToken, borrowCount);
+        }
+    }
+
+    /// @notice Collect the rewards from third party protocol,then swap from the reward tokens to wanted tokens and reInvest
+    /// @return _claimIsWorth The boolean value to check the claim action is worth or not
+    /// @return _rewardTokens The list of the reward token
+    /// @return _claimAmounts The list of the reward amount claimed
+    /// @return _wantTokens The address list of the wanted token
+    /// @return _wantAmounts The amount list of the wanted token
+    function _claimRewardsAndReInvest()
+        internal
+        returns (
+            bool _claimIsWorth,
+            address[] memory _rewardTokens,
+            uint256[] memory _claimAmounts,
+            address[] memory _wantTokens,
+            uint256[] memory _wantAmounts
+        )
+    {
+        address[] memory _holders = new address[](1);
+        _holders[0] = address(this);
+        address[] memory _iTokens = new address[](1);
+        _iTokens[0] = iToken;
+        IRewardDistributorV3(rewardDistributorV3).claimReward(_holders, _iTokens);
+        _rewardTokens = new address[](1);
+        _rewardTokens[0] = DF;
+        _claimAmounts = new uint256[](1);
+        _wantTokens = wants;
+        _wantAmounts = new uint256[](1);
+        uint256 _balanceOfDF = balanceOfToken(_rewardTokens[0]);
+        _claimAmounts[0] = _balanceOfDF;
+        if (_balanceOfDF > 0) {
+            _claimIsWorth = true;
+            // swap from DF to WETH
+            IERC20Upgradeable(DF).safeApprove(address(UNIROUTER2), 0);
+            IERC20Upgradeable(DF).safeApprove(address(UNIROUTER2), _balanceOfDF);
+            //set up sell reward path
+            address[] memory _dfSellPath = new address[](2);
+            _dfSellPath[0] = DF;
+            _dfSellPath[1] = W_ETH;
+            UNIROUTER2.swapExactTokensForTokens(
+                _balanceOfDF,
+                0,
+                _dfSellPath,
+                address(this),
+                block.timestamp
+            );
+            uint256 _balanceOfWETH = balanceOfToken(W_ETH);
+            IWeth(W_ETH).withdraw(_balanceOfWETH);
+
+            _wantAmounts[0] = _balanceOfWETH;
+            DFiToken(_iTokens[0]).mint{value: _wantAmounts[0]}(address(this));
         }
     }
 
