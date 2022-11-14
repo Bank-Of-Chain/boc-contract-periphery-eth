@@ -15,7 +15,7 @@ import "../../../external/dforce/IRewardDistributorV3.sol";
 import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 
-//import "hardhat/console.sol";
+import "hardhat/console.sol";
 
 /// @title DForceRevolvingLoanStrategy
 /// @notice Investment strategy of investing in stablecoins and revolving lending through post-staking via DForceRevolvingLoan
@@ -606,38 +606,36 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     /// @notice Returns the new leverage with the fix borrowFactor
     /// @return _borrowFactor The borrow factor
     function _getNewLeverage(uint256 _borrowFactor) internal view returns (uint256) {
-        uint256 _currentBorrowFactor = BPS;
-        uint256 _leverage = BPS;
+        // q = borrowFactor/bps
+        // n = borrowCount + 1;
+        // _leverage = (1-q^n)/(1-q),(n>=1, q=0.8)
+        uint256 _bps = BPS;
         uint256 _borrowCount = borrowCount;
-        for (uint256 i = 0; i < _borrowCount; i++) {
-            _currentBorrowFactor = (_currentBorrowFactor * _borrowFactor) / BPS;
-            _leverage = _leverage + _currentBorrowFactor;
-        }
+        uint256 _leverage = (_bps *
+            _bps -
+            (_borrowFactor**(_borrowCount + 1)) /
+            (_bps**(_borrowCount - 1))) / (_bps - _borrowFactor);
         return _leverage;
     }
 
     /// @notice update all leverage (leverage leverageMax leverageMin)
     function _updateAllLeverage() internal {
-        uint256 _currentBorrowFactor = BPS;
-        uint256 _currentBorrowFactorMax = BPS;
-        uint256 _currentBorrowFactorMin = BPS;
+        // q = borrowFactor/bps
+        // n = borrowCount + 1;
+        // _leverage = (1-q^n)/(1-q),(n>=1, q=0.8)
+        uint256 _bps = BPS;
+        uint256 _borrowCount = borrowCount;
         uint256 _borrowFactor = borrowFactor;
         uint256 _borrowFactorMax = borrowFactorMax;
         uint256 _borrowFactorMin = borrowFactorMin;
-        uint256 _borrowCount = borrowCount;
-        uint256 _leverage = BPS;
-        uint256 _leverageMax = BPS;
-        uint256 _leverageMin = BPS;
-        for (uint256 i = 0; i < _borrowCount; i++) {
-            _currentBorrowFactor = (_currentBorrowFactor * _borrowFactor) / BPS;
-            _leverage = _leverage + _currentBorrowFactor;
-            _currentBorrowFactorMax = (_currentBorrowFactorMax * _borrowFactorMax) / BPS;
-            _leverageMax = _leverageMax + _currentBorrowFactorMax;
-            _currentBorrowFactorMin = (_currentBorrowFactorMin * _borrowFactorMin) / BPS;
-            _leverageMin = _leverageMin + _currentBorrowFactorMin;
-        }
-        leverage = _leverage;
-        leverageMax = _leverageMax;
-        leverageMin = _leverageMin;
+        leverage =
+            (_bps * _bps - (_borrowFactor**(_borrowCount + 1)) / (_bps**(_borrowCount - 1))) /
+            (_bps - _borrowFactor);
+        leverageMax =
+            (_bps * _bps - (_borrowFactorMax**(_borrowCount + 1)) / (_bps**(_borrowCount - 1))) /
+            (_bps - _borrowFactorMax);
+        leverageMin =
+            (_bps * _bps - (_borrowFactorMin**(_borrowCount + 1)) / (_bps**(_borrowCount - 1))) /
+            (_bps - _borrowFactorMin);
     }
 }
