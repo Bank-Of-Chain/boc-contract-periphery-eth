@@ -68,13 +68,13 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
     ) external initializer {
         borrowCount = 10;
         borrowFactor = 8000;
-        borrowFactorMax = 8500;
-        borrowFactorMin = 7500;
+        borrowFactorMax = 8400;
+        borrowFactorMin = 7600;
         borrowCount = 10;
 
         leverage = _calLeverage(8000, 10000, 10);
-        leverageMax = _calLeverage(8500, 10000, 10);
-        leverageMin = _calLeverage(7500, 10000, 10);
+        leverageMax = _calLeverage(8400, 10000, 10);
+        leverageMin = _calLeverage(7600, 10000, 10);
         address[] memory _wants = new address[](1);
         _wants[0] = _underlyingToken;
         iToken = _iToken;
