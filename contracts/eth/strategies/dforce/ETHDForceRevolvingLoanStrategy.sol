@@ -72,11 +72,11 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
         borrowFactor = 8000;
         borrowFactorMax = 8500;
         borrowFactorMin = 7500;
-        leverage = _getNewLeverage(8000);
-        leverageMax = _getNewLeverage(8500);
-        leverageMin = _getNewLeverage(7500);
-
         borrowCount = 10;
+
+        leverage = _calLeverage(8000, 10000, 10);
+        leverageMax = _calLeverage(8500, 10000, 10);
+        leverageMin = _calLeverage(7500, 10000, 10);
         address[] memory _wants = new address[](1);
         _wants[0] = _underlyingToken;
         iToken = _iToken;
@@ -557,11 +557,7 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
         // _leverage = (1-q^n)/(1-q),(n>=1, q=0.8)
         uint256 _bps = BPS;
         uint256 _borrowCount = borrowCount;
-        uint256 _leverage = (_bps *
-            _bps -
-            (_borrowFactor**(_borrowCount + 1)) /
-            (_bps**(_borrowCount - 1))) / (_bps - _borrowFactor);
-        return _leverage;
+        return _calLeverage(_borrowFactor, _bps, _borrowCount);
     }
 
     /// @notice update all leverage (leverage leverageMax leverageMin)
@@ -571,17 +567,20 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
         // _leverage = (1-q^n)/(1-q),(n>=1, q=0.8)
         uint256 _bps = BPS;
         uint256 _borrowCount = borrowCount;
-        uint256 _borrowFactor = borrowFactor;
-        uint256 _borrowFactorMax = borrowFactorMax;
-        uint256 _borrowFactorMin = borrowFactorMin;
-        leverage =
+        leverage = _calLeverage(borrowFactor, _bps, _borrowCount);
+        leverageMax = _calLeverage(borrowFactorMax, _bps, _borrowCount);
+        leverageMin = _calLeverage(borrowFactorMin, _bps, _borrowCount);
+    }
+
+    /// @notice Returns the leverage  with by _borrowFactor _bps  _borrowCount
+    /// @return _borrowFactor The borrow factor
+    function _calLeverage(
+        uint256 _borrowFactor,
+        uint256 _bps,
+        uint256 _borrowCount
+    ) private pure returns (uint256) {
+        return
             (_bps * _bps - (_borrowFactor**(_borrowCount + 1)) / (_bps**(_borrowCount - 1))) /
             (_bps - _borrowFactor);
-        leverageMax =
-            (_bps * _bps - (_borrowFactorMax**(_borrowCount + 1)) / (_bps**(_borrowCount - 1))) /
-            (_bps - _borrowFactorMax);
-        leverageMin =
-            (_bps * _bps - (_borrowFactorMin**(_borrowCount + 1)) / (_bps**(_borrowCount - 1))) /
-            (_bps - _borrowFactorMin);
     }
 }
