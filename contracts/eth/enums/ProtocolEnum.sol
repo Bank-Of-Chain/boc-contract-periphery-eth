@@ -9,5 +9,6 @@ enum ProtocolEnum {
     UniswapV3,
     StakeWise,
     YearnV2,
-    Aave
+    Aave,
+    DForce
 }

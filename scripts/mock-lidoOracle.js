@@ -63,7 +63,7 @@ async function reportOracle(passDays, increaseRate) {
         await ethers.getImpersonatedSigner(oracler);
         // transfer eth to oracler
         const accounts = await ethers.getSigners();
-        const beforeBalance = await balance.current(accounts[0].address)
+        const beforeBalance = await balance.current(oracler)
         if(beforeBalance.toString() < '10000000000000000000'){
             await send.ether(accounts[0].address, oracler, 10 * 10 ** 18)
         }
