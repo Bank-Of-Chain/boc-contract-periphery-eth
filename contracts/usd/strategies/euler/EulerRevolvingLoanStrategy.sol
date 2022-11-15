@@ -365,7 +365,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         uint256 _origBalance
         ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256, uint256));
         address _want = wants[0];
-        require(balanceOTfoken(_want) >= _origBalance + _flashLoanAmount, "not received enough");
+        require(balanceOfToken(_want) >= _origBalance + _flashLoanAmount, "not received enough");
         DFiToken _dFiToken = DFiToken(iToken);
         if (_mintAmount > 0) {
             _dFiToken.mint(address(this), _mintAmount);
