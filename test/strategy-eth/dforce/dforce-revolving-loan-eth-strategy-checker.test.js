@@ -18,12 +18,14 @@ describe('【DForceRevolvingLoanETHStrategy Strategy Checker】', function () {
         console.log("init borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
         await strategy.setBorrowCount(0);
         console.log("before rebalance1 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
-        await strategy.rebalance({from:keeper});
+        let rebalanceTx =  await strategy.rebalance({from:keeper});
+        console.log("rebalance gasUsed",rebalanceTx.receipt.gasUsed.toString());
         borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("after rebalance1 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
         await strategy.setBorrowCount(10);
         console.log("before rebalance2 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
-        await strategy.rebalance({from:keeper});
+        rebalanceTx = await strategy.rebalance({from:keeper});
+        console.log("rebalance gasUsed",rebalanceTx.receipt.gasUsed.toString());
         borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("after rebalance2 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
 

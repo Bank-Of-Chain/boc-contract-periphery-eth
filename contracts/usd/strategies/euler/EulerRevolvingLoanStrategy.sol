@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
 
 import "./../../enums/ProtocolEnum.sol";
-import "../../../external/euler/IEulerDToken.sol";
 import "../../../external/dforce/DFiToken.sol";
 import "../../../external/dforce/IDForceController.sol";
 import "../../../external/dforce/IDForcePriceOracle.sol";
@@ -15,12 +14,13 @@ import "../../../external/dforce/IRewardDistributorV3.sol";
 import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 
-/// @title DForceRevolvingLoanStrategy
-/// @notice Investment strategy of investing in stablecoins and revolving lending through post-staking via DForceRevolvingLoan
+import "hardhat/console.sol";
+
+/// @title EulerRevolvingLoanStrategy
+/// @notice Investment strategy of investing in stablecoins and revolving lending through post-staking via EulerRevolvingLoan
 /// @author Bank of Chain Protocol Inc
-contract DForceRevolvingLoanStrategy is BaseStrategy {
+contract EulerRevolvingLoanStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-    address internal constant EULER_ADDRESS = 0x27182842E098f60e3D576794A5bFFb0777E025d3;
     address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     IUniswapV2Router2 public constant UNIROUTER2 =
         IUniswapV2Router2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
@@ -32,7 +32,6 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     address public iController;
     address public rewardDistributorV3;
     address public priceOracle;
-    address public eulerDToken;
     uint256 public borrowFactor;
     uint256 public borrowFactorMax;
     uint256 public borrowFactorMin;
@@ -82,8 +81,7 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
         address _iToken,
         address _iController,
         address _priceOracle,
-        address _rewardDistributorV3,
-        address _eulerDToken
+        address _rewardDistributorV3
     ) external initializer {
         borrowCount = 10;
         borrowFactor = 8000;
@@ -100,7 +98,6 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
         iController = _iController;
         priceOracle = _priceOracle;
         rewardDistributorV3 = _rewardDistributorV3;
-        eulerDToken = _eulerDToken;
         super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.DForce), _wants);
         IERC20Upgradeable(_underlyingToken).safeApprove(_iToken, type(uint256).max);
         IERC20Upgradeable(W_ETH).safeApprove(UNISWAP_V3_ROUTER, type(uint256).max);
@@ -219,6 +216,9 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
             1e18 +
             balanceOfToken(_tokens[0]) -
             DFiToken(_iTokenTmp).borrowBalanceStored(address(this));
+        console.log("getPositionDetail=");
+        console.log((balanceOfToken(_iTokenTmp) * DFiToken(_iTokenTmp).exchangeRateStored()) /
+            1e18 ,balanceOfToken(_tokens[0]) , DFiToken(_iTokenTmp).borrowBalanceStored(address(this)));
     }
 
     /// @notice Return the third party protocol's pool total assets in USD.
@@ -279,9 +279,10 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     /// Requirements: only keeper can call
     function rebalance() external isKeeper {
         address _iToken = iToken;
+        uint256 _borrowCount = borrowCount;
         DFiToken(_iToken).borrowBalanceCurrent(address(this));
-        (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(_iToken, borrowCount);
-        _rebalance(_remainingAmount, _overflowAmount);
+        (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(_iToken, _borrowCount);
+        _rebalance(_remainingAmount, _overflowAmount, _iToken, _borrowCount);
     }
 
     /// @notice Returns the info of borrow.
@@ -309,11 +310,12 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
                 _iController.enterMarkets(_iTokens);
             }
             DFiToken(_iToken).borrowBalanceCurrent(address(this));
+            uint256 _borrowCount = borrowCount;
             (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowStandardInfo(
                 _iToken,
-                borrowCount
+                _borrowCount
             );
-            _rebalance(_remainingAmount, _overflowAmount);
+            _rebalance(_remainingAmount, _overflowAmount, _iToken, _borrowCount);
         }
     }
 
@@ -349,37 +351,8 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
                 _redeemAmount = _redeemAmount - (_increaseAmount * 1e18) / _exchangeRateStored;
                 _repayBorrowAmount = _repayBorrowAmount - _increaseAmount;
             }
-            _repay(_redeemAmount, _repayBorrowAmount);
+            _repay(_redeemAmount, _repayBorrowAmount, false, _iToken, borrowCount);
         }
-    }
-
-    function onFlashLoan(bytes memory data) external {
-        address _eulerAddress = EULER_ADDRESS;
-        require(msg.sender == _eulerAddress, "invalid call");
-        (
-            uint256 _mintAmount,
-            uint256 _borrowAmount,
-            uint256 _redeemAmount,
-            uint256 _repayBorrowAmount,
-            uint256 _flashLoanAmount,
-            uint256 _origBalance
-        ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256, uint256));
-        address _want = wants[0];
-        require(balanceOTfoken(_want) >= _origBalance + _flashLoanAmount, "not received enough");
-        DFiToken _dFiToken = DFiToken(iToken);
-        if (_mintAmount > 0) {
-            _dFiToken.mint(address(this), _mintAmount);
-        }
-        if (_repayBorrowAmount > 0) {
-            _dFiToken.repayBorrow(_repayBorrowAmount);
-        }
-        if (_borrowAmount > 0) {
-            _dFiToken.borrow(_borrowAmount);
-        }
-        if (_redeemAmount > 0) {
-            _dFiToken.redeem(address(this), _redeemAmount);
-        }
-        IERC20Upgradeable(_want).safeTransfer(_eulerAddress, _flashLoanAmount);
     }
 
     /// @notice Collect the rewards from third party protocol,then swap from the reward tokens to wanted tokens and reInvest
@@ -443,32 +416,115 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     }
 
     /// @notice repayBorrow and redeem collateral
-    function _repay(uint256 _redeemAmount, uint256 _repayBorrowAmount) internal {
-        bytes memory _params = abi.encodePacked(
-            uint256(0),
-            uint256(0),
-            _redeemAmount,
-            _repayBorrowAmount,
-            _repayBorrowAmount,
-            balanceOfToken(wants[0])
-        );
-        IEulerDToken(eulerDToken).flashLoan(_repayBorrowAmount, _params);
+    function _repay(
+        uint256 _redeemAmount,
+        uint256 _repayBorrowAmount,
+        bool _allRepayBorrow,
+        address _iToken,
+        uint256 _borrowCount
+    ) internal {
+        address _want = wants[0];
+        address _iTokenTemp = _iToken;
+        uint256 _redeemAmountTemp = _redeemAmount;
+        uint256 _repayBorrowAmountTemp = _repayBorrowAmount;
+
+        DFiToken _dFiToken = DFiToken(_iTokenTemp);
+        IDForceController _iController = IDForceController(iController);
+        uint256 _collateralFactorMantissa = _iController
+            .markets(_iTokenTemp)
+            .collateralFactorMantissa;
+        uint256 _underlyingPrice = IDForcePriceOracle(priceOracle).getUnderlyingPrice(_iTokenTemp);
+        //max borrowCount + 2
+        for (uint256 i = 0; i < 22; i++) {
+            (uint256 _equity, , , uint256 _borrowedValue) = _iController.calcAccountEquity(
+                address(this)
+            );
+            if (_equity > 0 && _redeemAmountTemp > 0) {
+                uint256 _allowRedeemAmount = 0;
+                {
+                    uint256 _exchangeRateStored = _dFiToken.exchangeRateStored();
+                    uint256 _balanceOfIToken = balanceOfToken(_iTokenTemp);
+                    uint256 _newBalanceOfIToken = (((_borrowedValue *
+                        1e18 +
+                        _collateralFactorMantissa -
+                        1) / _collateralFactorMantissa) *
+                        1e18 +
+                        (_underlyingPrice * _exchangeRateStored) -
+                        1) / (_underlyingPrice * _exchangeRateStored);
+                    if (_balanceOfIToken > _newBalanceOfIToken) {
+                        _allowRedeemAmount = _balanceOfIToken - _newBalanceOfIToken;
+                    }
+                }
+                if (_allowRedeemAmount > 0) {
+                    {
+                        uint256 _setupRedeemAmount = _allowRedeemAmount;
+                        if (_setupRedeemAmount > _redeemAmountTemp) {
+                            _setupRedeemAmount = _redeemAmountTemp;
+                        }
+                        _dFiToken.redeem(address(this), _setupRedeemAmount);
+                        _redeemAmountTemp = _redeemAmountTemp - _setupRedeemAmount;
+                    }
+                    if (_allRepayBorrow) {
+                        uint256 _setupRepayAmount = balanceOfToken(_want);
+                        if (_setupRepayAmount > 0) {
+                            _dFiToken.repayBorrow(_setupRepayAmount);
+                        }
+                    } else if (_repayBorrowAmountTemp > 0) {
+                        uint256 _setupRepayAmount = balanceOfToken(_want);
+                        if (_setupRepayAmount > _repayBorrowAmountTemp) {
+                            _setupRepayAmount = _repayBorrowAmountTemp;
+                        }
+                        _dFiToken.repayBorrow(_setupRepayAmount);
+                        _repayBorrowAmountTemp = _repayBorrowAmountTemp - _setupRepayAmount;
+                    }
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
     }
 
     /// @notice Rebalance the collateral of this strategy
-    function _rebalance(uint256 _remainingAmount, uint256 _overflowAmount) internal {
+    function _rebalance(
+        uint256 _remainingAmount,
+        uint256 _overflowAmount,
+        address _iToken,
+        uint256 _borrowCount
+    ) internal {
+        IDForceController _iController = IDForceController(iController);
+        address _want = wants[0];
+        DFiToken _dFiToken = DFiToken(_iToken);
         if (_remainingAmount > 0) {
-            bytes memory _params = abi.encodePacked(
-                _remainingAmount,
-                _remainingAmount,
-                uint256(0),
-                uint256(0),
-                _remainingAmount,
-                balanceOfToken(wants[0])
-            );
-            IEulerDToken(eulerDToken).flashLoan(_remainingAmount, _params);
+            uint256 _increaseDebtAmount = _remainingAmount;
+            uint256 _borrowFactorMantissa = _iController.markets(_iToken).borrowFactorMantissa;
+            uint256 _underlyingPrice = IDForcePriceOracle(priceOracle).getUnderlyingPrice(_iToken);
+            for (uint256 i = 0; i < _borrowCount; i++) {
+                (uint256 _equity, , , ) = _iController.calcAccountEquity(address(this));
+                if (_equity > 0 && _increaseDebtAmount > 0) {
+                    uint256 _allowBorrowAmount = (_equity * _borrowFactorMantissa) /
+                        (_underlyingPrice * 1e18);
+                    if (_allowBorrowAmount > 0) {
+                        uint256 _setupBorrowAmount = _allowBorrowAmount;
+                        if (_increaseDebtAmount < _setupBorrowAmount) {
+                            _setupBorrowAmount = _increaseDebtAmount;
+                        }
+                        _dFiToken.borrow(_setupBorrowAmount);
+                        uint256 _setupAmount = balanceOfToken(_want);
+                        if (_setupAmount > 0) {
+                            _dFiToken.mint(address(this), _setupAmount);
+                        }
+                        _increaseDebtAmount = _increaseDebtAmount - _setupBorrowAmount;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
         } else if (_overflowAmount > 0) {
-            _repay(_overflowAmount, _overflowAmount);
+            _repay(_overflowAmount, 0, true, _iToken, _borrowCount);
         }
         if (_remainingAmount + _overflowAmount > 0) {
             emit Rebalance(_remainingAmount, _overflowAmount);
