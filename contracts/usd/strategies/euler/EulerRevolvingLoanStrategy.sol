@@ -15,15 +15,15 @@ import "../../../external/dforce/IRewardDistributorV3.sol";
 import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 
-/// @title DForceRevolvingLoanStrategy
-/// @notice Investment strategy of investing in stablecoins and revolving lending through post-staking via DForceRevolvingLoan
+/// @title EulerRevolvingLoanStrategy
+/// @notice Investment strategy of investing in stablecoins and revolving lending through post-staking via EulerRevolvingLoan
 /// @author Bank of Chain Protocol Inc
-contract DForceRevolvingLoanStrategy is BaseStrategy {
+contract EulerRevolvingLoanStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address internal constant EULER_ADDRESS = 0x27182842E098f60e3D576794A5bFFb0777E025d3;
     address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     IUniswapV2Router2 public constant UNIROUTER2 =
-        IUniswapV2Router2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    IUniswapV2Router2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     address public constant W_ETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address internal constant DF = 0x431ad2ff6a9C365805eBaD47Ee021148d6f7DBe0;
     uint256 public constant BPS = 10000;
@@ -113,8 +113,8 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     function setBorrowFactor(uint256 _borrowFactor) external isVaultManager {
         require(
             _borrowFactor < BPS &&
-                _borrowFactor >= borrowFactorMin &&
-                _borrowFactor <= borrowFactorMax,
+            _borrowFactor >= borrowFactorMin &&
+            _borrowFactor <= borrowFactorMax,
             "setting output the range"
         );
         borrowFactor = _borrowFactor;
@@ -171,10 +171,10 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     /// @return _ratios the ratios list of `_assets`.
     ///     The ratio is the proportion of each asset to total assets
     function getWantsInfo()
-        public
-        view
-        override
-        returns (address[] memory _assets, uint256[] memory _ratios)
+    public
+    view
+    override
+    returns (address[] memory _assets, uint256[] memory _ratios)
     {
         _assets = wants;
         _ratios = new uint256[](1);
@@ -183,11 +183,11 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
 
     /// @notice Return the output path list of the strategy when withdraw.
     function getOutputsInfo()
-        external
-        view
-        virtual
-        override
-        returns (OutputInfo[] memory _outputsInfo)
+    external
+    view
+    virtual
+    override
+    returns (OutputInfo[] memory _outputsInfo)
     {
         _outputsInfo = new OutputInfo[](1);
         OutputInfo memory _info0 = _outputsInfo[0];
@@ -201,31 +201,31 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     /// @return _isUsd Whether to count in USD
     /// @return _usdValue The USD value of positions held
     function getPositionDetail()
-        public
-        view
-        override
-        returns (
-            address[] memory _tokens,
-            uint256[] memory _amounts,
-            bool _isUsd,
-            uint256 _usdValue
-        )
+    public
+    view
+    override
+    returns (
+        address[] memory _tokens,
+        uint256[] memory _amounts,
+        bool _isUsd,
+        uint256 _usdValue
+    )
     {
         address _iTokenTmp = iToken;
         _tokens = wants;
         _amounts = new uint256[](1);
         _amounts[0] =
-            (balanceOfToken(_iTokenTmp) * DFiToken(_iTokenTmp).exchangeRateStored()) /
-            1e18 +
-            balanceOfToken(_tokens[0]) -
-            DFiToken(_iTokenTmp).borrowBalanceStored(address(this));
+        (balanceOfToken(_iTokenTmp) * DFiToken(_iTokenTmp).exchangeRateStored()) /
+        1e18 +
+        balanceOfToken(_tokens[0]) -
+        DFiToken(_iTokenTmp).borrowBalanceStored(address(this));
     }
 
     /// @notice Return the third party protocol's pool total assets in USD.
     function get3rdPoolAssets() external view override returns (uint256) {
         address _iTokenTmp = iToken;
         uint256 _iTokenTotalSupply = (DFiToken(_iTokenTmp).totalSupply() *
-            DFiToken(_iTokenTmp).exchangeRateStored()) / 1e18;
+        DFiToken(_iTokenTmp).exchangeRateStored()) / 1e18;
         return _iTokenTotalSupply != 0 ? queryTokenValue(wants[0], _iTokenTotalSupply) : 0;
     }
 
@@ -235,11 +235,11 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
         uint256 _totalShares,
         uint256 _outputCode
     )
-        public
-        virtual
-        override
-        onlyVault
-        returns (address[] memory _assets, uint256[] memory _amounts)
+    public
+    virtual
+    override
+    onlyVault
+    returns (address[] memory _assets, uint256[] memory _amounts)
     {
         // if withdraw all need claim rewards
         if (_repayShares == _totalShares) {
@@ -250,18 +250,18 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
 
     /// @inheritdoc BaseStrategy
     function harvest()
-        public
-        virtual
-        override
-        returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
+    public
+    virtual
+    override
+    returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
         // sell reward token
         (
-            bool _claimIsWorth,
-            address[] memory _rewardsTokens,
-            uint256[] memory _claimAmounts,
-            address[] memory _wantTokens,
-            uint256[] memory _wantAmounts
+        bool _claimIsWorth,
+        address[] memory _rewardsTokens,
+        uint256[] memory _claimAmounts,
+        address[] memory _wantTokens,
+        uint256[] memory _wantAmounts
         ) = _claimRewardsAndReInvest();
         if (_claimIsWorth) {
             vault.report(_rewardsTokens, _claimAmounts);
@@ -295,8 +295,8 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     /// @param _assets the address list of token to deposit
     /// @param _amounts the amount list of token to deposit
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
-        internal
-        override
+    internal
+    override
     {
         uint256 _amount = _amounts[0];
         if (_amount > 0) {
@@ -338,7 +338,7 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
             uint256 _leverage = leverage;
             uint256 _newDebtAmount = (_debtAmount - _repayBorrowAmount) * _leverage;
             uint256 _newCollateralAmount = (((_collateralITokenAmount - _redeemAmount) *
-                _exchangeRateStored) / 1e18) * (_leverage - BPS);
+            _exchangeRateStored) / 1e18) * (_leverage - BPS);
             if (_newDebtAmount > _newCollateralAmount) {
                 uint256 _decreaseAmount = (_newDebtAmount - _newCollateralAmount) / BPS;
                 _redeemAmount = _redeemAmount + (_decreaseAmount * 1e18) / _exchangeRateStored;
@@ -357,12 +357,12 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
         address _eulerAddress = EULER_ADDRESS;
         require(msg.sender == _eulerAddress, "invalid call");
         (
-            uint256 _mintAmount,
-            uint256 _borrowAmount,
-            uint256 _redeemAmount,
-            uint256 _repayBorrowAmount,
-            uint256 _flashLoanAmount,
-            uint256 _origBalance
+        uint256 _mintAmount,
+        uint256 _borrowAmount,
+        uint256 _redeemAmount,
+        uint256 _repayBorrowAmount,
+        uint256 _flashLoanAmount,
+        uint256 _origBalance
         ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256, uint256));
         address _want = wants[0];
         require(balanceOfToken(_want) >= _origBalance + _flashLoanAmount, "not received enough");
@@ -389,14 +389,14 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     /// @return _wantTokens The address list of the wanted token
     /// @return _wantAmounts The amount list of the wanted token
     function _claimRewardsAndReInvest()
-        internal
-        returns (
-            bool _claimIsWorth,
-            address[] memory _rewardTokens,
-            uint256[] memory _claimAmounts,
-            address[] memory _wantTokens,
-            uint256[] memory _wantAmounts
-        )
+    internal
+    returns (
+        bool _claimIsWorth,
+        address[] memory _rewardTokens,
+        uint256[] memory _claimAmounts,
+        address[] memory _wantTokens,
+        uint256[] memory _wantAmounts
+    )
     {
         address[] memory _holders = new address[](1);
         _holders[0] = address(this);
@@ -483,16 +483,16 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     /// @return _remainingAmount The amount of aToken will still be used as collateral to borrow eth
     /// @return _overflowAmount The amount of debt token that exceeds the maximum allowable loan
     function _borrowInfo(address _iToken, uint256 _borrowCount)
-        private
-        view
-        returns (uint256 _remainingAmount, uint256 _overflowAmount)
+    private
+    view
+    returns (uint256 _remainingAmount, uint256 _overflowAmount)
     {
         if (_borrowCount == 0) {
             _overflowAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
         } else {
             uint256 _debtAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
             uint256 _collateralAmount = (balanceOfToken(_iToken) *
-                DFiToken(_iToken).exchangeRateStored()) / 1e18;
+            DFiToken(_iToken).exchangeRateStored()) / 1e18;
             uint256 _leverage = leverage;
             uint256 _leverageMax = leverageMax;
             uint256 _leverageMin = leverageMin;
@@ -501,12 +501,12 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
             uint256 _needCollateralAmountMax = (_debtAmount * _leverageMin) / (_leverageMin - BPS);
             if (_needCollateralAmountMin > _collateralAmount) {
                 _overflowAmount =
-                    (_leverage * _debtAmount - (_leverage - BPS) * _collateralAmount) /
-                    BPS;
+                (_leverage * _debtAmount - (_leverage - BPS) * _collateralAmount) /
+                BPS;
             } else if (_needCollateralAmountMax < _collateralAmount) {
                 _remainingAmount =
-                    ((_leverage - BPS) * _collateralAmount - _leverage * _debtAmount) /
-                    BPS;
+                ((_leverage - BPS) * _collateralAmount - _leverage * _debtAmount) /
+                BPS;
             }
         }
     }
@@ -515,27 +515,27 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     /// @return _remainingAmount The amount of aToken will still be used as collateral to borrow
     /// @return _overflowAmount The amount of debt token that exceeds the maximum allowable loan
     function _borrowStandardInfo(address _iToken, uint256 _borrowCount)
-        private
-        view
-        returns (uint256 _remainingAmount, uint256 _overflowAmount)
+    private
+    view
+    returns (uint256 _remainingAmount, uint256 _overflowAmount)
     {
         if (_borrowCount == 0) {
             _overflowAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
         } else {
             uint256 _debtAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
             uint256 _collateralAmount = (balanceOfToken(_iToken) *
-                DFiToken(_iToken).exchangeRateStored()) / 1e18;
+            DFiToken(_iToken).exchangeRateStored()) / 1e18;
             uint256 _capitalAmount = _collateralAmount - _debtAmount;
             uint256 _leverage = leverage;
             uint256 _needCollateralAmount = (_debtAmount * _leverage) / (_leverage - BPS);
             if (_needCollateralAmount > _collateralAmount) {
                 _overflowAmount =
-                    (_leverage * _debtAmount - (_leverage - BPS) * _collateralAmount) /
-                    BPS;
+                (_leverage * _debtAmount - (_leverage - BPS) * _collateralAmount) /
+                BPS;
             } else if (_needCollateralAmount < _collateralAmount) {
                 _remainingAmount =
-                    ((_leverage - BPS) * _collateralAmount - _leverage * _debtAmount) /
-                    BPS;
+                ((_leverage - BPS) * _collateralAmount - _leverage * _debtAmount) /
+                BPS;
             }
         }
     }
@@ -570,8 +570,8 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
         uint256 _leverage = _bps;
         if (_borrowCount >= 1) {
             _leverage =
-                (_bps * _bps - (_borrowFactor**(_borrowCount + 1)) / (_bps**(_borrowCount - 1))) /
-                (_bps - _borrowFactor);
+            (_bps * _bps - (_borrowFactor**(_borrowCount + 1)) / (_bps**(_borrowCount - 1))) /
+            (_bps - _borrowFactor);
         }
         return _leverage;
     }

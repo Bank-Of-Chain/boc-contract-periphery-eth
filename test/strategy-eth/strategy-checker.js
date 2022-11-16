@@ -299,6 +299,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         console.log('Lend:', depositedAssets, depositedAmounts);
 
         const lendTx = await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
+        console.log("lend gasUsed",lendTx.receipt.gasUsed.toString())
         expectEvent.inTransaction(lendTx, 'Borrow', {
             _assets: depositedAssets,
             _amounts: depositedAmounts

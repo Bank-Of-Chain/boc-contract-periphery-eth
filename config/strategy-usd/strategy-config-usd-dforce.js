@@ -43,7 +43,8 @@ const dForceStrategies = [
             "0x298f243aD592b6027d4717fBe9DeCda668E3c3A8",//iToken
             "0x8B53Ab2c0Df3230EA327017C91Eb909f815Ad113",//_iController
             "0xb4De37b03f7AcE98FB795572B18aE3CFae85A628",//_priceOracle
-            "0x8fAeF85e436a8dd85D8E636Ea22E3b90f1819564"//_rewardDistributorV3
+            "0x8fAeF85e436a8dd85D8E636Ea22E3b90f1819564",//_rewardDistributorV3
+            "0x6085Bc95F506c326DCBCD7A6dd6c79FBc18d4686"//_eulerDToken
         ]
     },
     {
@@ -57,7 +58,8 @@ const dForceStrategies = [
             "0x1180c114f7fAdCB6957670432a3Cf8Ef08Ab5354",//iToken
             "0x8B53Ab2c0Df3230EA327017C91Eb909f815Ad113",//_iController
             "0xb4De37b03f7AcE98FB795572B18aE3CFae85A628",//_priceOracle
-            "0x8fAeF85e436a8dd85D8E636Ea22E3b90f1819564"//_rewardDistributorV3
+            "0x8fAeF85e436a8dd85D8E636Ea22E3b90f1819564",//_rewardDistributorV3
+            "0x49426E647db495db6Ef5Bf6c4283D0a3a25B5688"//_eulerDToken
         ]
     },
     {
@@ -71,7 +73,8 @@ const dForceStrategies = [
             "0x2f956b2f801c6dad74E87E7f45c94f6283BF0f45",//iToken
             "0x8B53Ab2c0Df3230EA327017C91Eb909f815Ad113",//_iController
             "0xb4De37b03f7AcE98FB795572B18aE3CFae85A628",//_priceOracle
-            "0x8fAeF85e436a8dd85D8E636Ea22E3b90f1819564"//_rewardDistributorV3
+            "0x8fAeF85e436a8dd85D8E636Ea22E3b90f1819564",//_rewardDistributorV3
+            "0x84721A3dB22EB852233AEAE74f9bC8477F8bcc42"//_eulerDToken
         ]
     },
 ];
