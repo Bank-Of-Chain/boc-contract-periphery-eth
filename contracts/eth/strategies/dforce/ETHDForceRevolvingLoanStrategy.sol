@@ -459,20 +459,15 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
             uint256 _debtAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
             uint256 _collateralAmount = (balanceOfToken(_iToken) *
                 DFiToken(_iToken).exchangeRateStored()) / 1e18;
-            uint256 _leverage = leverage;
-            uint256 _leverageMax = leverageMax;
-            uint256 _leverageMin = leverageMin;
-            uint256 _needCollateralAmount = (_debtAmount * _leverage) / (_leverage - BPS);
-            uint256 _needCollateralAmountMin = (_debtAmount * _leverageMax) / (_leverageMax - BPS);
-            uint256 _needCollateralAmountMax = (_debtAmount * _leverageMin) / (_leverageMin - BPS);
+            uint256 _capitalAmount = _collateralAmount - _debtAmount;
+            uint256 _BPS = BPS;
+            uint256 _needCollateralAmount = (_capitalAmount * leverage) / _BPS;
+            uint256 _needCollateralAmountMin = (_capitalAmount * leverageMin) / _BPS;
+            uint256 _needCollateralAmountMax = (_capitalAmount * leverageMax) / _BPS;
             if (_needCollateralAmountMin > _collateralAmount) {
-                _overflowAmount =
-                    (_leverage * _debtAmount - (_leverage - BPS) * _collateralAmount) /
-                    BPS;
+                _remainingAmount = _needCollateralAmount - _collateralAmount;
             } else if (_needCollateralAmountMax < _collateralAmount) {
-                _remainingAmount =
-                    ((_leverage - BPS) * _collateralAmount - _leverage * _debtAmount) /
-                    BPS;
+                _overflowAmount = _collateralAmount - _needCollateralAmount;
             }
         }
     }
@@ -491,16 +486,12 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
             uint256 _debtAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
             uint256 _collateralAmount = (balanceOfToken(_iToken) *
                 DFiToken(_iToken).exchangeRateStored()) / 1e18;
-            uint256 _leverage = leverage;
-            uint256 _needCollateralAmount = (_debtAmount * _leverage) / (_leverage - BPS);
+            uint256 _capitalAmount = _collateralAmount - _debtAmount;
+            uint256 _needCollateralAmount = (_capitalAmount * leverage) / BPS;
             if (_needCollateralAmount > _collateralAmount) {
-                _overflowAmount =
-                    (_leverage * _debtAmount - (_leverage - BPS) * _collateralAmount) /
-                    BPS;
+                _remainingAmount = _needCollateralAmount - _collateralAmount;
             } else if (_needCollateralAmount < _collateralAmount) {
-                _remainingAmount =
-                    ((_leverage - BPS) * _collateralAmount - _leverage * _debtAmount) /
-                    BPS;
+                _overflowAmount = _collateralAmount - _needCollateralAmount;
             }
         }
     }
@@ -508,9 +499,7 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
     /// @notice Returns the new leverage with the fix borrowFactor
     /// @return _borrowFactor The borrow factor
     function _getNewLeverage(uint256 _borrowFactor) internal view returns (uint256) {
-        uint256 _bps = BPS;
-        uint256 _borrowCount = borrowCount;
-        return _calLeverage(_borrowFactor, _bps, _borrowCount);
+        return _calLeverage(_borrowFactor, BPS, borrowCount);
     }
 
     /// @notice update all leverage (leverage leverageMax leverageMin)
