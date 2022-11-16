@@ -528,8 +528,7 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
             uint256 _collateralAmount = (balanceOfToken(_iToken) *
                 DFiToken(_iToken).exchangeRateStored()) / 1e18;
             uint256 _capitalAmount = _collateralAmount - _debtAmount;
-            uint256 _leverage = leverage;
-            uint256 _needCollateralAmount = (_capitalAmount * _leverage) / BPS;
+            uint256 _needCollateralAmount = (_capitalAmount * leverage) / BPS;
             if (_needCollateralAmount > _collateralAmount) {
                 _remainingAmount = _needCollateralAmount - _collateralAmount;
             } else if (_needCollateralAmount < _collateralAmount) {
