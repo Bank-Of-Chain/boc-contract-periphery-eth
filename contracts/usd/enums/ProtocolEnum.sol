@@ -18,5 +18,6 @@ enum ProtocolEnum {
     DForce,
     Synapse,
     Aura,
-    Aave
+    Aave,
+    Euler
 }

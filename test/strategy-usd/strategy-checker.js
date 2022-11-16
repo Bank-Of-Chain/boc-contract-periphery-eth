@@ -380,6 +380,9 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         const strategyParam = await mockVault.strategies(strategy.address);
         console.log("strategyTotalDebt:%s",strategyParam.totalDebt);
         const strategyTotalDebt = new BigNumber(strategyParam.totalDebt);
+        const beforeTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
+        console.log('redeem before TotalAssets:%s', beforeTotalAssets.toFixed());
+        console.log('strategyTotalDebt:%s', strategyTotalDebt.toFixed());
 
         const redeemTx = await mockVault.redeem(strategy.address, strategyTotalDebt, outputCode);
         console.log("redeem gas used=",redeemTx.receipt.gasUsed);

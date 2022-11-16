@@ -61,4 +61,15 @@ interface IEulerEToken {
     /// @param subAccountId 0 for primary, 1-255 for a sub-account
     /// @param amount In underlying units (use max uint256 to repay the debt in full or up to the available underlying balance)
     function burn(uint subAccountId, uint amount) external;
+
+    /// @notice Allow spender to access an amount of your eTokens in sub-account 0
+    /// @param spender Trusted address
+    /// @param amount Use max uint256 for "infinite" allowance
+    function approve(address spender, uint amount) external returns (bool);
+
+    /// @notice Allow spender to access an amount of your eTokens in a particular sub-account
+    /// @param subAccountId 0 for primary, 1-255 for a sub-account
+    /// @param spender Trusted address
+    /// @param amount Use max uint256 for "infinite" allowance
+    function approveSubAccount(uint subAccountId, address spender, uint amount) external returns (bool);
 }

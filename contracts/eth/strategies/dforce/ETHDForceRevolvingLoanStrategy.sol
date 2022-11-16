@@ -239,8 +239,8 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
             address[] memory _wantTokens,
             uint256[] memory _wantAmounts
         ) = _claimRewardsAndReInvest();
+        vault.report(_rewardsTokens, _claimAmounts);
         if (_claimIsWorth) {
-            vault.report(_rewardsTokens, _claimAmounts);
             emit SwapRewardsToWants(
                 address(this),
                 _rewardsTokens,
@@ -257,7 +257,7 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
         address _iToken = iToken;
         DFiToken(_iToken).borrowBalanceCurrent(address(this));
         (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(_iToken, borrowCount);
-        _rebalance(_remainingAmount, _overflowAmount);
+        _rebalance(_remainingAmount, _overflowAmount, _iToken);
     }
 
     /// @notice Returns the info of borrow.
@@ -287,7 +287,7 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
                 _iToken,
                 borrowCount
             );
-            _rebalance(_remainingAmount, _overflowAmount);
+            _rebalance(_remainingAmount, _overflowAmount, _iToken);
         }
     }
 
@@ -419,7 +419,11 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
     }
 
     /// @notice Rebalance the collateral of this strategy
-    function _rebalance(uint256 _remainingAmount, uint256 _overflowAmount) internal {
+    function _rebalance(
+        uint256 _remainingAmount,
+        uint256 _overflowAmount,
+        address _iToken
+    ) internal {
         if (_remainingAmount > 0) {
             bytes memory _params = abi.encodePacked(
                 _remainingAmount,
@@ -431,7 +435,10 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
             );
             IEulerDToken(eulerDToken).flashLoan(_remainingAmount, _params);
         } else if (_overflowAmount > 0) {
-            _repay(_overflowAmount, _overflowAmount);
+            uint256 _exchangeRateStored = DFiToken(_iToken).exchangeRateStored();
+            uint256 _redeemAmount = (_overflowAmount * 1e18 + _exchangeRateStored - 1) /
+                _exchangeRateStored;
+            _repay(_redeemAmount, _overflowAmount);
         }
         if (_remainingAmount + _overflowAmount > 0) {
             emit Rebalance(_remainingAmount, _overflowAmount);
@@ -484,7 +491,6 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
             uint256 _debtAmount = DFiToken(_iToken).borrowBalanceStored(address(this));
             uint256 _collateralAmount = (balanceOfToken(_iToken) *
                 DFiToken(_iToken).exchangeRateStored()) / 1e18;
-            uint256 _capitalAmount = _collateralAmount - _debtAmount;
             uint256 _leverage = leverage;
             uint256 _needCollateralAmount = (_debtAmount * _leverage) / (_leverage - BPS);
             if (_needCollateralAmount > _collateralAmount) {
