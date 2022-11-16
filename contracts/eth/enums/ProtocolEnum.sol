@@ -10,5 +10,6 @@ enum ProtocolEnum {
     StakeWise,
     YearnV2,
     Aave,
-    DForce
+    DForce,
+    Euler
 }
