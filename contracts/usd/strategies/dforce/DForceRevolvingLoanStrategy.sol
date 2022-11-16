@@ -157,7 +157,7 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     function setBorrowCount(uint256 _borrowCount) external isKeeper {
         require(_borrowCount <= 20, "setting output the range");
         borrowCount = _borrowCount;
-        _updateAllLeverage();
+        _updateAllLeverage(_borrowCount);
         emit UpdateBorrowCount(_borrowCount);
     }
 
@@ -544,9 +544,8 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     }
 
     /// @notice update all leverage (leverage leverageMax leverageMin)
-    function _updateAllLeverage() internal {
+    function _updateAllLeverage(uint256 _borrowCount) internal {
         uint256 _bps = BPS;
-        uint256 _borrowCount = borrowCount;
         leverage = _calLeverage(borrowFactor, _bps, _borrowCount);
         leverageMax = _calLeverage(borrowFactorMax, _bps, _borrowCount);
         leverageMin = _calLeverage(borrowFactorMin, _bps, _borrowCount);

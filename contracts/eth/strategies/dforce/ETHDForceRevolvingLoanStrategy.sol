@@ -76,9 +76,9 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
         borrowFactorMin = 7100;
         borrowCount = 10;
 
-        leverage = _calLeverage(7100, 10000, 10);
+        leverage = _calLeverage(7500, 10000, 10);
         leverageMax = _calLeverage(7900, 10000, 10);
-        leverageMin = _calLeverage(7600, 10000, 10);
+        leverageMin = _calLeverage(7100, 10000, 10);
         address[] memory _wants = new address[](1);
         _wants[0] = _underlyingToken;
         iToken = _iToken;
@@ -140,7 +140,7 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
     function setBorrowCount(uint256 _borrowCount) external isKeeper {
         require(_borrowCount <= 20, "setting output the range");
         borrowCount = _borrowCount;
-        _updateAllLeverage();
+        _updateAllLeverage(_borrowCount);
         emit UpdateBorrowCount(_borrowCount);
     }
 
@@ -503,9 +503,8 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
     }
 
     /// @notice update all leverage (leverage leverageMax leverageMin)
-    function _updateAllLeverage() internal {
+    function _updateAllLeverage(uint256 _borrowCount) internal {
         uint256 _bps = BPS;
-        uint256 _borrowCount = borrowCount;
         leverage = _calLeverage(borrowFactor, _bps, _borrowCount);
         leverageMax = _calLeverage(borrowFactorMax, _bps, _borrowCount);
         leverageMin = _calLeverage(borrowFactorMin, _bps, _borrowCount);
