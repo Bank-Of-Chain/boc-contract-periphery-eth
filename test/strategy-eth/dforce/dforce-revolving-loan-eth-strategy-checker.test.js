@@ -17,15 +17,21 @@ describe('【DForceRevolvingLoanETHStrategy Strategy Checker】', function () {
         let borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("init borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
         await strategy.setBorrowCount(0);
+        let beforeTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
         console.log("before rebalance1 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
         let rebalanceTx =  await strategy.rebalance({from:keeper});
         console.log("rebalance gasUsed",rebalanceTx.receipt.gasUsed.toString());
+        let afterTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
+        console.log('rebalance1 beforeTotalAssets:%s,afterTotalAssets:%s', beforeTotalAssets.toFixed(), afterTotalAssets.toFixed());
         borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("after rebalance1 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
         await strategy.setBorrowCount(10);
+        beforeTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
         console.log("before rebalance2 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
         rebalanceTx = await strategy.rebalance({from:keeper});
         console.log("rebalance gasUsed",rebalanceTx.receipt.gasUsed.toString());
+        afterTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
+        console.log('rebalance2 beforeTotalAssets:%s,afterTotalAssets:%s', beforeTotalAssets.toFixed(), afterTotalAssets.toFixed());
         borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("after rebalance2 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
 
