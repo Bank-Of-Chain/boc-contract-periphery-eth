@@ -289,6 +289,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         if (_amount > 0) {
             address _eToken = eToken;
             IEulerEToken(_eToken).deposit(0, _amount);
+            IEulerMarkets(EULER_MARKETS).enterMarket(0, _assets[0]);
             (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowStandardInfo(
                 _eToken,
                 dToken,

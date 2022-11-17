@@ -255,24 +255,8 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
         override
         returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
     {
-        // sell reward token
-        (
-            bool _claimIsWorth,
-            address[] memory _rewardsTokens,
-            uint256[] memory _claimAmounts,
-            address[] memory _wantTokens,
-            uint256[] memory _wantAmounts
-        ) = _claimRewardsAndReInvest();
+        (_rewardsTokens, _claimAmounts) = _claimRewardsAndReInvest();
         vault.report(_rewardsTokens, _claimAmounts);
-        if (_claimIsWorth) {
-            emit SwapRewardsToWants(
-                address(this),
-                _rewardsTokens,
-                _claimAmounts,
-                _wantTokens,
-                _wantAmounts
-            );
-        }
     }
 
     /// @notice Rebalance the collateral of this strategy
@@ -383,20 +367,11 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     }
 
     /// @notice Collect the rewards from third party protocol,then swap from the reward tokens to wanted tokens and reInvest
-    /// @return _claimIsWorth The boolean value to check the claim action is worth or not
     /// @return _rewardTokens The list of the reward token
     /// @return _claimAmounts The list of the reward amount claimed
-    /// @return _wantTokens The address list of the wanted token
-    /// @return _wantAmounts The amount list of the wanted token
     function _claimRewardsAndReInvest()
         internal
-        returns (
-            bool _claimIsWorth,
-            address[] memory _rewardTokens,
-            uint256[] memory _claimAmounts,
-            address[] memory _wantTokens,
-            uint256[] memory _wantAmounts
-        )
+        returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
     {
         address[] memory _holders = new address[](1);
         _holders[0] = address(this);
@@ -406,12 +381,11 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
         _rewardTokens = new address[](1);
         _rewardTokens[0] = DF;
         _claimAmounts = new uint256[](1);
-        _wantTokens = wants;
-        _wantAmounts = new uint256[](1);
+        address[] memory _wantTokens = wants;
+        uint256[] memory _wantAmounts = new uint256[](1);
         uint256 _balanceOfDF = balanceOfToken(_rewardTokens[0]);
         _claimAmounts[0] = _balanceOfDF;
         if (_balanceOfDF > 0) {
-            _claimIsWorth = true;
             // swap from DF to WETH
             //set up sell reward path
             address[] memory _dfSellPath = new address[](2);
@@ -438,7 +412,16 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
                 )
             );
             _wantAmounts[0] = balanceOfToken(_wantTokens[0]);
-            DFiToken(_iTokens[0]).mint(address(this), _wantAmounts[0]);
+            if (_wantAmounts[0] > 0) {
+                DFiToken(_iTokens[0]).mint(address(this), _wantAmounts[0]);
+            }
+            emit SwapRewardsToWants(
+                address(this),
+                _rewardTokens,
+                _claimAmounts,
+                _wantTokens,
+                _wantAmounts
+            );
         }
     }
 
