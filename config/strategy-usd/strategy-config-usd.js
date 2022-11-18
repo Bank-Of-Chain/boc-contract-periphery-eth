@@ -12,8 +12,8 @@ const {aaveStrategies} = require('./strategy-config-usd-aave');
 const strategiesList = [
     // ...auraStrategies,
     // ...convexStrategies,
-    ...dForceStrategies,
-    // ...eulerStrategies,
+    // ...dForceStrategies,
+    ...eulerStrategies,
     // ...dodoStrategies,
     // // ...stargateStrategies,
     // // ...sushiStrategies,

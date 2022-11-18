@@ -13,8 +13,6 @@ import "../../../external/euler/IEulerEToken.sol";
 import "../../../external/euler/IEulerMarkets.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 
-import "hardhat/console.sol";
-
 /// @title EulerRevolvingLoanStrategy
 /// @notice Investment strategy of investing in stablecoins and revolving lending through post-staking via EulerRevolvingLoan
 /// @author Bank of Chain Protocol Inc
@@ -318,9 +316,9 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         bytes32[] calldata _proof,
         address _stake
     ) external returns (uint256 _claimAmount) {
-        uint256 _beforeBalance = balanceOfToken(_token);
+        uint256 _beforeBalance = IERC20Upgradeable(_token).balanceOf(_account);
         IEulDistributor(EUL_DISTRIBUTOR).claim(_account, _token, _claimable, _proof, _stake);
-        _claimAmount = balanceOfToken(_token) - _beforeBalance;
+        _claimAmount = IERC20Upgradeable(_token).balanceOf(_account) - _beforeBalance;
         return _claimAmount;
     }
 

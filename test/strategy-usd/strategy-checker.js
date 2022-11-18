@@ -160,7 +160,7 @@ function findStrategyItem(strategyName) {
     return result;
 }
 
-async function check(strategyName, callback, uniswapV3RebalanceCallback, outputCode = 0) {
+async function check(strategyName, callback, afterCallback, uniswapV3RebalanceCallback, outputCode = 0) {
     before(async function () {
         BigNumber.set({ DECIMAL_PLACES: 6 });
         accounts = await ethers.getSigners();
@@ -350,6 +350,10 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         }
 
         await advanceBlock(3);
+
+        if (afterCallback) {
+            await afterCallback(strategy);
+        }
 
         pendingRewards = await strategy.harvest.call({
             from: keeper,
