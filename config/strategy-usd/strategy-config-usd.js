@@ -1,6 +1,7 @@
 const {auraStrategies} = require('./strategy-config-usd-aura');
 const {convexStrategies} = require('./strategy-config-usd-convex');
 const {dForceStrategies} = require('./strategy-config-usd-dforce');
+const {eulerStrategies} = require('./strategy-config-usd-euler');
 const {dodoStrategies} = require('./strategy-config-usd-dodo');
 const {stargateStrategies} = require('./strategy-config-usd-stargate');
 const {sushiStrategies} = require('./strategy-config-usd-sushi');
@@ -11,13 +12,14 @@ const {aaveStrategies} = require('./strategy-config-usd-aave');
 const strategiesList = [
     // ...auraStrategies,
     // ...convexStrategies,
-    // ...dForceStrategies,
+    ...dForceStrategies,
+    // ...eulerStrategies,
     // ...dodoStrategies,
     // // ...stargateStrategies,
     // // ...sushiStrategies,
     // ...uniswapStrategies,
     // ...yearnStrategies,
-    ...aaveStrategies
+    // ...aaveStrategies
 ]
 
 exports.strategiesList = strategiesList
