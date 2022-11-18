@@ -4,28 +4,29 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
+import "../ETHBaseStrategy.sol";
 
 import "./../../enums/ProtocolEnum.sol";
 import "../../../external/euler/IEulDistributor.sol";
 import "../../../external/euler/IEulerDToken.sol";
 import "../../../external/euler/IEulerEToken.sol";
 import "../../../external/euler/IEulerMarkets.sol";
+import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 
-import "hardhat/console.sol";
-
-/// @title EulerRevolvingLoanStrategy
-/// @notice Investment strategy of investing in stablecoins and revolving lending through post-staking via EulerRevolvingLoan
+/// @title ETHEulerRevolvingLoanStrategy
+/// @notice Investment strategy of investing in WETH/WstETH and revolving lending through post-staking via EulerRevolvingLoan
 /// @author Bank of Chain Protocol Inc
-contract EulerRevolvingLoanStrategy is BaseStrategy {
+contract ETHEulerRevolvingLoanStrategy is ETHBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address internal constant EULER_ADDRESS = 0x27182842E098f60e3D576794A5bFFb0777E025d3;
     address internal constant EULER_MARKETS = 0x3520d5a913427E6F0D6A83E07ccD4A4da316e4d3;
     address internal constant EUL = 0xd9Fcd98c322942075A5C3860693e9f4f03AAE07b;
     address internal constant EUL_DISTRIBUTOR = 0xd524E29E3BAF5BB085403Ca5665301E94387A7e2;
     address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    IUniswapV2Router2 public constant UNIROUTER2 =
+        IUniswapV2Router2(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    address public constant W_ETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 public constant BPS = 10000;
 
     address public eToken;
@@ -51,27 +52,12 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
     /// @param _overflowAmount The amount of debt token that exceeds the maximum allowable loan
     event Rebalance(uint256 _remainingAmount, uint256 _overflowAmount);
 
-    /// @param _strategy The specified strategy emitted this event
-    /// @param _rewards The address list of reward tokens
-    /// @param _rewardAmounts The amount list of of reward tokens
-    /// @param _wants The address list of wantted tokens
-    /// @param _wantAmounts The amount list of wantted tokens
-    event SwapRewardsToWants(
-        address _strategy,
-        address[] _rewards,
-        uint256[] _rewardAmounts,
-        address[] _wants,
-        uint256[] _wantAmounts
-    );
-
     /// @notice Initialize this contract
     /// @param _vault The Vault contract
-    /// @param _harvester The harvester contract address
     /// @param _name The name of strategy
     /// @param _underlyingToken The lending asset of the Vault contract
     function initialize(
         address _vault,
-        address _harvester,
         string memory _name,
         address _underlyingToken,
         uint256 _borrowFactor,
@@ -82,7 +68,6 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         borrowFactor = _borrowFactor;
         borrowFactorMax = _borrowFactorMax;
         borrowFactorMin = _borrowFactorMin;
-
         leverage = _calLeverage(_borrowFactor, 10000, 10);
         leverageMax = _calLeverage(_borrowFactorMax, 10000, 10);
         leverageMin = _calLeverage(_borrowFactorMin, 10000, 10);
@@ -96,11 +81,11 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         address _dToken = eIEulerMarkets.underlyingToDToken(_underlyingToken);
         dToken = _dToken;
 
-        super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Euler), _wants);
+        super._initialize(_vault, uint16(ProtocolEnum.Euler), _name, _wants);
         IERC20Upgradeable(_underlyingToken).safeApprove(EULER_ADDRESS, type(uint256).max);
-        IERC20Upgradeable(EUL).safeApprove(UNISWAP_V3_ROUTER, type(uint256).max);
-        if (_underlyingToken != USDC) {
-            IERC20Upgradeable(USDC).safeApprove(UNISWAP_V3_ROUTER, type(uint256).max);
+        IERC20Upgradeable(EUL).safeApprove(address(UNIROUTER2), type(uint256).max);
+        if (_underlyingToken != W_ETH) {
+            IERC20Upgradeable(W_ETH).safeApprove(UNISWAP_V3_ROUTER, type(uint256).max);
         }
     }
 
@@ -163,10 +148,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         return "1.0.0";
     }
 
-    /// @notice Return the underlying token list and ratio list needed by the strategy
-    /// @return _assets the address list of token to deposit
-    /// @return _ratios the ratios list of `_assets`.
-    ///     The ratio is the proportion of each asset to total assets
+    /// @inheritdoc ETHBaseStrategy
     function getWantsInfo()
         public
         view
@@ -178,7 +160,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         _ratios[0] = 1e18;
     }
 
-    /// @notice Return the output path list of the strategy when withdraw.
+    /// @inheritdoc ETHBaseStrategy
     function getOutputsInfo()
         external
         view
@@ -192,11 +174,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         _info0.outputTokens = wants;
     }
 
-    /// @notice Returns the position details of the strategy.
-    /// @return _tokens The list of the position token
-    /// @return _amounts The list of the position amount
-    /// @return _isUsd Whether to count in USD
-    /// @return _usdValue The USD value of positions held
+    /// @inheritdoc ETHBaseStrategy
     function getPositionDetail()
         public
         view
@@ -204,8 +182,8 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         returns (
             address[] memory _tokens,
             uint256[] memory _amounts,
-            bool _isUsd,
-            uint256 _usdValue
+            bool _isETH,
+            uint256 _ethValue
         )
     {
         _tokens = wants;
@@ -216,13 +194,13 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
             IEulerDToken(dToken).balanceOf(address(this));
     }
 
-    /// @notice Return the third party protocol's pool total assets in USD.
+    /// @inheritdoc ETHBaseStrategy
     function get3rdPoolAssets() external view override returns (uint256) {
         uint256 _iTokenTotalSupply = IEulerEToken(eToken).totalSupplyUnderlying();
-        return _iTokenTotalSupply != 0 ? queryTokenValue(wants[0], _iTokenTotalSupply) : 0;
+        return _iTokenTotalSupply != 0 ? queryTokenValueInETH(wants[0], _iTokenTotalSupply) : 0;
     }
 
-    /// @inheritdoc BaseStrategy
+    /// @inheritdoc ETHBaseStrategy
     function harvest()
         public
         virtual
@@ -238,7 +216,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
     function rebalance() external isKeeper {
         address _eToken = eToken;
         (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(
-            eToken,
+            _eToken,
             dToken,
             borrowCount
         );
@@ -252,9 +230,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         (_remainingAmount, _overflowAmount) = _borrowInfo(eToken, dToken, borrowCount);
     }
 
-    /// @notice Strategy deposit funds to third party pool.
-    /// @param _assets the address list of token to deposit
-    /// @param _amounts the amount list of token to deposit
+    /// @inheritdoc ETHBaseStrategy
     function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
         internal
         override
@@ -273,10 +249,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         }
     }
 
-    /// @notice Strategy withdraw the funds from third party pool
-    /// @param _withdrawShares The amount of shares to withdraw
-    /// @param _totalShares The total amount of shares owned by this strategy
-    /// @param _outputCode The code of output
+    /// @inheritdoc ETHBaseStrategy
     function withdrawFrom3rdPool(
         uint256 _withdrawShares,
         uint256 _totalShares,
@@ -339,31 +312,30 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         address[] memory _wantTokens = wants;
         uint256[] memory _wantAmounts = new uint256[](1);
         if (_balanceOfEUL > 0) {
-            // swap from EUL to USDC by uinswap v3 1% fee
-            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
-                IUniswapV3.ExactInputSingleParams(
-                    EUL,
-                    USDC,
-                    10000,
-                    address(this),
-                    block.timestamp,
-                    _balanceOfEUL,
-                    0,
-                    0
-                )
+            // swap from EUL to W_ETH by uinswap v2
+            //set up sell reward path
+            address[] memory _dfSellPath = new address[](2);
+            _dfSellPath[0] = EUL;
+            _dfSellPath[1] = W_ETH;
+            UNIROUTER2.swapExactTokensForTokens(
+                _balanceOfEUL,
+                0,
+                _dfSellPath,
+                address(this),
+                block.timestamp
             );
 
-            // swap from USDC to wants[0] by uinswap v3 0.01% fee
-            uint256 _balanceOfUSDC = balanceOfToken(USDC);
-            if (_wantTokens[0] != USDC) {
+            // swap from W_ETH to wants[0] by uinswap v3 0.01% fee
+            uint256 _balanceOfWETH = balanceOfToken(W_ETH);
+            if (_wantTokens[0] != W_ETH) {
                 IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
                     IUniswapV3.ExactInputSingleParams(
-                        USDC,
+                        W_ETH,
                         _wantTokens[0],
-                        100,
+                        500,
                         address(this),
                         block.timestamp,
-                        _balanceOfUSDC,
+                        _balanceOfWETH,
                         0,
                         0
                     )
