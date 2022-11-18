@@ -13,8 +13,6 @@ import "../../../external/euler/IEulerEToken.sol";
 import "../../../external/euler/IEulerMarkets.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 
-import "hardhat/console.sol";
-
 /// @title EulerRevolvingLoanStrategy
 /// @notice Investment strategy of investing in stablecoins and revolving lending through post-staking via EulerRevolvingLoan
 /// @author Bank of Chain Protocol Inc
@@ -352,7 +350,6 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
                     0
                 )
             );
-            console.log("USDC",balanceOfToken(USDC));
 
             // swap from USDC to wants[0] by uinswap v3 0.01% fee
             uint256 _balanceOfUSDC = balanceOfToken(USDC);
@@ -369,13 +366,11 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
                         0
                     )
                 );
-                console.log("USDC,_wantTokens[0]",balanceOfToken(USDC),balanceOfToken(_wantTokens[0]));
             }
             _wantAmounts[0] = balanceOfToken(_wantTokens[0]);
             if (_wantAmounts[0] > 0) {
                 IEulerEToken(eToken).deposit(0, _wantAmounts[0]);
             }
-            console.log("after deposit USDC,_wantTokens[0]",balanceOfToken(USDC),balanceOfToken(_wantTokens[0]));
             emit SwapRewardsToWants(
                 address(this),
                 _rewardTokens,

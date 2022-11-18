@@ -14,8 +14,6 @@ import "../../../external/euler/IEulerMarkets.sol";
 import "../../../external/uniswap/IUniswapV2Router2.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
 
-import "hardhat/console.sol";
-
 /// @title ETHEulerRevolvingLoanStrategy
 /// @notice Investment strategy of investing in WETH/WstETH and revolving lending through post-staking via EulerRevolvingLoan
 /// @author Bank of Chain Protocol Inc
@@ -293,9 +291,9 @@ contract ETHEulerRevolvingLoanStrategy is ETHBaseStrategy {
         bytes32[] calldata _proof,
         address _stake
     ) external returns (uint256 _claimAmount) {
-        uint256 _beforeBalance = balanceOfToken(_token);
+        uint256 _beforeBalance = IERC20Upgradeable(_token).balanceOf(_account);
         IEulDistributor(EUL_DISTRIBUTOR).claim(_account, _token, _claimable, _proof, _stake);
-        _claimAmount = balanceOfToken(_token) - _beforeBalance;
+        _claimAmount = IERC20Upgradeable(_token).balanceOf(_account) - _beforeBalance;
         return _claimAmount;
     }
 
@@ -326,7 +324,6 @@ contract ETHEulerRevolvingLoanStrategy is ETHBaseStrategy {
                 address(this),
                 block.timestamp
             );
-            console.log("W_ETH",balanceOfToken(W_ETH));
 
             // swap from W_ETH to wants[0] by uinswap v3 0.01% fee
             uint256 _balanceOfWETH = balanceOfToken(W_ETH);
@@ -343,13 +340,11 @@ contract ETHEulerRevolvingLoanStrategy is ETHBaseStrategy {
                         0
                     )
                 );
-                console.log("W_ETH,_wantTokens[0]",balanceOfToken(W_ETH),balanceOfToken(_wantTokens[0]));
             }
             _wantAmounts[0] = balanceOfToken(_wantTokens[0]);
             if (_wantAmounts[0] > 0) {
                 IEulerEToken(eToken).deposit(0, _wantAmounts[0]);
             }
-            console.log("after deposit W_ETH,_wantTokens[0]",balanceOfToken(W_ETH),balanceOfToken(_wantTokens[0]));
             emit SwapRewardsToWants(
                 address(this),
                 _rewardTokens,
