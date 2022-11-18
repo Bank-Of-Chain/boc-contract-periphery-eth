@@ -13,7 +13,7 @@ const strategiesList = [
     // ...auraStrategies,
     // ...convexStrategies,
     ...dForceStrategies,
-    ...eulerStrategies,
+    // ...eulerStrategies,
     // ...dodoStrategies,
     // // ...stargateStrategies,
     // // ...sushiStrategies,

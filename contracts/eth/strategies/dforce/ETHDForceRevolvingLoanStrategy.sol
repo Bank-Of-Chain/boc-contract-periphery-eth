@@ -197,7 +197,7 @@ contract ETHDForceRevolvingLoanStrategy is ETHBaseStrategy {
             DFiToken(_iTokenTmp).borrowBalanceStored(address(this));
     }
 
-    /// @notice Return the third party protocol's pool total assets in USD.
+    /// @inheritdoc ETHBaseStrategy
     function get3rdPoolAssets() external view override returns (uint256) {
         address _iTokenTmp = iToken;
         uint256 _iTokenTotalSupply = (DFiToken(_iTokenTmp).totalSupply() *
