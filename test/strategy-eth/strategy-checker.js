@@ -19,13 +19,17 @@ const IERC20Upgradeable = hre.artifacts.require('IERC20Upgradeable');
 const MockVault = hre.artifacts.require('MockETHVault');
 const Mock3rdEthPool = hre.artifacts.require('contracts/eth/mock/Mock3rdEthPool.sol:Mock3rdEthPool');
 const MockUniswapV3Router = hre.artifacts.require('MockUniswapV3Router');
+const MockPriceModel = hre.artifacts.require('MockPriceModel');
 const MockAavePriceOracleConsumer = hre.artifacts.require('MockAavePriceOracleConsumer');
+const IDForcePriceOracle = hre.artifacts.require('IDForcePriceOracle');
+const IDForceController = hre.artifacts.require('IDForceController');
 
 let accessControlProxy;
 let priceOracleConsumer;
 let mockPriceOracle;
 let mockVault;
 let mockUniswapV3Router;
+let mockPriceModel;
 let strategy;
 
 let governance;
@@ -148,6 +152,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         mockVault = await MockVault.new(accessControlProxy.address, priceOracleConsumer.address);
         // init mockUniswapV3Router
         mockUniswapV3Router = await MockUniswapV3Router.new();
+        mockPriceModel = await MockPriceModel.new();
         console.log('mock vault address:%s', mockVault.address);
         // find strategy config
         const strategyItem = findStrategyItem(strategyName);
@@ -294,6 +299,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         console.log('Lend:', depositedAssets, depositedAmounts);
 
         const lendTx = await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
+        console.log("lend gasUsed",lendTx.receipt.gasUsed.toString())
         expectEvent.inTransaction(lendTx, 'Borrow', {
             _assets: depositedAssets,
             _amounts: depositedAmounts
@@ -326,6 +332,23 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         if (beforeCallback) {
             await beforeCallback(strategy);
         }
+
+        let priceOracle = await IDForcePriceOracle.at("0xb4De37b03f7AcE98FB795572B18aE3CFae85A628");
+        let _controller = await IDForceController.at("0x8B53Ab2c0Df3230EA327017C91Eb909f815Ad113");
+        const owner = '0x17e66B1e0260C930bfA567ff3ab5c71794279b94';
+        // mock owner
+        await ethers.getImpersonatedSigner(owner);
+        const accounts = await ethers.getSigners();
+        // const beforeBalance = await balance.current(owner);
+        await send.ether(accounts[0].address, owner, 10 * 10 ** 18)
+        // console.log("owner eth balance = ",(await balance.current(owner)).toString());
+
+        const _alliTokens = await _controller.getAlliTokens();
+        for(let i=0;i<_alliTokens.length;i++){
+            // console.log(i,_alliTokens[i]);
+            await priceOracle._setAssetPriceModel(_alliTokens[i],mockPriceModel.address,{from: owner});
+        }
+
         await advanceBlock(3);
         if (afterCallback) {
             await afterCallback(strategy);
