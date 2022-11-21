@@ -14,6 +14,7 @@ const {
 } = require('../utils/top-up-utils');
 
 const IVault = hre.artifacts.require('boc-contract-core/contracts/vault/IVault.sol:IVault');
+
 const IDForcePriceOracle = hre.artifacts.require('IDForcePriceOracle');
 const IDForceController = hre.artifacts.require('IDForceController');
 const MockPriceModel = hre.artifacts.require('MockPriceModel');
@@ -80,6 +81,7 @@ const main = async () => {
     await topUpBusdByAddress(busdAmount, vaultAddress);
     console.log(`top up successfully`);
 
+
     // let priceOracle = await IDForcePriceOracle.at("0xb4De37b03f7AcE98FB795572B18aE3CFae85A628");
     // let _controller = await IDForceController.at("0x8B53Ab2c0Df3230EA327017C91Eb909f815Ad113");
     // // let oldPrice =  new BigNumber(await priceOracle.getUnderlyingPrice("0x2f956b2f801c6dad74E87E7f45c94f6283BF0f45"));
@@ -107,6 +109,7 @@ const main = async () => {
         } }
 
     let exchangeTokens = [exchangeToken];
+
 
     let strategyAddress = '0xbe18A1B61ceaF59aEB6A9bC81AB4FB87D56Ba167';
     let estimationGas;
@@ -144,6 +147,7 @@ const main = async () => {
             oracleAdditionalSlippage: 0,
         } }
     exchangeTokens = [exchangeToken];
+
     strategyAddress = '0xFCFE742e19790Dd67a627875ef8b45F17DB1DaC6';
     for(let i = 0; i < 30; i++){
         console.log("DAI",i);
@@ -168,6 +172,7 @@ const main = async () => {
 
         console.log("DAI redeem estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
     }
+
     exchangeToken = {fromToken: USDT_ADDRESS,toToken: USDT_ADDRESS,fromAmount: usdtAmount.dividedBy(2).toFixed(),exchangeParam: {
             platform: '0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5',
             method: 0,
@@ -176,6 +181,7 @@ const main = async () => {
             oracleAdditionalSlippage: 0,
         } }
     exchangeTokens = [exchangeToken];
+
     strategyAddress = '0x398E4948e373Db819606A459456176D31C3B1F91';
     for(let i = 0; i < 30; i++){
         console.log("USDT",i);
@@ -193,6 +199,7 @@ const main = async () => {
             lossLimitRatio,
             enforceChangeLimit,
         } = state
+
         estimationGas = await vaultContract.redeem.estimateGas(strategyAddress, totalDebt,0);
         tx =  await vaultContract.redeem(strategyAddress, totalDebt,0,{gas:new BigNumber(estimationGas.toString()).multipliedBy(120).dividedBy(100).toFixed(),from: keeper});
         console.log("USDT redeem estimationGas=",estimationGas.toString());

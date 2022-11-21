@@ -23,6 +23,7 @@
 │    ConvexMetaGusdStrategy     │ '0xb047e89a5184d69Ca2C3E8BA554cDc52f7B1Ce3A' │
 │    ConvexMetaLusdStrategy     │ '0xb6Ae3176eF152b064a0B89141e31689A40c28936' │
 │    ConvexMetaUsdpStrategy     │ '0x91590e0C62739Be6F37fF5bb23F5f7aE5cbc1a5B' │
+│    ConvexMetaTusdStrategy     │ '0x6f7e69C46C3A657dfd5D44798a8BE442c778112d' │
 │      Convex3CrvStrategy       │ '0xfd9d2C615b340A75365b2Bb918502D7596656564' │
 │      ConvexAaveStrategy       │ '0xD7c85C0f771fd768EcC38957788Fbe6f0aaB7013' │
 │    ConvexCompoundStrategy     │ '0x3205a9004d27374512f1ABe7203F007ADf08fDF0' │
