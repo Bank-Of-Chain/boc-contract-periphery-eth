@@ -354,6 +354,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
             await afterCallback(strategy);
         }
         const harvestTx = await strategy.harvest({ from: keeper });
+        console.log("harvest gasUsed=",harvestTx.receipt.gasUsed);
         expectEvent.inTransaction(harvestTx,'StrategyReported');
         const afterTotalAssets = new BigNumber(await strategy.estimatedTotalAssets());
         console.log('beforeTotalAssets:%s, afterTotalAssets:%s', beforeTotalAssets.toFixed(), afterTotalAssets.toFixed());

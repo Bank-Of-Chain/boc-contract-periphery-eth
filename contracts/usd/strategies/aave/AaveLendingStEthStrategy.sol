@@ -15,8 +15,11 @@ import "../../../external/aave/DataTypes.sol";
 import "../../../external/aave/ILendingPoolAddressesProvider.sol";
 import "../../../external/aave/IPriceOracleGetter.sol";
 import "../../../external/curve/ICurveLiquidityFarmingPool.sol";
+import "../../../external/euler/IEulerDToken.sol";
 import "../../../external/weth/IWeth.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
+
+import "hardhat/console.sol";
 
 contract AaveLendingStEthStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -46,6 +49,11 @@ contract AaveLendingStEthStrategy is BaseStrategy {
     uint256 public borrowFactorMin;
     uint256 public borrowCount;
     address public uniswapV3Pool;
+    uint256 public leverage;
+    uint256 public leverageMax;
+    uint256 public leverageMin;
+    address internal constant EULER_ADDRESS = 0x27182842E098f60e3D576794A5bFFb0777E025d3;
+    address internal constant W_ETH_EULER_D_TOKEN = 0x62e28f054efc24b26A794F5C1249B6349454352C;
 
     /// Events
 
@@ -92,6 +100,9 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         borrowFactorMin = 6100;
         borrowFactorMax = 6900;
         borrowCount = 3;
+        leverage = _calLeverage(6500, 6500, 10000, 3);
+        leverageMax = _calLeverage(6900, 6900, 10000, 3);
+        leverageMin = _calLeverage(6100, 6100, 10000, 3);
 
         address _lendingPoolAddress = aaveProvider.getLendingPool();
         IERC20Upgradeable(ST_ETH).safeApprove(_lendingPoolAddress, type(uint256).max);
@@ -110,6 +121,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
     function setStETHBorrowFactor(uint256 _stETHBorrowFactor) external isVaultManager {
         require(_stETHBorrowFactor < BPS, "setting output the range");
         stETHBorrowFactor = _stETHBorrowFactor;
+        leverage = _getNewLeverage(borrowFactor, _stETHBorrowFactor);
 
         emit UpdateStETHBorrowFactor(_stETHBorrowFactor);
     }
@@ -123,6 +135,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
             "setting output the range"
         );
         stETHBorrowFactorMax = _stETHBorrowFactorMax;
+        leverageMax = _getNewLeverage(borrowFactorMax, _stETHBorrowFactorMax);
 
         emit UpdateStETHBorrowFactorMax(_stETHBorrowFactorMax);
     }
@@ -136,6 +149,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
             "setting output the range"
         );
         stETHBorrowFactorMin = _stETHBorrowFactorMin;
+        leverageMin = _getNewLeverage(borrowFactorMin, _stETHBorrowFactorMin);
 
         emit UpdateStETHBorrowFactorMin(_stETHBorrowFactorMin);
     }
@@ -151,6 +165,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
             "setting output the range"
         );
         borrowFactor = _borrowFactor;
+        leverage = _getNewLeverage(_borrowFactor, stETHBorrowFactor);
 
         emit UpdateBorrowFactor(_borrowFactor);
     }
@@ -164,6 +179,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
             "setting output the range"
         );
         borrowFactorMax = _borrowFactorMax;
+        leverageMax = _getNewLeverage(_borrowFactorMax, stETHBorrowFactorMax);
 
         emit UpdateBorrowFactorMax(_borrowFactorMax);
     }
@@ -177,6 +193,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
             "setting output the range"
         );
         borrowFactorMin = _borrowFactorMin;
+        leverageMin = _getNewLeverage(_borrowFactorMin, stETHBorrowFactorMin);
 
         emit UpdateBorrowFactorMin(_borrowFactorMin);
     }
@@ -185,8 +202,9 @@ contract AaveLendingStEthStrategy is BaseStrategy {
     /// @param _borrowCount The new value of `borrowCount`
     /// Requirements: only vault manager can call
     function setBorrowCount(uint256 _borrowCount) external isVaultManager {
-        require(_borrowCount <= 10, "setting output the range");
+        require(_borrowCount <= 10 && _borrowCount > 0, "setting output the range");
         borrowCount = _borrowCount;
+        _updateAllLeverage(_borrowCount);
 
         emit UpdateBorrowCount(_borrowCount);
     }
@@ -267,6 +285,272 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         return queryTokenValue(ST_ETH, IERC20Upgradeable(ST_ETH).totalSupply());
     }
 
+    /// @inheritdoc BaseStrategy
+    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
+        internal
+        override
+    {
+        uint256 _amount = _amounts[0];
+        address _asset = _assets[0];
+        address _aStETH = A_ST_ETH;
+        address _stETH = ST_ETH;
+        address _lendingPoolAddress = aaveProvider.getLendingPool();
+        ILendingPool(_lendingPoolAddress).deposit(_asset, _amount, address(this), 0);
+        {
+            uint256 _userConfigurationData = ILendingPool(_lendingPoolAddress)
+                .getUserConfiguration(address(this))
+                .data;
+
+            if (!UserConfiguration.isUsingAsCollateral(_userConfigurationData, reserveIdOfToken)) {
+                ILendingPool(_lendingPoolAddress).setUserUseReserveAsCollateral(_asset, true);
+            }
+            if (
+                balanceOfToken(_aStETH) > 0 &&
+                !UserConfiguration.isUsingAsCollateral(
+                    _userConfigurationData,
+                    RESERVE_ID_OF_ST_ETH
+                )
+            ) {
+                ILendingPool(_lendingPoolAddress).setUserUseReserveAsCollateral(_stETH, true);
+            }
+        }
+
+        (uint256 _stETHPrice, uint256 _tokenPrice) = _getAssetsPrices(_stETH, _asset);
+
+        address _curvePoolAddress = CURVE_POOL_ADDRESS;
+        (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowStandardInfo(
+            _aStETH,
+            _stETHPrice,
+            _tokenPrice,
+            _curvePoolAddress
+        );
+        _rebalance(_remainingAmount, _overflowAmount, _stETHPrice, _curvePoolAddress);
+    }
+
+    /// @inheritdoc BaseStrategy
+    function withdrawFrom3rdPool(
+        uint256 _withdrawShares,
+        uint256 _totalShares,
+        uint256 _outputCode
+    ) internal override {
+        uint256 _redeemAstETHAmount;
+        uint256 _redeemATokenAmount;
+        uint256 _repayBorrowAmount;
+        uint256 _newDebtAmount;
+        uint256 _newCollateralAmount;
+        uint256 _stETHPrice;
+        uint256 _leverage = leverage;
+        uint256 _bps = BPS;
+        {
+            uint256 _tokenPrice;
+            (_stETHPrice, _tokenPrice) = _getAssetsPrices(ST_ETH, wants[0]);
+            uint256 _withdrawSharesCopy = _withdrawShares;
+            uint256 _totalSharesCopy = _totalShares;
+            address _aToken = aToken;
+            uint256 _collateralAStETHTokenAmount = balanceOfToken(A_ST_ETH);
+            uint256 _collateralATokenAmount = balanceOfToken(_aToken);
+            _redeemAstETHAmount =
+                (_collateralAStETHTokenAmount * _withdrawSharesCopy) /
+                _totalSharesCopy;
+            _redeemATokenAmount =
+                (_collateralATokenAmount * _withdrawSharesCopy) /
+                _totalSharesCopy;
+            uint256 _redeemAstETHAmountCopy = _redeemAstETHAmount;
+            uint256 _redeemATokenAmountCopy = _redeemATokenAmount;
+            uint256 _debtAmount = balanceOfToken(DEBT_W_ETH);
+            _repayBorrowAmount = (_debtAmount * _withdrawSharesCopy) / _totalSharesCopy;
+            _newDebtAmount = (_debtAmount - _repayBorrowAmount) * _leverage;
+            _newCollateralAmount =
+                (((_collateralAStETHTokenAmount - _redeemAstETHAmountCopy) * _stETHPrice) /
+                    1e18 +
+                    ((_collateralATokenAmount - _redeemATokenAmountCopy) * _tokenPrice) /
+                    decimalUnitOfToken(_aToken)) *
+                (_leverage - _bps);
+        }
+
+        address _curvePoolAddress = CURVE_POOL_ADDRESS;
+        if (_newDebtAmount > _newCollateralAmount) {
+            //(_debtAmount-x*_exchangeRate)/(_collateralAmountInETH- x * _stETHPrice) = (leverage-BPS)/leverage
+            //stETH to ETH
+            uint256 _exchangeRate = ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
+                1,
+                0,
+                1e18
+            );
+            uint256 _decreaseAmount = (_newDebtAmount - _newCollateralAmount) /
+                ((_leverage * _exchangeRate) / 1e18 - ((_leverage - _bps) * _stETHPrice) / 1e18);
+            if (_decreaseAmount > 0) {
+                _repayBorrowAmount =
+                    _repayBorrowAmount +
+                    ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(1, 0, _decreaseAmount);
+                _redeemAstETHAmount = _redeemAstETHAmount + _decreaseAmount;
+            }
+        } else if (_newDebtAmount < _newCollateralAmount) {
+            //(_debtAmount+x)/(_collateralAmountInETH+_exchangeRate * x) = (leverage-BPS)/leverage
+            //ETH to stETH
+            uint256 _exchangeRate = ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
+                0,
+                1,
+                1e18
+            );
+            uint256 _increaseAmount = (_newCollateralAmount - _newDebtAmount) /
+                (_leverage - ((_leverage - _bps) * _exchangeRate) / 1e18);
+            if (_increaseAmount > 0) {
+                _repayBorrowAmount = _repayBorrowAmount - _increaseAmount;
+                _redeemAstETHAmount =
+                    _redeemAstETHAmount -
+                    ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(0, 1, _increaseAmount);
+            }
+        }
+        _repay(_redeemAstETHAmount, _redeemATokenAmount, _repayBorrowAmount);
+    }
+
+    /// @notice Returns the info of borrow.
+    /// @return _remainingAmount The amount of debt token will still can to borrow
+    /// @return _overflowAmount The amount of aToken that exceeds the maximum allowable loan
+    function borrowInfo() public view returns (uint256 _remainingAmount, uint256 _overflowAmount) {
+        address _stETH = ST_ETH;
+        address _tokenAddress = wants[0];
+        (uint256 _stETHPrice, uint256 _tokenPrice) = _getAssetsPrices(_stETH, _tokenAddress);
+        address _curvePoolAddress = CURVE_POOL_ADDRESS;
+        (_remainingAmount, _overflowAmount) = _borrowInfo(
+            _stETHPrice,
+            _tokenPrice,
+            _curvePoolAddress
+        );
+    }
+
+    /// @notice Rebalance the collateral of this strategy
+    /// Requirements: only keeper can call
+    function rebalance() external isKeeper {
+        address _stETH = ST_ETH;
+        address _tokenAddress = wants[0];
+        (uint256 _stETHPrice, uint256 _tokenPrice) = _getAssetsPrices(_stETH, _tokenAddress);
+        address _curvePoolAddress = CURVE_POOL_ADDRESS;
+        (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(
+            _stETHPrice,
+            _tokenPrice,
+            _curvePoolAddress
+        );
+        console.log("_remainingAmount, _overflowAmount=", _remainingAmount, _overflowAmount);
+        _rebalance(_remainingAmount, _overflowAmount, _stETHPrice, _curvePoolAddress);
+    }
+
+    // euler flashload call only by  euler
+    function onFlashLoan(bytes memory data) external {
+        address _eulerAddress = EULER_ADDRESS;
+        require(msg.sender == _eulerAddress, "invalid call");
+        (
+            uint256 _depositAmount,
+            uint256 _borrowAmount,
+            uint256 _redeemAStETHAmount,
+            uint256 _redeemATokenAmount,
+            uint256 _repayBorrowAmount,
+            uint256 _flashLoanAmount,
+            uint256 _origBalance
+        ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256, uint256, uint256));
+        console.log(
+            "_depositAmount,_borrowAmount,_redeemAmount,_repayBorrowAmount,_flashLoanAmount,_flashLoanAmount"
+        );
+        console.log(_depositAmount, _borrowAmount, _redeemAStETHAmount, _repayBorrowAmount);
+        console.log(_flashLoanAmount, _flashLoanAmount);
+        uint256 _wethAmount = balanceOfToken(W_ETH);
+        console.log("_wethAmount=", _wethAmount);
+        require(_wethAmount >= _origBalance + _flashLoanAmount, "not received enough");
+        ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
+        uint256 _typeMax = type(uint256).max;
+        if (_depositAmount > 0) {
+            address _asset = ST_ETH;
+            uint256 _amount = 0;
+            if (_depositAmount == _typeMax) {
+                IWeth(W_ETH).withdraw(_wethAmount);
+                ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _wethAmount}(
+                    0,
+                    1,
+                    _wethAmount,
+                    0
+                );
+                _amount = balanceOfToken(_asset);
+            } else {
+                _amount = _depositAmount;
+            }
+            console.log(
+                "balanceOfToken(_asset),_depositAmount,_amount",
+                balanceOfToken(_asset),
+                _depositAmount,
+                _amount
+            );
+            _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
+        }
+        if (_repayBorrowAmount > 0) {
+            _aaveLendingPool.repay(
+                W_ETH,
+                _repayBorrowAmount,
+                uint256(DataTypes.InterestRateMode.VARIABLE),
+                address(this)
+            );
+        }
+        if (_borrowAmount > 0) {
+            _aaveLendingPool.borrow(
+                W_ETH,
+                _borrowAmount,
+                uint256(DataTypes.InterestRateMode.VARIABLE),
+                0,
+                address(this)
+            );
+            console.log("ETHAmount , _flashLoanAmount= ", balanceOfToken(W_ETH), _flashLoanAmount);
+        }
+        if (_redeemAStETHAmount > 0) {
+            address stETH = ST_ETH;
+            _aaveLendingPool.withdraw(stETH, _redeemAStETHAmount, address(this));
+            uint256 _stETHAmount = balanceOfToken(stETH);
+            ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange(1, 0, _stETHAmount, 0);
+
+            console.log(
+                "_stETHAmount , ETH, _flashLoanAmount= ",
+                _stETHAmount,
+                address(this).balance,
+                _flashLoanAmount
+            );
+            IWeth(W_ETH).deposit{value: address(this).balance}();
+        }
+        if (_redeemATokenAmount > 0) {
+            address _want = wants[0];
+            _aaveLendingPool.withdraw(_want, _redeemATokenAmount, address(this));
+            uint256 _tokenAmount = balanceOfToken(_want);
+
+            uint256 _wETHAmount = balanceOfToken(W_ETH);
+            if (_wETHAmount > _flashLoanAmount) {
+                IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
+                    IUniswapV3.ExactInputSingleParams(
+                        W_ETH,
+                        _want,
+                        500,
+                        address(this),
+                        block.timestamp,
+                        _wETHAmount - _flashLoanAmount,
+                        0,
+                        0
+                    )
+                );
+            } else if (_wETHAmount < _flashLoanAmount) {
+                IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
+                    IUniswapV3.ExactOutputSingleParams(
+                        _want,
+                        W_ETH,
+                        500,
+                        address(this),
+                        block.timestamp,
+                        _flashLoanAmount - _wETHAmount,
+                        _tokenAmount,
+                        0
+                    )
+                );
+            }
+        }
+        IERC20Upgradeable(W_ETH).safeTransfer(_eulerAddress, _flashLoanAmount);
+    }
+
     function _getAssetsPrices(address _asset1, address _asset2)
         private
         view
@@ -281,160 +565,61 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         _price2 = _prices[1];
     }
 
-    /// @inheritdoc BaseStrategy
-    function depositTo3rdPool(address[] memory _assets, uint256[] memory _amounts)
-        internal
-        override
-    {
-        address _lendingPoolAddress = aaveProvider.getLendingPool();
-        uint256 _stETHPrice;
-        uint256 _tokenPrice;
-        uint256 _userConfigurationData = ILendingPool(_lendingPoolAddress)
-            .getUserConfiguration(address(this))
-            .data;
-        {
-            address _aToken = aToken;
-            address _asset = _assets[0];
-            uint256 _beforeBalanceOfAToken = balanceOfToken(_aToken);
-            {
-                uint256 _amount = _amounts[0];
-                ILendingPool(_lendingPoolAddress).deposit(_asset, _amount, address(this), 0);
-            }
-            (_stETHPrice, _tokenPrice) = _getAssetsPrices(ST_ETH, _asset);
-            {
-                {
-                    if (
-                        !UserConfiguration.isUsingAsCollateral(
-                            _userConfigurationData,
-                            reserveIdOfToken
-                        )
-                    ) {
-                        ILendingPool(_lendingPoolAddress).setUserUseReserveAsCollateral(
-                            _asset,
-                            true
-                        );
-                    }
-                }
-
-                uint256 _aTokenAmount = balanceOfToken(_aToken) - _beforeBalanceOfAToken;
-                uint256 _borrowAmount = (((_aTokenAmount * _tokenPrice) /
-                    decimalUnitOfToken(_asset)) * borrowFactor) / BPS;
-                {
-                    (, , uint256 _availableBorrowsETH, , , ) = ILendingPool(_lendingPoolAddress)
-                        .getUserAccountData(address(this));
-                    if (_borrowAmount > _availableBorrowsETH) {
-                        _borrowAmount = _availableBorrowsETH;
-                    }
-                }
-                if (_borrowAmount > 0) {
-                    ILendingPool(_lendingPoolAddress).borrow(
-                        W_ETH,
-                        _borrowAmount,
-                        uint256(DataTypes.InterestRateMode.VARIABLE),
-                        0,
-                        address(this)
-                    );
-                    IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
-                    uint256 _ethAmount = address(this).balance;
-                    ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _ethAmount}(
-                        0,
-                        1,
-                        _ethAmount,
-                        0
-                    );
-                }
-            }
-        }
-        uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
-
-        if (_receivedStETHAmount > 0) {
-            uint256 _beforeBalanceOfAStETH = balanceOfToken(A_ST_ETH);
-            ILendingPool(_lendingPoolAddress).deposit(
-                ST_ETH,
-                _receivedStETHAmount,
-                address(this),
-                0
-            );
-
-            if (
-                !UserConfiguration.isUsingAsCollateral(
-                    _userConfigurationData,
-                    RESERVE_ID_OF_ST_ETH
-                )
-            ) {
-                ILendingPool(_lendingPoolAddress).setUserUseReserveAsCollateral(ST_ETH, true);
-            }
-            uint256 _astETHAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
-            uint256 _borrowCount = borrowCount;
-            uint256 _borrowFactor = stETHBorrowFactor;
-            for (uint256 i = 0; i < _borrowCount; i++) {
-                if (_astETHAmount > 10) {
-                    uint256 _increaseAstEthAmount = _borrowEthAndDepositStEth(
-                        _astETHAmount,
-                        _borrowFactor,
-                        _stETHPrice,
-                        _lendingPoolAddress
-                    );
-                    _astETHAmount = _increaseAstEthAmount;
-                } else {
-                    break;
-                }
-            }
-        }
-    }
-
-    /// @inheritdoc BaseStrategy
-    function withdrawFrom3rdPool(
-        uint256 _withdrawShares,
-        uint256 _totalShares,
-        uint256 _outputCode
-    ) internal override {
-        address _token = wants[0];
-        (uint256 _stETHPrice, uint256 _tokenPrice) = _getAssetsPrices(ST_ETH, _token);
-        uint256 _astETHAmount = (balanceOfToken(A_ST_ETH) * _withdrawShares) / _totalShares;
-        uint256 _aTokenAmount = (balanceOfToken(aToken) * _withdrawShares) / _totalShares;
-        uint256 _wethDebtAmount = (balanceOfToken(DEBT_W_ETH) * _withdrawShares) / _totalShares;
-        _repay(_astETHAmount, _aTokenAmount, _wethDebtAmount, _stETHPrice, _tokenPrice, _token);
-    }
-
-    /// @notice Returns the info of borrow.
-    /// @return _remainingAmount The amount of aToken will still be used as collateral to borrow eth
-    /// @return _overflowAmount The amount of aToken that exceeds the maximum allowable loan
-    function borrowInfo() public view returns (uint256 _remainingAmount, uint256 _overflowAmount) {
-        (uint256 _stETHPrice, uint256 _tokenPrice) = _getAssetsPrices(ST_ETH, wants[0]);
-        (_remainingAmount, _overflowAmount) = _borrowInfo(_stETHPrice, _tokenPrice);
+    /// @notice repayBorrow and redeem collateral
+    function _repay(
+        uint256 _redeemAstETHAmount,
+        uint256 _redeemATokenAmount,
+        uint256 _repayBorrowAmount
+    ) internal {
+        bytes memory _params = abi.encodePacked(
+            uint256(0),
+            uint256(0),
+            _redeemAstETHAmount,
+            _redeemATokenAmount,
+            _repayBorrowAmount,
+            _repayBorrowAmount,
+            balanceOfToken(W_ETH)
+        );
+        IEulerDToken(W_ETH_EULER_D_TOKEN).flashLoan(_repayBorrowAmount, _params);
     }
 
     /// @notice Rebalance the collateral of this strategy
-    /// Requirements: only keeper can call
-    function rebalance() external isKeeper {
-        address _lendingPoolAddress = aaveProvider.getLendingPool();
-        address _tokenAddress = wants[0];
-        (uint256 _stETHPrice, uint256 _tokenPrice) = _getAssetsPrices(ST_ETH, _tokenAddress);
-        (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(
-            _stETHPrice,
-            _tokenPrice
-        );
-        if (_remainingAmount > 10) {
-            uint256 _borrowCount = borrowCount;
-            uint256 _borrowFactor = stETHBorrowFactor;
-            uint256 _increaseAstEthAmount = _remainingAmount;
-            for (uint256 i = 0; i < _borrowCount; i++) {
-                if (_increaseAstEthAmount > 10) {
-                    _increaseAstEthAmount = _borrowEthAndDepositStEth(
-                        _increaseAstEthAmount,
-                        _borrowFactor,
-                        _stETHPrice,
-                        _lendingPoolAddress
-                    );
+    function _rebalance(
+        uint256 _remainingAmount,
+        uint256 _overflowAmount,
+        uint256 _stETHPrice,
+        address _curvePoolAddress
+    ) internal {
+        ICurveLiquidityFarmingPool _curvePool = ICurveLiquidityFarmingPool(_curvePoolAddress);
+        if (_remainingAmount > 0) {
+            uint256 _borrowAmount = _remainingAmount;
+            uint256 _depositAmount = type(uint256).max;
+            bytes memory _params = abi.encodePacked(
+                _depositAmount,
+                _borrowAmount,
+                uint256(0),
+                uint256(0),
+                uint256(0),
+                _borrowAmount,
+                balanceOfToken(W_ETH)
+            );
+            IEulerDToken(W_ETH_EULER_D_TOKEN).flashLoan(_borrowAmount, _params);
+        } else if (_overflowAmount > 0) {
+            uint256 _repayBorrowAmount = _curvePool.get_dy(1, 0, _overflowAmount);
+            uint256 _redeemAStETHAmount = _overflowAmount;
+            uint256 _redeemATokenAmount = 0;
+            //stETH
+            uint256 _aStETHAmount = balanceOfToken(A_ST_ETH);
+            if (_aStETHAmount < _redeemAStETHAmount) {
+                _redeemAStETHAmount = _aStETHAmount;
+            } else if (_aStETHAmount > _redeemAStETHAmount) {
+                if (_aStETHAmount > _redeemAStETHAmount + 1) {
+                    _redeemAStETHAmount = _redeemAStETHAmount + 2;
                 } else {
-                    break;
+                    _redeemAStETHAmount = _redeemAStETHAmount + 1;
                 }
             }
-        } else if (_overflowAmount > 0) {
-            uint256 _astETHAmount = _overflowAmount;
-            uint256 _wethDebtAmount = _overflowAmount * 3;
-            _repay(_astETHAmount, 0, _wethDebtAmount, _stETHPrice, _tokenPrice, _tokenAddress);
+            _repay(_redeemAStETHAmount, _redeemATokenAmount, _repayBorrowAmount);
         }
         if (_remainingAmount + _overflowAmount > 0) {
             emit Rebalance(_remainingAmount, _overflowAmount);
@@ -442,364 +627,156 @@ contract AaveLendingStEthStrategy is BaseStrategy {
     }
 
     /// @notice Returns the info of borrow.
-    /// @param _stETHPrice the price of stETH in ETH
-    /// @param _tokenPrice the price of the token(dai/usdc) in ETH
-    /// @return _remainingAmount The amount of aToken will still be used as collateral to borrow eth
-    /// @return _overflowAmount The amount of debt token that exceeds the maximum allowable loan
-    function _borrowInfo(uint256 _stETHPrice, uint256 _tokenPrice)
-        private
-        view
-        returns (uint256 _remainingAmount, uint256 _overflowAmount)
-    {
-        uint256 _stETHPriceCopy = _stETHPrice;
-        uint256 _tokenPriceCopy = _tokenPrice;
-        uint256 _wethDebtAmount = balanceOfToken(DEBT_W_ETH);
-        uint256 _needAstETHAmount;
-        uint256 _needAstETHAmountMin;
-        uint256 _needAstETHAmountMax;
-        uint256 _leverage = BPS;
-
-        {
-            uint256 _leverageMax = BPS;
-            uint256 _leverageMin = BPS;
-            {
-                uint256 _currentBorrowFactor = BPS;
-                uint256 _currentBorrowFactorMax = BPS;
-                uint256 _currentBorrowFactorMin = BPS;
-                uint256 _borrowCount = borrowCount;
-                for (uint256 i = 0; i < _borrowCount; i++) {
-                    _currentBorrowFactor = (_currentBorrowFactor * stETHBorrowFactor) / BPS;
-                    _leverage = _leverage + _currentBorrowFactor;
-                    _currentBorrowFactorMax =
-                        (_currentBorrowFactorMax * stETHBorrowFactorMax) /
-                        BPS;
-                    _leverageMax = _leverageMax + _currentBorrowFactorMax;
-                    _currentBorrowFactorMin =
-                        (_currentBorrowFactorMin * stETHBorrowFactorMin) /
-                        BPS;
-                    _leverageMin = _leverageMin + _currentBorrowFactorMin;
-                }
-            }
-
-            {
-                uint256 _tokenDecimal;
-                uint256 _aTokenAmount;
-                {
-                    address _aToken = aToken;
-                    _tokenDecimal = decimalUnitOfToken(_aToken);
-                    _aTokenAmount = balanceOfToken(_aToken);
-                }
-                uint256 _allowDebtAmountInETH = (_aTokenAmount * borrowFactor * _tokenPriceCopy) /
-                    (BPS * _tokenDecimal);
-                uint256 _allowDebtAmountMaxInETH = (_aTokenAmount *
-                    borrowFactorMax *
-                    _tokenPriceCopy) / (BPS * _tokenDecimal);
-                uint256 _allowDebtAmountMinInETH = (_aTokenAmount *
-                    borrowFactorMin *
-                    _tokenPriceCopy) / (BPS * _tokenDecimal);
-                _needAstETHAmount =
-                    ((((_wethDebtAmount - _allowDebtAmountInETH) * 1e18) / _stETHPriceCopy) *
-                        _leverage) /
-                    (_leverage - BPS);
-                _needAstETHAmountMin =
-                    ((((_wethDebtAmount - _allowDebtAmountMaxInETH) * 1e18) / _stETHPriceCopy) *
-                        _leverageMax) /
-                    (_leverageMax - BPS);
-                _needAstETHAmountMax =
-                    ((((_wethDebtAmount - _allowDebtAmountMinInETH) * 1e18) / _stETHPriceCopy) *
-                        _leverageMin) /
-                    (_leverageMin - BPS);
-                _wethDebtAmount = _wethDebtAmount - _allowDebtAmountInETH;
-            }
-        }
-        {
-            uint256 _astETHAmount = balanceOfToken(A_ST_ETH);
-            if (_needAstETHAmountMin > _astETHAmount) {
-                _overflowAmount =
-                    (_leverage *
-                        _wethDebtAmount *
-                        1e18 -
-                        _astETHAmount *
-                        (_leverage - BPS) *
-                        _stETHPriceCopy) /
-                    (_leverage *
-                        ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).get_dy(1, 0, 1e18) -
-                        (_leverage - BPS) *
-                        _stETHPriceCopy);
-            } else if (_needAstETHAmountMax < _astETHAmount) {
-                _remainingAmount = _astETHAmount - _needAstETHAmount;
-            }
-        }
-    }
-
-    /// @notice redeem aToken ,then exchange to debt Token ,and finally repay the debt
-    /// @param _astETHAmount The amount of aToken that will still be to redeem
-    /// @param _stETHPrice the price of stETH in ETH
-    /// @param _lendingPoolAddress The address of lendingPool
-    /// @return _increaseAstEthAmount The amount of increase aToken
-    function _borrowEthAndDepositStEth(
-        uint256 _astETHAmount,
-        uint256 _borrowFactor,
+    /// @dev _needCollateralAmount = (_debtAmount * _leverage) / (_leverage - BPS);
+    /// _debtAmount_now / _needCollateralAmount = （_leverage - 10000) / _leverage;
+    /// _leverage = (capitalAmount + _debtAmount_now) *10000 / capitalAmount;
+    /// _debtAmount_now = capitalAmount * (_leverage - 10000)
+    /// @return _remainingAmount The amount of debt token will still can to borrow
+    /// @return _overflowAmount The amount of aToken that exceeds the maximum allowable loan
+    function _borrowInfo(
         uint256 _stETHPrice,
-        address _lendingPoolAddress
-    ) private returns (uint256 _increaseAstEthAmount) {
-        ILendingPool _aaveLendingPool = ILendingPool(_lendingPoolAddress);
-        uint256 _astETHValueInEth = (_astETHAmount * _stETHPrice) / 1e18;
-        uint256 _borrowAmount = (_astETHValueInEth * _borrowFactor) / BPS;
+        uint256 _tokenPrice,
+        address _curvePoolAddress
+    ) private view returns (uint256 _remainingAmount, uint256 _overflowAmount) {
+        uint256 _bps = BPS;
+        uint256 _leverage = leverage;
+        uint256 _debtAmountMax;
+        uint256 _debtAmountMin;
+        uint256 _debtAmount = balanceOfToken(DEBT_W_ETH);
+        address _aToken = aToken;
+        uint256 _collateralAmountInETH = (balanceOfToken(A_ST_ETH) * _stETHPrice) /
+            1e18 +
+            (balanceOfToken(_aToken) * _tokenPrice) /
+            decimalUnitOfToken(_aToken);
+
         {
-            (, , uint256 _availableBorrowsETH, , , ) = _aaveLendingPool
-                .getUserAccountData(address(this));
-            if (_borrowAmount > _availableBorrowsETH) {
-                _borrowAmount = _availableBorrowsETH;
-            }
+            uint256 _leverageMax = leverageMax;
+            uint256 _leverageMin = leverageMin;
+            uint256 _capitalAmountInETH = (_collateralAmountInETH - _debtAmount);
+            _debtAmountMax = (_capitalAmountInETH * (_leverageMax - _bps)) / _bps;
+            _debtAmountMin = (_capitalAmountInETH * (_leverageMin - _bps)) / _bps;
         }
-        if (_borrowAmount > 0) {
-            _aaveLendingPool.borrow(
-                W_ETH,
-                _borrowAmount,
-                uint256(DataTypes.InterestRateMode.VARIABLE),
+
+        if (_debtAmount > _debtAmountMax) {
+            //(_debtAmount-x*_exchangeRate)/(_collateralAmountInETH- x * _stETHPrice) = (leverage-BPS)/leverage
+            // stETH to ETH
+            uint256 _exchangeRate = ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
+                1,
                 0,
-                address(this)
+                1e18
             );
-            IWeth(W_ETH).withdraw(balanceOfToken(W_ETH));
-            uint256 _ethAmount = address(this).balance;
-            ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _ethAmount}(
+            _overflowAmount =
+                (_debtAmount * _leverage - _collateralAmountInETH * (_leverage - _bps)) /
+                ((_leverage * _exchangeRate) / 1e18 - ((_leverage - _bps) * _stETHPrice) / 1e18);
+        } else if (_debtAmount < _debtAmountMin) {
+            //(_debtAmount+x)/(_collateralAmountInETH+_exchangeRate * x) = (leverage-BPS)/leverage
+            // ETH to stETH
+            uint256 _exchangeRate = ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
                 0,
                 1,
-                _ethAmount,
-                0
+                1e18
             );
-            uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
-
-            uint256 _beforeBalanceOfAStETH = balanceOfToken(A_ST_ETH);
-            _aaveLendingPool.deposit(ST_ETH, _receivedStETHAmount, address(this), 0);
-            _increaseAstEthAmount = balanceOfToken(A_ST_ETH) - _beforeBalanceOfAStETH;
+            _remainingAmount =
+                (_collateralAmountInETH * (_leverage - _bps) - _debtAmount * _leverage) /
+                (_leverage - ((_leverage - _bps) * _exchangeRate) / 1e18);
         }
+        console.log(
+            "contract _remainingAmount,_overflowAmount =",
+            _remainingAmount,
+            _overflowAmount
+        );
+        console.log("leverage,leverageMax,leverageMin =", leverage, leverageMax, leverageMin);
     }
 
-    /// @notice get allow withdraw amount
-    /// @param _aaveLendingPool The aave lending pool
-    /// @param _tokenPrice the price of token(DAI/USDC/stETH) in ETH
-    /// @param _configurationData the data of reserve configuration
-    /// @return _allowWithdrawAmount The amount of can withdraw
-    function _getAllowWithdrawAmount(
-        ILendingPool _aaveLendingPool,
-        uint256 _tokenPrice,
-        uint256 _configurationData
-    ) private view returns (uint256 _allowWithdrawAmount) {
-        uint256 _idleDebtETH;
-        {
-            (
-                uint256 _totalCollateralETH,
-                uint256 _totalDebtETH,
-                ,
-                uint256 _currentLiquidationThreshold,
-                ,
-
-            ) = _aaveLendingPool.getUserAccountData(address(this));
-
-            uint256 _tokenLiquidationThreshold = ReserveConfiguration.getLiquidationThreshold(
-                _configurationData
-            );
-
-            if (_totalDebtETH < 1) {
-                _idleDebtETH = _totalCollateralETH;
-            } else {
-                _idleDebtETH =
-                    (_totalCollateralETH *
-                        _currentLiquidationThreshold -
-                        (((1e18 * _totalDebtETH - _totalDebtETH / 2) / 1e18) * 1e4 - 1e4 / 2)) /
-                    (_tokenLiquidationThreshold + 50);
-            }
-            if (_idleDebtETH > 0) {
-                uint256 _tokenDecimal = ReserveConfiguration.getDecimals(_configurationData);
-                _allowWithdrawAmount = (_idleDebtETH * (10**_tokenDecimal)) / _tokenPrice;
-            }
-        }
-    }
-
-    /// @notice redeem aToken and astETH,then exchange to debt Token ,and finally repay the debt
-    /// @param _astETHAmount The amount of astETHToken that will still be to redeem
-    /// @param _aTokenAmount The amount of aToken(ausdc/adai) that will still be to redeem
-    /// @param _wethDebtAmount The amount of debt token that will still be to repay
-    /// @param _stETHPrice the price of stETH in ETH
-    /// @param _tokenPrice the price of token(usdc/dai) in ETH
-    /// @param _tokenAddress the address of token(usdc/dai)
-    function _repay(
-        uint256 _astETHAmount,
-        uint256 _aTokenAmount,
-        uint256 _wethDebtAmount,
+    /// @notice Returns the info of borrow with default borrowFactor
+    /// @return _remainingAmount The amount of debt token will still can to borrow
+    /// @return _overflowAmount The amount of aToken that exceeds the maximum allowable loan
+    function _borrowStandardInfo(
+        address _aStETH,
         uint256 _stETHPrice,
         uint256 _tokenPrice,
-        address _tokenAddress
-    ) private {
-        uint256 _wethDebtAmountCopy = _wethDebtAmount;
-        ICurveLiquidityFarmingPool _curvePool = ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS);
-        ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
-        uint256 _stETHConfigurationData = _aaveLendingPool
-            .getReserveData(ST_ETH)
-            .configuration
-            .data;
-        uint256 _tokenConfigurationData = _aaveLendingPool
-            .getReserveData(_tokenAddress)
-            .configuration
-            .data;
-        uint256 _repayCount = borrowCount * 2;
-        for (uint256 i = 0; i < _repayCount; i++) {
-            if (_astETHAmount > 1) {
-                uint256 _setupWithdraw;
-                {
-                    _setupWithdraw = _getAllowWithdrawAmount(
-                        _aaveLendingPool,
-                        _stETHPrice,
-                        _stETHConfigurationData
-                    );
-                    if (_setupWithdraw >= _astETHAmount) {
-                        _setupWithdraw = _astETHAmount;
-                    }
-                }
-                if (_setupWithdraw > 1) {
-                    if (_astETHAmount - _setupWithdraw < 1e10) {
-                        uint256 _userBalance = balanceOfToken(A_ST_ETH);
-                        if (_setupWithdraw > _userBalance) {
-                            _setupWithdraw = _userBalance;
-                        }
-                    }
-                    _astETHAmount = _astETHAmount - _setupWithdraw;
-                    if (_setupWithdraw > 1) {
-                        _aaveLendingPool.withdraw(ST_ETH, _setupWithdraw, address(this));
-                        uint256 _receivedStETHAmount = balanceOfToken(ST_ETH);
-                        _curvePool.exchange(1, 0, _receivedStETHAmount, 0);
-                    }
-                    if (_wethDebtAmountCopy > 0) {
-                        uint256 _setupRepay = _wethDebtAmountCopy;
-                        {
-                            uint256 _ethAmount = address(this).balance;
-                            if (_ethAmount < _setupRepay) {
-                                _setupRepay = _ethAmount;
-                            }
-                        }
-                        if (_setupRepay > 0) {
-                            IWeth(W_ETH).deposit{value: _setupRepay}();
-                            _aaveLendingPool.repay(
-                                W_ETH,
-                                _setupRepay,
-                                uint256(DataTypes.InterestRateMode.VARIABLE),
-                                address(this)
-                            );
-                            _wethDebtAmountCopy = _wethDebtAmountCopy - _setupRepay;
-                        }
-                    }
-                }
-            } else {
-                break;
-            }
-        }
-        for (uint256 i = 0; i < 2; i++) {
-            if (_aTokenAmount > 0) {
-                uint256 _setupWithdraw;
-                {
-                    _setupWithdraw = _getAllowWithdrawAmount(
-                        _aaveLendingPool,
-                        _tokenPrice,
-                        _tokenConfigurationData
-                    );
-                    if (_setupWithdraw > _aTokenAmount) {
-                        _setupWithdraw = _aTokenAmount;
-                    }
-                }
-                if (_setupWithdraw > 0) {
-                    if (_aTokenAmount - _setupWithdraw < 1e5) {
-                        uint256 _userBalance = balanceOfToken(aToken);
-                        if (_setupWithdraw > _userBalance) {
-                            _setupWithdraw = _userBalance;
-                        }
-                    }
-                    _aTokenAmount = _aTokenAmount - _setupWithdraw;
-                    if (_setupWithdraw > 1) {
-                        _aaveLendingPool.withdraw(_tokenAddress, _setupWithdraw, address(this));
-                        if (_wethDebtAmountCopy > 0) {
-                            {
-                                uint256 _receivedTokenAmount = balanceOfToken(_tokenAddress);
-                                uint256 _needAmountIn = IQuoter(QUOTER).quoteExactOutputSingle(
-                                    _tokenAddress,
-                                    W_ETH,
-                                    500,
-                                    _wethDebtAmountCopy,
-                                    0
-                                );
-                                if (_needAmountIn < _receivedTokenAmount) {
-                                    IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
-                                        IUniswapV3.ExactOutputSingleParams(
-                                            _tokenAddress,
-                                            W_ETH,
-                                            500,
-                                            address(this),
-                                            block.timestamp,
-                                            _wethDebtAmountCopy,
-                                            _receivedTokenAmount,
-                                            0
-                                        )
-                                    );
-                                } else {
-                                    IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
-                                        IUniswapV3.ExactInputSingleParams(
-                                            _tokenAddress,
-                                            W_ETH,
-                                            500,
-                                            address(this),
-                                            block.timestamp,
-                                            _receivedTokenAmount,
-                                            0,
-                                            0
-                                        )
-                                    );
-                                }
-                            }
+        address _curvePoolAddress
+    ) private view returns (uint256 _remainingAmount, uint256 _overflowAmount) {
+        uint256 _leverage = leverage;
+        uint256 _bps = BPS;
 
-                            uint256 _setupRepay = _wethDebtAmountCopy;
-                            {
-                                uint256 _wethAmount = balanceOfToken(W_ETH);
-                                if (_wethAmount < _setupRepay) {
-                                    _setupRepay = _wethAmount;
-                                }
-                            }
-                            if (_setupRepay > 0) {
-                                _aaveLendingPool.repay(
-                                    W_ETH,
-                                    _setupRepay,
-                                    uint256(DataTypes.InterestRateMode.VARIABLE),
-                                    address(this)
-                                );
-                                _wethDebtAmountCopy = _wethDebtAmountCopy - _setupRepay;
-                            }
-                        }
-                    }
-                }
-            } else {
-                break;
-            }
+        uint256 _newDebtAmount = balanceOfToken(DEBT_W_ETH) * _leverage;
+        uint256 _newCollateralAmount;
+        {
+            address _aToken = aToken;
+            _newCollateralAmount =
+                ((balanceOfToken(_aStETH) * _stETHPrice) /
+                    1e18 +
+                    (balanceOfToken(_aToken) * _tokenPrice) /
+                    decimalUnitOfToken(_aToken)) *
+                (_leverage - _bps);
         }
 
-        uint256 _ethAmount = address(this).balance;
-        if (_ethAmount > 0) {
-            IWeth(W_ETH).deposit{value: _ethAmount}();
-        }
-
-        uint256 _wethAmount = balanceOfToken(W_ETH);
-        if (_wethAmount > 0) {
-            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
-                IUniswapV3.ExactInputSingleParams(
-                    W_ETH,
-                    _tokenAddress,
-                    500,
-                    address(this),
-                    block.timestamp,
-                    _wethAmount,
-                    0,
-                    0
-                )
+        address _curvePoolAddress = CURVE_POOL_ADDRESS;
+        if (_newDebtAmount > _newCollateralAmount) {
+            //(_debtAmount-x*_exchangeRate)/(_collateralAmountInETH- x * _stETHPrice) = (leverage-BPS)/leverage
+            // stETH to ETH
+            uint256 _exchangeRate = ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
+                1,
+                0,
+                1e18
             );
+            _overflowAmount =
+                (_newDebtAmount - _newCollateralAmount) /
+                ((_leverage * _exchangeRate) / 1e18 - ((_leverage - _bps) * _stETHPrice) / 1e18);
+        } else if (_newDebtAmount < _newCollateralAmount) {
+            //(_debtAmount+x)/(_collateralAmountInETH+_exchangeRate * x) = (leverage-BPS)/leverage
+            // ETH to stETH
+            uint256 _exchangeRate = ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
+                0,
+                1,
+                1e18
+            );
+            _remainingAmount =
+                (_newCollateralAmount - _newDebtAmount) /
+                (_leverage - ((_leverage - _bps) * _exchangeRate) / 1e18);
         }
+    }
+
+    /// @notice Returns the new leverage with the fix borrowFactor
+    /// @return _borrowFactor The borrow factor
+    function _getNewLeverage(uint256 _borrowFactor, uint256 _stETHBorrowFactor)
+        internal
+        view
+        returns (uint256)
+    {
+        return _calLeverage(_borrowFactor, _stETHBorrowFactor, BPS, borrowCount);
+    }
+
+    /// @notice update all leverage (leverage leverageMax leverageMin)
+    function _updateAllLeverage(uint256 _borrowCount) internal {
+        uint256 _bps = BPS;
+        leverage = _calLeverage(borrowFactor, stETHBorrowFactor, _bps, _borrowCount);
+        leverageMax = _calLeverage(borrowFactorMax, stETHBorrowFactorMax, _bps, _borrowCount);
+        leverageMin = _calLeverage(borrowFactorMin, stETHBorrowFactorMin, _bps, _borrowCount);
+    }
+
+    /// @notice Returns the leverage  with by _borrowFactor _bps  _borrowCount
+    /// @return _borrowFactor The borrow factor
+    function _calLeverage(
+        uint256 _borrowFactor,
+        uint256 _stETHBorrowFactor,
+        uint256 _bps,
+        uint256 _borrowCount
+    ) private pure returns (uint256) {
+        // q = borrowFactor/bps
+        // n = borrowCount + 1;
+        // _leverage = (1-q^n)/(1-q),(n>=1, q=0.8)
+        uint256 _leverage = _bps + _borrowFactor;
+        if (_borrowCount >= 1) {
+            _leverage =
+                (_bps *
+                    _bps -
+                    (_stETHBorrowFactor**(_borrowCount + 1)) /
+                    (_bps**(_borrowCount - 1))) /
+                (_bps - _stETHBorrowFactor);
+            _leverage = _bps + (_borrowFactor * _leverage) / _bps;
+        }
+        return _leverage;
     }
 }

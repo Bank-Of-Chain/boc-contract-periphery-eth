@@ -10,12 +10,12 @@ const {aaveStrategies} = require('./strategy-config-eth-aave');
 const strategiesList = [
 //     ...auraStrategies,
 //     ...convexStrategies,
-    ...dForceStrategies,
-    // ...eulerStrategies,
+//     ...dForceStrategies,
+//     ...eulerStrategies,
 //     ...uniswapStrategies,
 //     ...stakewiseStrategies,
 //     ...yearnStrategies,
-//     ...aaveStrategies
+    ...aaveStrategies
 ]
 
 exports.strategiesList = strategiesList

@@ -75,7 +75,8 @@ describe('【AaveUSDCLendingStEthStrategy Strategy Checker】', function() {
 
         let borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("before rebalance1 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
-        await strategy.rebalance({from:keeper});
+        let rebalanceTx = await strategy.rebalance({from:keeper});
+        console.log("rebalance gasUsed",rebalanceTx.receipt.gasUsed.toString());
         borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("after rebalance1 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
         userAccountData = await lendingPool.getUserAccountData(strategyAddress);
@@ -96,7 +97,8 @@ describe('【AaveUSDCLendingStEthStrategy Strategy Checker】', function() {
             userAccountData.healthFactor.toString());
         borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("before rebalance2 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
-        await strategy.rebalance({from:keeper});
+        rebalanceTx = await strategy.rebalance({from:keeper});
+        console.log("rebalance gasUsed",rebalanceTx.receipt.gasUsed.toString());
         borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("after rebalance2 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
         userAccountData = await lendingPool.getUserAccountData(strategyAddress);
@@ -117,7 +119,8 @@ describe('【AaveUSDCLendingStEthStrategy Strategy Checker】', function() {
             userAccountData.healthFactor.toString());
         borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("before rebalance3 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
-        await strategy.rebalance({from:keeper});
+        rebalanceTx = await strategy.rebalance({from:keeper});
+        console.log("rebalance gasUsed",rebalanceTx.receipt.gasUsed.toString());
         borrowInfo = await strategy.borrowInfo({from:keeper});
         console.log("after rebalance3 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
         userAccountData = await lendingPool.getUserAccountData(strategyAddress);
