@@ -161,7 +161,7 @@ function findStrategyItem(strategyName) {
     return result;
 }
 
-async function check(strategyName, callback, afterCallback, uniswapV3RebalanceCallback, outputCode = 0) {
+async function check(strategyName, callback, afterCallback, uniswapV3RebalanceCallback, outputCode = 0, redeemAfterCallback = null) {
     before(async function () {
         BigNumber.set({ DECIMAL_PLACES: 6 });
         accounts = await ethers.getSigners();
@@ -408,6 +408,12 @@ async function check(strategyName, callback, afterCallback, uniswapV3RebalanceCa
         let strategyTotalWithdrawUsd = depositUSD.plus(rewardUsd);
         assert(strategyTotalWithdrawUsd.isGreaterThanOrEqualTo(depositUSD), 'the value of stablecoins user got do not increase');
     });
+
+    if (redeemAfterCallback) {
+        it('[redeem after call back]', async function () {
+            await redeemAfterCallback(strategy,[mockVault.address]);
+        });
+    }
 }
 
 module.exports = {

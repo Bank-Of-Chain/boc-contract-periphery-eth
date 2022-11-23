@@ -61,6 +61,22 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         address[] _wants,
         uint256[] _wantAmounts
     );
+    /// @param _strategy The strategy for reporting
+    /// @param _gain The gain in ETH units for this report
+    /// @param _loss The loss in ETH units for this report
+    /// @param _lastStrategyTotalDebt The total debt of `_strategy` for last report
+    /// @param _nowStrategyTotalDebt The total debt of `_strategy` for this report
+    /// @param _rewardTokens The reward token list
+    /// @param _claimAmounts The amount list of `_rewardTokens`
+    event StrategyClaimReported(
+        address indexed _strategy,
+        uint256 _gain,
+        uint256 _loss,
+        uint256 _lastStrategyTotalDebt,
+        uint256 _nowStrategyTotalDebt,
+        address[] _rewardTokens,
+        uint256[] _claimAmounts
+    );
 
     /// @notice Initialize this contract
     /// @param _vault The Vault contract
@@ -319,7 +335,65 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         uint256 _beforeBalance = IERC20Upgradeable(_token).balanceOf(_account);
         IEulDistributor(EUL_DISTRIBUTOR).claim(_account, _token, _claimable, _proof, _stake);
         _claimAmount = IERC20Upgradeable(_token).balanceOf(_account) - _beforeBalance;
+        if (_account == address(this)) {
+            sellRewardAndTransferToVault();
+        }
+
         return _claimAmount;
+    }
+
+    /// @notice sell claim reward to usdc and transfer to vault
+    function sellRewardAndTransferToVault() public {
+        (address[] memory _tokens, uint256[] memory _amounts, , ) = getPositionDetail();
+        uint256 _assetsInUSD = queryTokenValue(_tokens[0], _amounts[0]);
+        address _eulToken = EUL;
+        uint256 _balanceOfEUL = balanceOfToken(_eulToken);
+
+        if (_assetsInUSD < 1e14 && _balanceOfEUL > 0) {
+            // swap from EUL to USDC by uinswap v3 1% fee
+            address _usdcToken = USDC;
+            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
+                IUniswapV3.ExactInputSingleParams(
+                    _eulToken,
+                    _usdcToken,
+                    10000,
+                    address(this),
+                    block.timestamp,
+                    _balanceOfEUL,
+                    0,
+                    0
+                )
+            );
+
+            address[] memory _assets = new address[](1);
+            _assets[0] = _usdcToken;
+
+            uint256[] memory _amounts = new uint256[](1);
+            _amounts[0] = balanceOfToken(_assets[0]);
+            transferTokensToTarget(address(vault), _assets, _amounts);
+
+            address[] memory _rewardTokens = new address[](1);
+            _rewardTokens[0] = _eulToken;
+            uint256[] memory _claimAmounts = new uint256[](1);
+            _claimAmounts[0] = _balanceOfEUL;
+
+            emit SwapRewardsToWants(
+                address(this),
+                _rewardTokens,
+                _claimAmounts,
+                _assets,
+                _amounts
+            );
+            emit StrategyClaimReported(
+                address(this),
+                uint256(0),
+                uint256(0),
+                _assetsInUSD,
+                _assetsInUSD,
+                _rewardTokens,
+                _claimAmounts
+            );
+        }
     }
 
     /// @notice Collect the rewards from third party protocol,then swap from the reward tokens to wanted tokens and reInvest

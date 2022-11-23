@@ -135,7 +135,7 @@ function findStrategyItem(strategyName) {
     return result;
 }
 
-async function check(strategyName, beforeCallback, afterCallback, uniswapV3RebalanceCallback,outputCode = 0) {
+async function check(strategyName, beforeCallback, afterCallback, uniswapV3RebalanceCallback,outputCode = 0, redeemAfterCallback = null) {
     before(async function () {
         BigNumber.set({ DECIMAL_PLACES: 6 });
         accounts = await ethers.getSigners();
@@ -394,6 +394,12 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         console.log('depositETH:%s, withdrawETH:%s', depositETH.toFixed(), withdrawETH.toFixed());
         assert(withdrawETH.isGreaterThan(depositETH), 'the value of wants user got do not increase');
     });
+
+    if (redeemAfterCallback) {
+        it('[redeem after call back]', async function () {
+            await redeemAfterCallback(strategy,[mockVault.address]);
+        });
+    }
 }
 
 module.exports = {

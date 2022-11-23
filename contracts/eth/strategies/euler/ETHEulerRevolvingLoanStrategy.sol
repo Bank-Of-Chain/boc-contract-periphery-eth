@@ -51,6 +51,22 @@ contract ETHEulerRevolvingLoanStrategy is ETHBaseStrategy {
     /// @param _remainingAmount The amount of aToken will still be used as collateral to borrow eth
     /// @param _overflowAmount The amount of debt token that exceeds the maximum allowable loan
     event Rebalance(uint256 _remainingAmount, uint256 _overflowAmount);
+    /// @param _strategy The strategy for reporting
+    /// @param _gain The gain in ETH units for this report
+    /// @param _loss The loss in ETH units for this report
+    /// @param _lastStrategyTotalDebt The total debt of `_strategy` for last report
+    /// @param _nowStrategyTotalDebt The total debt of `_strategy` for this report
+    /// @param _rewardTokens The reward token list
+    /// @param _claimAmounts The amount list of `_rewardTokens`
+    event StrategyClaimReported(
+        address indexed _strategy,
+        uint256 _gain,
+        uint256 _loss,
+        uint256 _lastStrategyTotalDebt,
+        uint256 _nowStrategyTotalDebt,
+        address[] _rewardTokens,
+        uint256[] _claimAmounts
+    );
 
     /// @notice Initialize this contract
     /// @param _vault The Vault contract
@@ -294,7 +310,61 @@ contract ETHEulerRevolvingLoanStrategy is ETHBaseStrategy {
         uint256 _beforeBalance = IERC20Upgradeable(_token).balanceOf(_account);
         IEulDistributor(EUL_DISTRIBUTOR).claim(_account, _token, _claimable, _proof, _stake);
         _claimAmount = IERC20Upgradeable(_token).balanceOf(_account) - _beforeBalance;
+        if (_account == address(this)) {
+            sellRewardAndTransferToVault();
+        }
         return _claimAmount;
+    }
+
+    /// @notice sell claim reward to usdc and transfer to vault
+    function sellRewardAndTransferToVault() public {
+        //set up sell reward path
+        address[] memory _dfSellPath = new address[](2);
+        _dfSellPath[0] = EUL;
+        _dfSellPath[1] = W_ETH;
+
+        uint256 _balanceOfEUL = balanceOfToken(_dfSellPath[0]);
+        (address[] memory _tokens, uint256[] memory _amounts, , ) = getPositionDetail();
+        uint256 _assetsInETH = queryTokenValueInETH(_tokens[0], _amounts[0]);
+        if (_assetsInETH < 1e10 && _balanceOfEUL > 0) {
+            // swap from EUL to W_ETH by uinswap v2
+            UNIROUTER2.swapExactTokensForTokens(
+                _balanceOfEUL,
+                0,
+                _dfSellPath,
+                address(this),
+                block.timestamp
+            );
+
+            address[] memory _assets = new address[](1);
+            _assets[0] = _dfSellPath[1];
+
+            uint256[] memory _amounts = new uint256[](1);
+            _amounts[0] = balanceOfToken(_assets[0]);
+            transferTokensToTarget(address(vault), _assets, _amounts);
+
+            address[] memory _rewardTokens = new address[](1);
+            _rewardTokens[0] = _dfSellPath[0];
+            uint256[] memory _claimAmounts = new uint256[](1);
+            _claimAmounts[0] = _balanceOfEUL;
+
+            emit SwapRewardsToWants(
+                address(this),
+                _rewardTokens,
+                _claimAmounts,
+                _assets,
+                _amounts
+            );
+            emit StrategyClaimReported(
+                address(this),
+                uint256(0),
+                uint256(0),
+                _assetsInETH,
+                _assetsInETH,
+                _rewardTokens,
+                _claimAmounts
+            );
+        }
     }
 
     /// @notice Collect the rewards from third party protocol,then swap from the reward tokens to wanted tokens and reInvest

@@ -8,6 +8,7 @@ const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.s
 const merkleTree = require('../../../utils/merkle-tree');
 const eulerUtils = require('../../../utils/euler-utils');
 const {balance, send} = require("@openzeppelin/test-helpers");
+const {assert} = require("chai");
 
 describe('【EulerRevolvingLoanUsdcStrategy Strategy Checker】', function () {
   checker.check('EulerRevolvingLoanUsdcStrategy',async function (strategyAddress) {},async function (strategy) {
@@ -66,5 +67,30 @@ describe('【EulerRevolvingLoanUsdcStrategy Strategy Checker】', function () {
     borrowInfo = await strategy.borrowInfo({from:keeper});
     console.log("after rebalance2 borrowInfo(remainingAmount,overflowAmount)=",borrowInfo._remainingAmount.toString(),borrowInfo._overflowAmount.toString());
 
+  },0,async function (strategy,customAddressArray) {
+
+    const accounts = await ethers.getSigners();
+    const eulHolder = '0xe837c2203883132b11ecb6ed8c246fd98c87fbd3';
+    // mock eulHolder
+    await ethers.getImpersonatedSigner(eulHolder);
+    await send.ether(accounts[0].address, eulHolder, 10 * 10 ** 18);
+
+    const eulContract = await ERC20.at('0xd9fcd98c322942075a5c3860693e9f4f03aae07b');
+    const transferAmount =  new BigNumber(100 * 10 ** 18);
+    console.log("before transfer",(await eulContract.balanceOf(eulHolder)).toString());
+
+    await eulContract.transfer(strategy.address, transferAmount.toString(), {
+      from: eulHolder,
+    });
+    console.log("after transfer",(await eulContract.balanceOf(eulHolder)).toString());
+
+    const mockVaultAddress = customAddressArray[0];
+    const usdcTokenContract = await ERC20.at(MFC.USDC_ADDRESS);
+    const beforeBalanceOfUsdc = new BigNumber(await usdcTokenContract.balanceOf(mockVaultAddress));
+
+    await strategy.sellRewardAndTransferToVault();
+    const afterBalanceOfUsdc = new BigNumber(await usdcTokenContract.balanceOf(mockVaultAddress));
+    console.log("beforeBalanceOfUsdc,afterBalanceOfUsdc=",beforeBalanceOfUsdc.toString(),afterBalanceOfUsdc.toString());
+    assert(afterBalanceOfUsdc.isGreaterThan(beforeBalanceOfUsdc), 'there is no reward to sell');
   });
 });
