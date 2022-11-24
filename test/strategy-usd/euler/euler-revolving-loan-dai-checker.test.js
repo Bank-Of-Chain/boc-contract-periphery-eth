@@ -78,17 +78,36 @@ describe('【EulerRevolvingLoanDaiStrategy Strategy Checker】', function () {
     const eulContract = await ERC20.at('0xd9fcd98c322942075a5c3860693e9f4f03aae07b');
     const transferAmount =  new BigNumber(100 * 10 ** 18);
     console.log("before transfer",(await eulContract.balanceOf(eulHolder)).toString());
+    console.log("before transfer strategy",(await eulContract.balanceOf(strategy.address)).toString());
 
     await eulContract.transfer(strategy.address, transferAmount.toString(), {
       from: eulHolder,
     });
     console.log("after transfer",(await eulContract.balanceOf(eulHolder)).toString());
+    console.log("after transfer strategy",(await eulContract.balanceOf(strategy.address)).toString());
 
     const mockVaultAddress = customAddressArray[0];
     const wantTokenContract = await ERC20.at((await strategy.getWants())[0]);
     const beforeBalanceOfWantToken = new BigNumber(await wantTokenContract.balanceOf(mockVaultAddress));
 
-    await strategy.sellRewardAndTransferToVault();
+    const eulClaimAccount = '0x8c97Da9740d23F9b126620c5EAd7F1c7E16340Ab';
+    console.log("before claim",(await eulContract.balanceOf(eulClaimAccount)).toString());
+
+    const distFile = './test/merkle-dist.json.gz';
+    let distribution = eulerUtils.loadMerkleDistFile(distFile);
+
+    let items = distribution.values.map(v => { return {
+      account: v[0],
+      token: v[1],
+      claimable: ethers.BigNumber.from(v[2]),
+    }});
+
+    let proof = merkleTree.proof(items, eulClaimAccount, eulerUtils.EulTokenAddr);
+
+    await strategy.claim(eulClaimAccount,eulerUtils.EulTokenAddr,proof.item.claimable.toString(),proof.witnesses,'0x0000000000000000000000000000000000000000');
+
+    console.log("after claim",(await eulContract.balanceOf(eulClaimAccount)).toString());
+
     const afterBalanceOfWantToken = new BigNumber(await wantTokenContract.balanceOf(mockVaultAddress));
     console.log("beforeBalanceOfWantToken,afterBalanceOfWantToken=",beforeBalanceOfWantToken.toString(),afterBalanceOfWantToken.toString());
     assert(afterBalanceOfWantToken.isGreaterThan(beforeBalanceOfWantToken), 'there is no reward to sell');

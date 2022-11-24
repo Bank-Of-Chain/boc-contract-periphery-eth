@@ -381,40 +381,46 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         IEulDistributor(EUL_DISTRIBUTOR).claim(_account, _token, _claimable, _proof, _stake);
         uint256 _balanceOfEUL = IERC20Upgradeable(_token).balanceOf(_account);
         _claimAmount = _balanceOfEUL - _beforeBalance;
-        if (_account == address(this) && _balanceOfEUL > 0 && _token == EUL) {
-            sellRewardAndTransferToVault();
+        if (_token == EUL) {
+            if (_account != address(this)) {
+                _balanceOfEUL = balanceOfToken(_token);
+            }
+            if (_balanceOfEUL > 0) {
+                (address[] memory _tokens, uint256[] memory _amounts, , ) = getPositionDetail();
+                uint256 _assetsInUSD = queryTokenValue(_tokens[0], _amounts[0]);
+                if (_assetsInUSD < 1e14) {
+                    sellRewardAndTransferToVault(_token, _balanceOfEUL, _assetsInUSD);
+                }
+            }
         }
-
         return _claimAmount;
     }
 
     /// @notice sell claim reward to usdc and transfer to vault
-    function sellRewardAndTransferToVault() public {
-        address _eulToken = EUL;
-        uint256 _balanceOfEUL = balanceOfToken(_eulToken);
-        (address[] memory _tokens, uint256[] memory _amounts, , ) = getPositionDetail();
-        uint256 _assetsInUSD = queryTokenValue(_tokens[0], _amounts[0]);
-        if (_assetsInUSD < 1e14 && _balanceOfEUL > 0) {
-            address[] memory _rewardTokens = new address[](1);
-            _rewardTokens[0] = _eulToken;
-            uint256[] memory _claimAmounts = new uint256[](1);
-            _claimAmounts[0] = _balanceOfEUL;
-            address[] memory _wantTokens = wants;
-            uint256[] memory _wantAmounts = new uint256[](1);
-            _wantAmounts[0] = swapRewardsToWants(_balanceOfEUL, _rewardTokens[0], _wantTokens[0]);
+    function sellRewardAndTransferToVault(
+        address _eulToken,
+        uint256 _balanceOfEUL,
+        uint256 _assetsInUSD
+    ) private {
+        address[] memory _rewardTokens = new address[](1);
+        _rewardTokens[0] = _eulToken;
+        uint256[] memory _claimAmounts = new uint256[](1);
+        _claimAmounts[0] = _balanceOfEUL;
+        address[] memory _wantTokens = wants;
+        uint256[] memory _wantAmounts = new uint256[](1);
+        _wantAmounts[0] = swapRewardsToWants(_balanceOfEUL, _rewardTokens[0], _wantTokens[0]);
 
-            transferTokensToTarget(address(vault), _wantTokens, _wantAmounts);
+        transferTokensToTarget(address(vault), _wantTokens, _wantAmounts);
 
-            emit StrategyClaimReported(
-                address(this),
-                uint256(0),
-                uint256(0),
-                _assetsInUSD,
-                _assetsInUSD,
-                _rewardTokens,
-                _claimAmounts
-            );
-        }
+        emit StrategyClaimReported(
+            address(this),
+            uint256(0),
+            uint256(0),
+            _assetsInUSD,
+            _assetsInUSD,
+            _rewardTokens,
+            _claimAmounts
+        );
     }
 
     /// @notice sell claim reward to want token
