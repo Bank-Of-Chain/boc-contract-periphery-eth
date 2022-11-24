@@ -41,9 +41,9 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
     /// @param _twapDuration The new max TWAP duration
     event UniV3SetTwapDuration(uint32 _twapDuration);
 
-    /// @param _rewardsTokens The address list of reward token
+    /// @param _rewardTokens The address list of reward token
     /// @param _claimAmounts The amount list of reward token
-    event UniV3Claim(address[] _rewardsTokens, uint256[] _claimAmounts);
+    event UniV3Claim(address[] _rewardTokens, uint256[] _claimAmounts);
 
     int24 internal baseThreshold;
     int24 internal limitThreshold;
@@ -268,40 +268,40 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
 
     /// @notice Harvests by the Strategy, 
     ///     recognizing any profits or losses and adjusting the Strategy's position.
-    /// @return _rewardsTokens The list of the reward token
+    /// @return _rewardTokens The list of the reward token
     /// @return _claimAmounts The list of the reward amount claimed
     function harvest()
         public
         override
-        returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
+        returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
     {
-        (_rewardsTokens, _claimAmounts) = collect();
-        console.log('UniswapV3Strategy claim _rewardsTokens0: %s, _rewardsTokens1: %s', _rewardsTokens[0], _rewardsTokens[1]);
+        (_rewardTokens, _claimAmounts) = collect();
+        console.log('UniswapV3Strategy claim _rewardTokens0: %s, _rewardTokens1: %s', _rewardTokens[0], _rewardTokens[1]);
         console.log('UniswapV3Strategy claim _claimAmounts0: %d, _claimAmounts1: %d', _claimAmounts[0], _claimAmounts[1]);
-        vault.report(_rewardsTokens, _claimAmounts);
+        vault.report(_rewardTokens, _claimAmounts);
     }
 
     /// @notice Claim by the Strategy
-    /// @return _rewardsTokens The list of the reward token
+    /// @return _rewardTokens The list of the reward token
     /// @return _claimAmounts The list of the reward amount claimed
     function claim()
         internal
-        returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
+        returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
     {
-        (_rewardsTokens, _claimAmounts) = collect();
-        console.log('UniswapV3Strategy claim _rewardsTokens0: %s, _rewardsTokens1: %s', _rewardsTokens[0], _rewardsTokens[1]);
+        (_rewardTokens, _claimAmounts) = collect();
+        console.log('UniswapV3Strategy claim _rewardTokens0: %s, _rewardTokens1: %s', _rewardTokens[0], _rewardTokens[1]);
         console.log('UniswapV3Strategy claim _claimAmounts0: %d, _claimAmounts1: %d', _claimAmounts[0], _claimAmounts[1]);
-        emit UniV3Claim(_rewardsTokens, _claimAmounts);
+        emit UniV3Claim(_rewardTokens, _claimAmounts);
     }
 
     /// @notice Collect by the Strategy
-    /// @return _rewardsTokens The list of the reward token
+    /// @return _rewardTokens The list of the reward token
     /// @return _claimAmounts The list of the reward amount claimed
     function collect()
         internal
-        returns (address[] memory _rewardsTokens, uint256[] memory _claimAmounts)
+        returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
     {
-        _rewardsTokens = wants;
+        _rewardTokens = wants;
         _claimAmounts = new uint256[](2);
         if (baseMintInfo.tokenId > 0) {
             (uint256 _amount0, uint256 _amount1) = __collectAll(baseMintInfo.tokenId);
