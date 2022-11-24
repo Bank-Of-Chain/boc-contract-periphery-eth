@@ -139,7 +139,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
 
     /// @inheritdoc ETHBaseStrategy
     function getVersion() external pure virtual override returns (string memory) {
-        return "1.0.0";
+        return "1.0.1";
     }
 
     /// @inheritdoc ETHBaseStrategy
@@ -209,15 +209,15 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         address _stETH = ST_ETH;
         uint256 _receivedStETHAmount = balanceOfToken(_stETH);
         if (_receivedStETHAmount > 0) {
-            address _lendingPoolAddress = aaveProvider.getLendingPool();
-            ILendingPool(_lendingPoolAddress).deposit(
+            ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
+            _aaveLendingPool.deposit(
                 _stETH,
                 _receivedStETHAmount,
                 address(this),
                 0
             );
             {
-                uint256 _userConfigurationData = ILendingPool(_lendingPoolAddress)
+                uint256 _userConfigurationData = _aaveLendingPool
                     .getUserConfiguration(address(this))
                     .data;
                 if (
@@ -226,12 +226,11 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                         RESERVE_ID_OF_ST_ETH
                     )
                 ) {
-                    ILendingPool(_lendingPoolAddress).setUserUseReserveAsCollateral(_stETH, true);
+                    _aaveLendingPool.setUserUseReserveAsCollateral(_stETH, true);
                 }
             }
 
-            IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
-            uint256 _stETHPrice = _aaveOracle.getAssetPrice(_stETH);
+            uint256 _stETHPrice = IPriceOracleGetter(aaveProvider.getPriceOracle()).getAssetPrice(_stETH);
 
             (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowStandardInfo(
                 A_ST_ETH,
@@ -249,16 +248,13 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-        IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
-        uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
 
-        address _aToken = A_ST_ETH;
-        uint256 _collateralITokenAmount = balanceOfToken(_aToken);
+        uint256 _collateralITokenAmount = balanceOfToken(A_ST_ETH);
         uint256 _redeemAmount = (_collateralITokenAmount * _withdrawShares) / _totalShares;
-        address _dToken = DEBT_W_ETH;
-        uint256 _debtAmount = balanceOfToken(_dToken);
+        uint256 _debtAmount = balanceOfToken(DEBT_W_ETH);
         uint256 _repayBorrowAmount = (_debtAmount * _withdrawShares) / _totalShares;
         if (_redeemAmount > 0) {
+            uint256 _stETHPrice = IPriceOracleGetter(aaveProvider.getPriceOracle()).getAssetPrice(ST_ETH);
             uint256 _leverage = leverage;
             uint256 _bps = BPS;
             uint256 _newDebtAmount = (_debtAmount - _repayBorrowAmount) * _leverage;

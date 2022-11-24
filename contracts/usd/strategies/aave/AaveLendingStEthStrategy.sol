@@ -211,7 +211,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
 
     /// @inheritdoc BaseStrategy
     function getVersion() external pure virtual override returns (string memory) {
-        return "1.0.0";
+        return "1.0.1";
     }
 
     /// @inheritdoc BaseStrategy
