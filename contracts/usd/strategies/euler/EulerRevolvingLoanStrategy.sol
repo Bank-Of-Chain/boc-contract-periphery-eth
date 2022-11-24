@@ -18,12 +18,22 @@ import "../../../external/uniswap/IUniswapV3.sol";
 /// @author Bank of Chain Protocol Inc
 contract EulerRevolvingLoanStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    /// @param tokenIn The token address of in
+    /// @param tokenOut The token address of out
+    /// @param fee The fee of exchange
+    struct UniswapV3Params {
+        address tokenIn;
+        address tokenOut;
+        uint24 fee;
+    }
+
     address internal constant EULER_ADDRESS = 0x27182842E098f60e3D576794A5bFFb0777E025d3;
     address internal constant EULER_MARKETS = 0x3520d5a913427E6F0D6A83E07ccD4A4da316e4d3;
     address internal constant EUL = 0xd9Fcd98c322942075A5C3860693e9f4f03AAE07b;
     address internal constant EUL_DISTRIBUTOR = 0xd524E29E3BAF5BB085403Ca5665301E94387A7e2;
     address internal constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant W_ETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     uint256 public constant BPS = 10000;
 
     address public eToken;
@@ -36,6 +46,8 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
     uint256 public leverage;
     uint256 public leverageMax;
     uint256 public leverageMin;
+
+    mapping(address => UniswapV3Params) public swapRewardRoutes;
 
     /// @param _borrowFactor The new borrow factor
     event UpdateBorrowFactor(uint256 _borrowFactor);
@@ -110,12 +122,45 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         address _dToken = eIEulerMarkets.underlyingToDToken(_underlyingToken);
         dToken = _dToken;
 
+        //set up sell reward path
+        address _eul = EUL;
+        address _weth = W_ETH;
+        swapRewardRoutes[_eul] = UniswapV3Params({
+            tokenIn: _eul,
+            tokenOut: _weth,
+            fee: uint24(10000)
+        });
+        swapRewardRoutes[_wants[0]] = UniswapV3Params({
+            tokenIn: _weth,
+            tokenOut: _wants[0],
+            fee: uint24(500)
+        });
+
         super._initialize(_vault, _harvester, _name, uint16(ProtocolEnum.Euler), _wants);
         IERC20Upgradeable(_underlyingToken).safeApprove(EULER_ADDRESS, type(uint256).max);
         IERC20Upgradeable(EUL).safeApprove(UNISWAP_V3_ROUTER, type(uint256).max);
-        if (_underlyingToken != USDC) {
-            IERC20Upgradeable(USDC).safeApprove(UNISWAP_V3_ROUTER, type(uint256).max);
-        }
+        IERC20Upgradeable(W_ETH).safeApprove(UNISWAP_V3_ROUTER, type(uint256).max);
+    }
+
+    /// @notice Sets the path of swap from reward token
+    /// @param _token The reward token or  want token
+    /// @param _tokenIn The token address of in
+    /// @param _tokenOut The token address of out
+    /// @param _fee The fee of exchange
+    /// Requirements: only vault manager can call
+    function setRewardSwapPath(
+        address _token,
+        address _tokenIn,
+        address _tokenOut,
+        uint24 _fee
+    ) external isVaultManager {
+        swapRewardRoutes[_token] = UniswapV3Params({
+            tokenIn: _tokenIn,
+            tokenOut: _tokenOut,
+            fee: _fee
+        });
+        IERC20Upgradeable(_tokenIn).safeApprove(UNISWAP_V3_ROUTER, 0);
+        IERC20Upgradeable(_tokenIn).safeApprove(UNISWAP_V3_ROUTER, type(uint256).max);
     }
 
     /// @notice Sets `_borrowFactor` to `borrowFactor`
@@ -334,8 +379,9 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
     ) external returns (uint256 _claimAmount) {
         uint256 _beforeBalance = IERC20Upgradeable(_token).balanceOf(_account);
         IEulDistributor(EUL_DISTRIBUTOR).claim(_account, _token, _claimable, _proof, _stake);
-        _claimAmount = IERC20Upgradeable(_token).balanceOf(_account) - _beforeBalance;
-        if (_account == address(this)) {
+        uint256 _balanceOfEUL = IERC20Upgradeable(_token).balanceOf(_account);
+        _claimAmount = _balanceOfEUL - _beforeBalance;
+        if (_account == address(this) && _balanceOfEUL > 0 && _token == EUL) {
             sellRewardAndTransferToVault();
         }
 
@@ -344,46 +390,21 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
 
     /// @notice sell claim reward to usdc and transfer to vault
     function sellRewardAndTransferToVault() public {
-        (address[] memory _tokens, uint256[] memory _amounts, , ) = getPositionDetail();
-        uint256 _assetsInUSD = queryTokenValue(_tokens[0], _amounts[0]);
         address _eulToken = EUL;
         uint256 _balanceOfEUL = balanceOfToken(_eulToken);
-
+        (address[] memory _tokens, uint256[] memory _amounts, , ) = getPositionDetail();
+        uint256 _assetsInUSD = queryTokenValue(_tokens[0], _amounts[0]);
         if (_assetsInUSD < 1e14 && _balanceOfEUL > 0) {
-            // swap from EUL to USDC by uinswap v3 1% fee
-            address _usdcToken = USDC;
-            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
-                IUniswapV3.ExactInputSingleParams(
-                    _eulToken,
-                    _usdcToken,
-                    10000,
-                    address(this),
-                    block.timestamp,
-                    _balanceOfEUL,
-                    0,
-                    0
-                )
-            );
-
-            address[] memory _assets = new address[](1);
-            _assets[0] = _usdcToken;
-
-            uint256[] memory _amounts = new uint256[](1);
-            _amounts[0] = balanceOfToken(_assets[0]);
-            transferTokensToTarget(address(vault), _assets, _amounts);
-
             address[] memory _rewardTokens = new address[](1);
             _rewardTokens[0] = _eulToken;
             uint256[] memory _claimAmounts = new uint256[](1);
             _claimAmounts[0] = _balanceOfEUL;
+            address[] memory _wantTokens = wants;
+            uint256[] memory _wantAmounts = new uint256[](1);
+            _wantAmounts[0] = swapRewardsToWants(_balanceOfEUL, _rewardTokens[0], _wantTokens[0]);
 
-            emit SwapRewardsToWants(
-                address(this),
-                _rewardTokens,
-                _claimAmounts,
-                _assets,
-                _amounts
-            );
+            transferTokensToTarget(address(vault), _wantTokens, _wantAmounts);
+
             emit StrategyClaimReported(
                 address(this),
                 uint256(0),
@@ -394,6 +415,61 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
                 _claimAmounts
             );
         }
+    }
+
+    /// @notice sell claim reward to want token
+    function swapRewardsToWants(
+        uint256 _balanceOfEUL,
+        address _rewardToken,
+        address _wantToken
+    ) internal returns (uint256) {
+        address[] memory _rewardTokens = new address[](1);
+        _rewardTokens[0] = _rewardToken;
+        uint256[] memory _claimAmounts = new uint256[](1);
+        _claimAmounts[0] = _balanceOfEUL;
+        address[] memory _wantTokens = new address[](1);
+        _wantTokens[0] = _wantToken;
+        uint256[] memory _wantAmounts = new uint256[](1);
+        UniswapV3Params memory _eulUniswapV3Params = swapRewardRoutes[_rewardTokens[0]];
+        IUniswapV3 _uniswapv3Pool = IUniswapV3(UNISWAP_V3_ROUTER);
+        // swap from EUL to W_ETH by uinswap v3 1% fee
+        _uniswapv3Pool.exactInputSingle(
+            IUniswapV3.ExactInputSingleParams(
+                _eulUniswapV3Params.tokenIn,
+                _eulUniswapV3Params.tokenOut,
+                _eulUniswapV3Params.fee,
+                address(this),
+                block.timestamp,
+                _balanceOfEUL,
+                0,
+                0
+            )
+        );
+        if (_wantTokens[0] != _eulUniswapV3Params.tokenOut) {
+            UniswapV3Params memory _wantUniswapV3Params = swapRewardRoutes[_wantTokens[0]];
+            _uniswapv3Pool.exactInputSingle(
+                IUniswapV3.ExactInputSingleParams(
+                    _wantUniswapV3Params.tokenIn,
+                    _wantUniswapV3Params.tokenOut,
+                    _wantUniswapV3Params.fee,
+                    address(this),
+                    block.timestamp,
+                    balanceOfToken(_eulUniswapV3Params.tokenOut),
+                    0,
+                    0
+                )
+            );
+        }
+
+        _wantAmounts[0] = balanceOfToken(_wantTokens[0]);
+        emit SwapRewardsToWants(
+            address(this),
+            _rewardTokens,
+            _claimAmounts,
+            _wantTokens,
+            _wantAmounts
+        );
+        return _wantAmounts[0];
     }
 
     /// @notice Collect the rewards from third party protocol,then swap from the reward tokens to wanted tokens and reInvest
@@ -408,50 +484,11 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         _claimAmounts = new uint256[](1);
         uint256 _balanceOfEUL = balanceOfToken(_rewardTokens[0]);
         _claimAmounts[0] = _balanceOfEUL;
-        address[] memory _wantTokens = wants;
-        uint256[] memory _wantAmounts = new uint256[](1);
         if (_balanceOfEUL > 0) {
-            // swap from EUL to USDC by uinswap v3 1% fee
-            IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
-                IUniswapV3.ExactInputSingleParams(
-                    EUL,
-                    USDC,
-                    10000,
-                    address(this),
-                    block.timestamp,
-                    _balanceOfEUL,
-                    0,
-                    0
-                )
-            );
-
-            // swap from USDC to wants[0] by uinswap v3 0.01% fee
-            uint256 _balanceOfUSDC = balanceOfToken(USDC);
-            if (_wantTokens[0] != USDC) {
-                IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
-                    IUniswapV3.ExactInputSingleParams(
-                        USDC,
-                        _wantTokens[0],
-                        100,
-                        address(this),
-                        block.timestamp,
-                        _balanceOfUSDC,
-                        0,
-                        0
-                    )
-                );
+            uint256 _wantAmount = swapRewardsToWants(_balanceOfEUL, _rewardTokens[0], wants[0]);
+            if (_wantAmount > 0) {
+                IEulerEToken(eToken).deposit(0, _wantAmount);
             }
-            _wantAmounts[0] = balanceOfToken(_wantTokens[0]);
-            if (_wantAmounts[0] > 0) {
-                IEulerEToken(eToken).deposit(0, _wantAmounts[0]);
-            }
-            emit SwapRewardsToWants(
-                address(this),
-                _rewardTokens,
-                _claimAmounts,
-                _wantTokens,
-                _wantAmounts
-            );
         }
     }
 

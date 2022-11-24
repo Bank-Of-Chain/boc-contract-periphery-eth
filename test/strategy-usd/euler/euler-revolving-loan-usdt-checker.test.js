@@ -85,12 +85,12 @@ describe('【EulerRevolvingLoanUsdtStrategy Strategy Checker】', function () {
     console.log("after transfer",(await eulContract.balanceOf(eulHolder)).toString());
 
     const mockVaultAddress = customAddressArray[0];
-    const usdcTokenContract = await ERC20.at(MFC.USDC_ADDRESS);
-    const beforeBalanceOfUsdc = new BigNumber(await usdcTokenContract.balanceOf(mockVaultAddress));
+    const wantTokenContract = await ERC20.at((await strategy.getWants())[0]);
+    const beforeBalanceOfWantToken = new BigNumber(await wantTokenContract.balanceOf(mockVaultAddress));
 
     await strategy.sellRewardAndTransferToVault();
-    const afterBalanceOfUsdc = new BigNumber(await usdcTokenContract.balanceOf(mockVaultAddress));
-    console.log("beforeBalanceOfUsdc,afterBalanceOfUsdc=",beforeBalanceOfUsdc.toString(),afterBalanceOfUsdc.toString());
-    assert(afterBalanceOfUsdc.isGreaterThan(beforeBalanceOfUsdc), 'there is no reward to sell');
+    const afterBalanceOfWantToken = new BigNumber(await wantTokenContract.balanceOf(mockVaultAddress));
+    console.log("beforeBalanceOfWantToken,afterBalanceOfWantToken=",beforeBalanceOfWantToken.toString(),afterBalanceOfWantToken.toString());
+    assert(afterBalanceOfWantToken.isGreaterThan(beforeBalanceOfWantToken), 'there is no reward to sell');
   });
 });
