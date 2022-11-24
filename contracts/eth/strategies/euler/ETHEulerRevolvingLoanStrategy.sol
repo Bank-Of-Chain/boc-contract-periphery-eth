@@ -376,10 +376,9 @@ contract ETHEulerRevolvingLoanStrategy is ETHBaseStrategy {
             _claimAmounts[0] = _balanceOfEUL;
             address[] memory _wantTokens = new address[](1);
             UniswapV3Params memory _eulUniswapV3Params = swapRewardRoutes[_rewardTokens[0]];
-            address _wantToken = _eulUniswapV3Params.tokenOut;
-            _wantTokens[0] = _wantToken;
+            _wantTokens[0] = eulUniswapV3Params.tokenOut;
             uint256[] memory _wantAmounts = new uint256[](1);
-            _wantAmounts[0] = swapRewardsToWants(_balanceOfEUL, _rewardTokens[0], _wantToken);
+            _wantAmounts[0] = swapRewardsToWants(_balanceOfEUL, _rewardTokens[0], _wantTokens[0]);
 
             transferTokensToTarget(address(vault), _wantTokens, _wantAmounts);
 
