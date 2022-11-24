@@ -338,7 +338,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         } else {
             if (shouldRebalance(_tick)) {
                 console.log('UniswapV3Strategy depositTo3rdPool rebalance');
-                rebalance(_tick);
+                rebalance(_tick, false);
             } else {
                 //add _liquidity
                 INonfungiblePositionManager.IncreaseLiquidityParams
@@ -427,13 +427,19 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
     function rebalanceByKeeper() external nonReentrant isKeeper {
         (, int24 _tick, , , , , ) = pool.slot0();
         require(shouldRebalance(_tick), "cannot rebalance");
-        rebalance(_tick);
+        rebalance(_tick, true);
     }
 
     /// @notice Rebalance the position of this strategy
     /// @param _tick The new tick to invest
-    function rebalance(int24 _tick) internal {
-        claim();
+    /// @param _report The boolean flag to report, 'true' to report
+    function rebalance(int24 _tick, bool _report) internal {
+        if (_report) {
+            harvest();
+        } else {
+            claim();
+        }
+
         // Withdraw all current _liquidity
         uint128 _baseLiquidity = balanceOfLpToken(baseMintInfo.tokenId);
         if (_baseLiquidity > 0) {
