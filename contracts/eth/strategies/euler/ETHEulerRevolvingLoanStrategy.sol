@@ -352,7 +352,7 @@ contract ETHEulerRevolvingLoanStrategy is ETHBaseStrategy {
         uint256 _claimable,
         bytes32[] calldata _proof,
         address _stake
-    ) external returns (uint256 _claimAmount) {
+    ) external isKeeper returns (uint256 _claimAmount) {
         uint256 _beforeBalance = IERC20Upgradeable(_token).balanceOf(_account);
         IEulDistributor(EUL_DISTRIBUTOR).claim(_account, _token, _claimable, _proof, _stake);
         uint256 _balanceOfEUL = IERC20Upgradeable(_token).balanceOf(_account);
