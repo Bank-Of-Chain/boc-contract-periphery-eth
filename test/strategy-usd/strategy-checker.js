@@ -289,7 +289,7 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         console.log('Lend:', depositedAssets, depositedAmounts.map(i => i.toFormat()));
 
         const lendTx = await mockVault.lend(strategy.address, depositedAssets, depositedAmounts);
-        console.log("lend gasUsed=",lendTx.receipt.gasUsed);
+        console.log("lend gas used=",lendTx.receipt.gasUsed);
         expectEvent.inTransaction(lendTx, 'Borrow', {
             _assets: depositedAssets,
             _amounts: depositedAmounts
@@ -310,7 +310,7 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         console.log('debtRate=%s', debtRate.toString());
         // If the strategy does not have debit, debtRate=-1, if there is debit, such as IronBank, the debit rate must be greater than 70% less than 100%
         assert(debtRate.eq(-1) || (debtRate.gt(7000) && debtRate.lt(10000)), 'debtRate must gt 7000 in Ironbank');
-        assert(delta.abs().isLessThan(10), 'estimatedTotalAssets does not match depositedUSD value');
+        assert(delta.abs().isLessThan(3), 'estimatedTotalAssets does not match depositedUSD value');
     });
 
     it('[the stablecoins balance of strategy should be zero]', async function () {
@@ -355,8 +355,7 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         pendingRewards = await strategy.harvest.call({
             from: keeper,
         });
-        let harvestTx = await strategy.harvest({ from: keeper });
-        console.log("harvest gasUsed=",harvestTx.receipt.gasUsed);
+        await strategy.harvest({ from: keeper });
         // After the harvest is completed, IronBank needs to perform one more step to sell and reinvest the mine
         const rewardsTokens = pendingRewards._rewardsTokens;
         for (let i = 0; i < rewardsTokens.length; i++) {
@@ -384,7 +383,7 @@ async function check(strategyName, callback, uniswapV3RebalanceCallback, outputC
         const strategyTotalDebt = new BigNumber(strategyParam.totalDebt);
 
         const redeemTx = await mockVault.redeem(strategy.address, strategyTotalDebt, outputCode);
-        console.log("redeem gasUsed=",redeemTx.receipt.gasUsed);
+        console.log("redeem gas used=",redeemTx.receipt.gasUsed);
         expectEvent.inTransaction(redeemTx,'Repay');
         const estimatedTotalAssets1 = new BigNumber(await strategy.estimatedTotalAssets()).dividedBy(10 ** 18);
         console.log('After withdraw all shares,strategy assets:%s', estimatedTotalAssets1.toFixed());
