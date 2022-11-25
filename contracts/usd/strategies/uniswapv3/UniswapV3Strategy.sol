@@ -15,7 +15,6 @@ import "../../../external/uniswapV3/INonfungiblePositionManager.sol";
 import "../../../external/uniswapV3/libraries/LiquidityAmounts.sol";
 import "../../../utils/actions/UniswapV3LiquidityActionsMixin.sol";
 import "./../../enums/ProtocolEnum.sol";
-import 'hardhat/console.sol';
 
 /// @title UniswapV3Strategy
 /// @notice Investment strategy for investing stablecoins via UniswapV3
@@ -276,8 +275,6 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
     {
         (_rewardTokens, _claimAmounts) = collect();
-        console.log('UniswapV3Strategy claim _rewardTokens0: %s, _rewardTokens1: %s', _rewardTokens[0], _rewardTokens[1]);
-        console.log('UniswapV3Strategy claim _claimAmounts0: %d, _claimAmounts1: %d', _claimAmounts[0], _claimAmounts[1]);
         vault.report(_rewardTokens, _claimAmounts);
     }
 
@@ -289,8 +286,6 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         returns (address[] memory _rewardTokens, uint256[] memory _claimAmounts)
     {
         (_rewardTokens, _claimAmounts) = collect();
-        console.log('UniswapV3Strategy claim _rewardTokens0: %s, _rewardTokens1: %s', _rewardTokens[0], _rewardTokens[1]);
-        console.log('UniswapV3Strategy claim _claimAmounts0: %d, _claimAmounts1: %d', _claimAmounts[0], _claimAmounts[1]);
         emit UniV3Claim(_rewardTokens, _claimAmounts);
     }
 
@@ -337,7 +332,6 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
             lastTick = _tick;
         } else {
             if (shouldRebalance(_tick)) {
-                console.log('UniswapV3Strategy depositTo3rdPool rebalance');
                 rebalance(_tick, false);
             } else {
                 //add _liquidity
@@ -464,7 +458,6 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
         ) = getSpecifiedRangesOfTick(_tick);
         uint256 _balance0 = balanceOfToken(token0);
         uint256 _balance1 = balanceOfToken(token1);
-        console.log('UniswapV3Strategy rebalance1 _balance0: %d, _balance1: %d', _balance0, _balance1);
         if (_balance0 > 0 && _balance1 > 0) {
             mintNewPosition(
                 _tickLower,
@@ -475,7 +468,6 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
             );
             _balance0 = balanceOfToken(token0);
             _balance1 = balanceOfToken(token1);
-            console.log('UniswapV3Strategy rebalance2 _balance0: %d, _balance1: %d', _balance0, _balance1);
         }
 
         if (_balance0 > 0 || _balance1 > 0) {
@@ -489,7 +481,6 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
                 mintNewPosition(_tickCeil, _tickCeil + limitThreshold, _balance0, _balance1, false);
             }
         }
-        console.log('UniswapV3Strategy rebalance3 _balance0: %d, _balance1: %d', balanceOfToken(token0), balanceOfToken(token1));
         lastTimestamp = block.timestamp;
         lastTick = _tick;
     }
