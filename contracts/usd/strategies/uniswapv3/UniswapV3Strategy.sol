@@ -107,7 +107,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
 
     /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
-        return "1.0.0";
+        return "1.0.1";
     }
 
     /// @notice Gets the statuses about uniswap V3
@@ -623,7 +623,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
     /// @notice Check the Validity of `_threshold`
     function _checkThreshold(int24 _threshold) internal view {
         require(
-            _threshold > 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0,
+            _threshold >= 0 && _threshold <= TickMath.MAX_TICK && _threshold % tickSpacing == 0,
             "TE"
         );
     }
