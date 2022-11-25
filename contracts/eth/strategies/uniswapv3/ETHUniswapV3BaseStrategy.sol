@@ -36,9 +36,9 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
     /// @param _twapDuration The new max TWAP duration
     event UniV3SetTwapDuration(uint32 _twapDuration);
 
-    /// @param _rewardsTokens The address list of reward token
+    /// @param _rewardTokens The address list of reward token
     /// @param _claimAmounts The amount list of reward token
-    event UniV3Claim(address[] _rewardsTokens, uint256[] _claimAmounts);
+    event UniV3Claim(address[] _rewardTokens, uint256[] _claimAmounts);
 
     int24 internal baseThreshold;
     int24 internal limitThreshold;
