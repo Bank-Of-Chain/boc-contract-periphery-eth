@@ -157,7 +157,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         // find strategy config
         const strategyItem = findStrategyItem(strategyName);
         console.log('strategyItem:',strategyItem);
-
+        
         const {
             name,
             contract,
@@ -174,7 +174,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
             ...customParams
         ]
         console.log('allParams:',allParams);
-
+        
         await strategy.initialize(...allParams);
 
         // if (strategyName === 'MockEthStrategy') {
@@ -261,7 +261,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
 
             // calculate amount wanted to deposit
             let amount;
-
+            
             if (i !== initIndex) {
                 // for example,
                 // assets: [ETH, stETH]
@@ -278,12 +278,12 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
             }
             amount = amount.integerValue();
             let wantBalance = new BigNumber(await balanceOf(asset, investor));
-
+            
             console.log('want:%s,balance:%d,amount:%d', asset, wantBalance, amount);
             // check balance enough
             if (wantBalance.gte(amount)) {
                 console.log('transfer amount:%s,%s',asset,amount);
-
+                
                 await transfer(asset, amount, investor, mockVault.address);
                 depositedAmounts.push(amount);
                 if (asset === MFC.ETH_ADDRESS) {
@@ -308,7 +308,7 @@ async function check(strategyName, beforeCallback, afterCallback, uniswapV3Rebal
         const estimatedTotalAssets = new BigNumber(ethers.utils.formatEther(BigInt(await strategy.estimatedTotalAssets())));
         let delta = depositETH.minus(estimatedTotalAssets);
         console.log('depositETH:%d,estimatedTotalAssets:%d,delta:%d', depositETH, estimatedTotalAssets, delta);
-
+        
         // we can tolerate a little loss
         assertUtils.assertBNBt(
             depositETH.multipliedBy(997).dividedBy(1000),
