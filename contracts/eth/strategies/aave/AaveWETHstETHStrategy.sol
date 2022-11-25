@@ -14,8 +14,6 @@ import "../../../external/curve/ICurveLiquidityFarmingPool.sol";
 import "../../../external/euler/IEulerDToken.sol";
 import "../../../external/weth/IWeth.sol";
 
-import "hardhat/console.sol";
-
 contract AaveWETHstETHStrategy is ETHBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -210,12 +208,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         uint256 _receivedStETHAmount = balanceOfToken(_stETH);
         if (_receivedStETHAmount > 0) {
             ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
-            _aaveLendingPool.deposit(
-                _stETH,
-                _receivedStETHAmount,
-                address(this),
-                0
-            );
+            _aaveLendingPool.deposit(_stETH, _receivedStETHAmount, address(this), 0);
             {
                 uint256 _userConfigurationData = _aaveLendingPool
                     .getUserConfiguration(address(this))
@@ -230,7 +223,9 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                 }
             }
 
-            uint256 _stETHPrice = IPriceOracleGetter(aaveProvider.getPriceOracle()).getAssetPrice(_stETH);
+            uint256 _stETHPrice = IPriceOracleGetter(aaveProvider.getPriceOracle()).getAssetPrice(
+                _stETH
+            );
 
             (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowStandardInfo(
                 A_ST_ETH,
@@ -248,13 +243,14 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-
         uint256 _collateralITokenAmount = balanceOfToken(A_ST_ETH);
         uint256 _redeemAmount = (_collateralITokenAmount * _withdrawShares) / _totalShares;
         uint256 _debtAmount = balanceOfToken(DEBT_W_ETH);
         uint256 _repayBorrowAmount = (_debtAmount * _withdrawShares) / _totalShares;
         if (_redeemAmount > 0) {
-            uint256 _stETHPrice = IPriceOracleGetter(aaveProvider.getPriceOracle()).getAssetPrice(ST_ETH);
+            uint256 _stETHPrice = IPriceOracleGetter(aaveProvider.getPriceOracle()).getAssetPrice(
+                ST_ETH
+            );
             uint256 _leverage = leverage;
             uint256 _bps = BPS;
             uint256 _newDebtAmount = (_debtAmount - _repayBorrowAmount) * _leverage;
@@ -338,7 +334,6 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
             _stETHPrice,
             _curvePoolAddress
         );
-        console.log("_remainingAmount, _overflowAmount=", _remainingAmount, _overflowAmount);
         _rebalance(_remainingAmount, _overflowAmount, _stETHPrice, _curvePoolAddress);
     }
 
@@ -354,13 +349,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
             uint256 _flashLoanAmount,
             uint256 _origBalance
         ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256, uint256));
-        console.log(
-            "_depositAmount,_borrowAmount,_redeemAmount,_repayBorrowAmount,_flashLoanAmount,_flashLoanAmount"
-        );
-        console.log(_depositAmount, _borrowAmount, _redeemAmount, _repayBorrowAmount);
-        console.log(_flashLoanAmount, _flashLoanAmount);
         uint256 _wethAmount = balanceOfToken(W_ETH);
-        console.log("_wethAmount=", _wethAmount);
         require(_wethAmount >= _origBalance + _flashLoanAmount, "not received enough");
         ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
         uint256 _typeMax = type(uint256).max;
@@ -379,12 +368,6 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
             } else {
                 _amount = _depositAmount;
             }
-            console.log(
-                "balanceOfToken(_asset),_depositAmount,_amount",
-                balanceOfToken(_asset),
-                _depositAmount,
-                _amount
-            );
             _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
         }
         if (_repayBorrowAmount > 0) {
@@ -403,20 +386,12 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
                 0,
                 address(this)
             );
-            console.log("ETHAmount , _flashLoanAmount= ", balanceOfToken(W_ETH), _flashLoanAmount);
         }
         if (_redeemAmount > 0) {
             address stETH = ST_ETH;
             _aaveLendingPool.withdraw(stETH, _redeemAmount, address(this));
             uint256 _stETHAmount = balanceOfToken(stETH);
             ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange(1, 0, _stETHAmount, 0);
-
-            console.log(
-                "_stETHAmount , ETH, _flashLoanAmount= ",
-                _stETHAmount,
-                balanceOfToken(NativeToken.NATIVE_TOKEN),
-                _flashLoanAmount
-            );
             IWeth(W_ETH).deposit{value: _flashLoanAmount}();
         }
         IERC20Upgradeable(W_ETH).safeTransfer(_eulerAddress, _flashLoanAmount);

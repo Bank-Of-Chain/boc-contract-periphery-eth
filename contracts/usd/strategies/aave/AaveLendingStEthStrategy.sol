@@ -5,11 +5,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "boc-contract-core/contracts/strategy/BaseStrategy.sol";
-import "boc-contract-core/contracts/library/NativeToken.sol";
 import "../../enums/ProtocolEnum.sol";
-import "../../../external/uniswap/IQuoter.sol";
 import "../../../external/aave/ILendingPool.sol";
-import "../../../external/aave/ReserveConfiguration.sol";
 import "../../../external/aave/UserConfiguration.sol";
 import "../../../external/aave/DataTypes.sol";
 import "../../../external/aave/ILendingPoolAddressesProvider.sol";
@@ -18,8 +15,6 @@ import "../../../external/curve/ICurveLiquidityFarmingPool.sol";
 import "../../../external/euler/IEulerDToken.sol";
 import "../../../external/weth/IWeth.sol";
 import "../../../external/uniswap/IUniswapV3.sol";
-
-import "hardhat/console.sol";
 
 contract AaveLendingStEthStrategy is BaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -432,7 +427,6 @@ contract AaveLendingStEthStrategy is BaseStrategy {
             _tokenPrice,
             _curvePoolAddress
         );
-        console.log("_remainingAmount, _overflowAmount=", _remainingAmount, _overflowAmount);
         _rebalance(_remainingAmount, _overflowAmount, _stETHPrice, _curvePoolAddress);
     }
 
@@ -449,13 +443,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
             uint256 _flashLoanAmount,
             uint256 _origBalance
         ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256, uint256, uint256));
-        console.log(
-            "_depositAmount,_borrowAmount,_redeemAmount,_repayBorrowAmount,_flashLoanAmount,_flashLoanAmount"
-        );
-        console.log(_depositAmount, _borrowAmount, _redeemAStETHAmount, _repayBorrowAmount);
-        console.log(_flashLoanAmount, _flashLoanAmount);
         uint256 _wethAmount = balanceOfToken(W_ETH);
-        console.log("_wethAmount=", _wethAmount);
         require(_wethAmount >= _origBalance + _flashLoanAmount, "not received enough");
         ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
         uint256 _typeMax = type(uint256).max;
@@ -474,12 +462,6 @@ contract AaveLendingStEthStrategy is BaseStrategy {
             } else {
                 _amount = _depositAmount;
             }
-            console.log(
-                "balanceOfToken(_asset),_depositAmount,_amount",
-                balanceOfToken(_asset),
-                _depositAmount,
-                _amount
-            );
             _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
         }
         if (_repayBorrowAmount > 0) {
@@ -498,20 +480,12 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                 0,
                 address(this)
             );
-            console.log("ETHAmount , _flashLoanAmount= ", balanceOfToken(W_ETH), _flashLoanAmount);
         }
         if (_redeemAStETHAmount > 0) {
             address stETH = ST_ETH;
             _aaveLendingPool.withdraw(stETH, _redeemAStETHAmount, address(this));
             uint256 _stETHAmount = balanceOfToken(stETH);
             ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange(1, 0, _stETHAmount, 0);
-
-            console.log(
-                "_stETHAmount , ETH, _flashLoanAmount= ",
-                _stETHAmount,
-                address(this).balance,
-                _flashLoanAmount
-            );
             IWeth(W_ETH).deposit{value: address(this).balance}();
         }
         if (_redeemATokenAmount > 0) {
@@ -680,12 +654,6 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                 (_collateralAmountInETH * (_leverage - _bps) - _debtAmount * _leverage) /
                 (_leverage - ((_leverage - _bps) * _exchangeRate) / 1e18);
         }
-        console.log(
-            "contract _remainingAmount,_overflowAmount =",
-            _remainingAmount,
-            _overflowAmount
-        );
-        console.log("leverage,leverageMax,leverageMin =", leverage, leverageMax, leverageMin);
     }
 
     /// @notice Returns the info of borrow with default borrowFactor

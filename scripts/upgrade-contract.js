@@ -1,60 +1,29 @@
+
 const { upgrades, ethers } = require("hardhat");
+
+const stakewiseStrategyProxyAddr = '0xE933639733c212265Ed7a243A061e705D0410CA5';
+const StakeWiseEthSeth23000Strategy = hre.artifacts.require('StakeWiseEthSeth23000Strategy');
 
 const main = async () => {
     let network = hre.network.name;
     console.log('upgrade contract on network-%s', network);
-    const ETHAaveStrategy = hre.artifacts.require('AaveWETHstETHStrategy');
-    const ethAaveStrategyArtifacts = await ethers.getContractFactory('AaveWETHstETHStrategy');
 
-    //AaveWETHstETHStrategy
-    let ethAaveStrategyProxyAddr = '0x70C0E1B334124C7d46fC0c7a9048A802ab4C39C6';
-    let ethAaveStrategyContract = await ETHAaveStrategy.at(ethAaveStrategyProxyAddr);
-    await upgrades.upgradeProxy(ethAaveStrategyContract, ethAaveStrategyArtifacts);
-    console.log('contract %s upgrade success,version:%s',(await ethAaveStrategyContract.name()).toString(), (await ethAaveStrategyContract.getVersion()).toString());
-    console.log('before setBorrowCount ');
-    console.log('leverage:%s',(await ethAaveStrategyContract.leverage()).toString());
-    console.log('leverageMax:%s',(await ethAaveStrategyContract.leverageMax()).toString());
-    console.log('leverageMin:%s',(await ethAaveStrategyContract.leverageMin()).toString());
-    await ethAaveStrategyContract.setBorrowCount(3);
-    console.log('after setBorrowCount ');
-    console.log('leverage:%s',(await ethAaveStrategyContract.leverage()).toString());
-    console.log('leverageMax:%s',(await ethAaveStrategyContract.leverageMax()).toString());
-    console.log('leverageMin:%s',(await ethAaveStrategyContract.leverageMin()).toString());
+    const accounts = await ethers.getSigners();
+    const governance = accounts[0].address;
 
-    const USDAaveStrategy = hre.artifacts.require('AaveLendingStEthStrategy');
-    const usdAaveStrategyArtifacts = await ethers.getContractFactory('AaveLendingStEthStrategy');
+    // 升级StakeWiseEthSeth23000Strategy合约
+    const stakeWiseEthSeth23000StrategyContract = await StakeWiseEthSeth23000Strategy.at(stakewiseStrategyProxyAddr);
+    const stakewiseStrategyArtifacts = await ethers.getContractFactory('StakeWiseEthSeth23000Strategy');
+    let upgraded = await upgrades.upgradeProxy(stakewiseStrategyProxyAddr, stakewiseStrategyArtifacts);
+    let statusInfo = await stakeWiseEthSeth23000StrategyContract.getStatus();
+    console.log('contract upgrade success,before baseThreshold:%s', statusInfo._baseThreshold.toString());
+    await stakeWiseEthSeth23000StrategyContract.setBaseThreshold(0,{from: governance});
+    statusInfo = await stakeWiseEthSeth23000StrategyContract.getStatus();
+    console.log('contract upgrade success,after baseThreshold:%s', statusInfo._baseThreshold.toString());
+    console.log('=========contract 升级完成==========');
+    await stakeWiseEthSeth23000StrategyContract.rebalanceByKeeper({from: governance});
+    console.log('=========rebalanceByKeeper 完成==========');
 
-    //AaveDaiLendingStEthStrategy
-    let usdAaveStrategyProxyAddr = '0x71298672cE73b85e06E0504C88A9A9f0c9dF3b9f';
-    let usdAaveStrategyContract = await USDAaveStrategy.at(usdAaveStrategyProxyAddr);
-    await upgrades.upgradeProxy(usdAaveStrategyContract, usdAaveStrategyArtifacts);
-    console.log('contract %s upgrade success,version:%s',(await usdAaveStrategyContract.name()).toString(), (await usdAaveStrategyContract.getVersion()).toString());
-    console.log('before setBorrowCount ');
-    console.log('leverage:%s',(await usdAaveStrategyContract.leverage()).toString());
-    console.log('leverageMax:%s',(await usdAaveStrategyContract.leverageMax()).toString());
-    console.log('leverageMin:%s',(await usdAaveStrategyContract.leverageMin()).toString());
-    await usdAaveStrategyContract.setBorrowCount(3);
-    console.log('after setBorrowCount ');
-    console.log('leverage:%s',(await usdAaveStrategyContract.leverage()).toString());
-    console.log('leverageMax:%s',(await usdAaveStrategyContract.leverageMax()).toString());
-    console.log('leverageMin:%s',(await usdAaveStrategyContract.leverageMin()).toString());
-
-    //AaveUSDCLendingStEthStrategy
-    usdAaveStrategyProxyAddr = '0xaEC8046c9d8F6f85F3b92B63594fAD3C4c929A6b';
-    usdAaveStrategyContract = await USDAaveStrategy.at(usdAaveStrategyProxyAddr);
-    await upgrades.upgradeProxy(usdAaveStrategyContract, usdAaveStrategyArtifacts);
-    console.log('contract %s upgrade success,version:%s',(await usdAaveStrategyContract.name()).toString(), (await usdAaveStrategyContract.getVersion()).toString());
-    console.log('before setBorrowCount ');
-    console.log('leverage:%s',(await usdAaveStrategyContract.leverage()).toString());
-    console.log('leverageMax:%s',(await usdAaveStrategyContract.leverageMax()).toString());
-    console.log('leverageMin:%s',(await usdAaveStrategyContract.leverageMin()).toString());
-    await usdAaveStrategyContract.setBorrowCount(3);
-    console.log('after setBorrowCount ');
-    console.log('leverage:%s',(await usdAaveStrategyContract.leverage()).toString());
-    console.log('leverageMax:%s',(await usdAaveStrategyContract.leverageMax()).toString());
-    console.log('leverageMin:%s',(await usdAaveStrategyContract.leverageMin()).toString());
-
-    console.log('=========contract upgrade completed==========');
 }
 
 main()
