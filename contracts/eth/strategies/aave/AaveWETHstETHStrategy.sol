@@ -340,68 +340,73 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
     // euler flashload call only by  euler
     function onFlashLoan(bytes memory data) external {
         address _eulerAddress = EULER_ADDRESS;
+        address _wETH = W_ETH;
+        address _stETH = ST_ETH;
         require(msg.sender == _eulerAddress, "invalid call");
         (
-            uint256 _depositAmount,
-            uint256 _borrowAmount,
-            uint256 _redeemAmount,
-            uint256 _repayBorrowAmount,
+            uint256 _operationCode,
+            uint256 _depositOrRedeemAmount,
+            uint256 _borrowOrRepayBorrowAmount,
             uint256 _flashLoanAmount,
             uint256 _origBalance
-        ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256, uint256));
-        uint256 _wethAmount = balanceOfToken(W_ETH);
+        ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256));
+        uint256 _wethAmount = balanceOfToken(_wETH);
         require(_wethAmount >= _origBalance + _flashLoanAmount, "not received enough");
         ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
-        uint256 _typeMax = type(uint256).max;
-        if (_depositAmount > 0) {
-            address _asset = ST_ETH;
-            uint256 _amount = 0;
-            if (_depositAmount == _typeMax) {
-                IWeth(W_ETH).withdraw(_wethAmount);
-                ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _wethAmount}(
-                    0,
-                    1,
-                    _wethAmount,
-                    0
-                );
-                _amount = balanceOfToken(_asset);
-            } else {
-                _amount = _depositAmount;
+
+        // 0 - Leverage/Deleveraging; 1 - redeem
+        if (_operationCode < 1) {
+            if (_depositOrRedeemAmount > 0) {
+                address _asset = _stETH;
+                uint256 _amount = 0;
+                if (_depositOrRedeemAmount == type(uint256).max) {
+                    IWeth(_wETH).withdraw(_wethAmount);
+                    ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _wethAmount}(
+                        0,
+                        1,
+                        _wethAmount,
+                        0
+                    );
+                    _amount = balanceOfToken(_asset);
+                } else {
+                    _amount = _depositOrRedeemAmount;
+                }
+                _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
             }
-            _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
+            if (_borrowOrRepayBorrowAmount > 0) {
+                _aaveLendingPool.borrow(
+                    _wETH,
+                    _borrowOrRepayBorrowAmount,
+                    uint256(DataTypes.InterestRateMode.VARIABLE),
+                    0,
+                    address(this)
+                );
+            }
+        } else {
+            if (_borrowOrRepayBorrowAmount > 0) {
+                _aaveLendingPool.repay(
+                    _wETH,
+                    _borrowOrRepayBorrowAmount,
+                    uint256(DataTypes.InterestRateMode.VARIABLE),
+                    address(this)
+                );
+            }
+            if (_depositOrRedeemAmount > 0) {
+                _aaveLendingPool.withdraw(_stETH, _depositOrRedeemAmount, address(this));
+                uint256 _stETHAmount = balanceOfToken(_stETH);
+                ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange(1, 0, _stETHAmount, 0);
+                IWeth(_wETH).deposit{value: _flashLoanAmount}();
+            }
         }
-        if (_repayBorrowAmount > 0) {
-            _aaveLendingPool.repay(
-                W_ETH,
-                _repayBorrowAmount,
-                uint256(DataTypes.InterestRateMode.VARIABLE),
-                address(this)
-            );
-        }
-        if (_borrowAmount > 0) {
-            _aaveLendingPool.borrow(
-                W_ETH,
-                _borrowAmount,
-                uint256(DataTypes.InterestRateMode.VARIABLE),
-                0,
-                address(this)
-            );
-        }
-        if (_redeemAmount > 0) {
-            address stETH = ST_ETH;
-            _aaveLendingPool.withdraw(stETH, _redeemAmount, address(this));
-            uint256 _stETHAmount = balanceOfToken(stETH);
-            ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange(1, 0, _stETHAmount, 0);
-            IWeth(W_ETH).deposit{value: _flashLoanAmount}();
-        }
-        IERC20Upgradeable(W_ETH).safeTransfer(_eulerAddress, _flashLoanAmount);
+        IERC20Upgradeable(_wETH).safeTransfer(_eulerAddress, _flashLoanAmount);
     }
 
     /// @notice repayBorrow and redeem collateral
     function _repay(uint256 _redeemAmount, uint256 _repayBorrowAmount) internal {
+        // 0 - Leverage/Deleveraging; 1 - redeem
+        uint256 _operationCode = 1;
         bytes memory _params = abi.encodePacked(
-            uint256(0),
-            uint256(0),
+            _operationCode,
             _redeemAmount,
             _repayBorrowAmount,
             _repayBorrowAmount,
@@ -421,11 +426,12 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         if (_remainingAmount > 0) {
             uint256 _borrowAmount = _remainingAmount;
             uint256 _depositAmount = type(uint256).max;
+            // 0 - Leverage/Deleveraging; 1 - redeem
+            uint256 _operationCode = 0;
             bytes memory _params = abi.encodePacked(
+                _operationCode,
                 _depositAmount,
                 _borrowAmount,
-                uint256(0),
-                uint256(0),
                 _borrowAmount,
                 balanceOfToken(W_ETH)
             );

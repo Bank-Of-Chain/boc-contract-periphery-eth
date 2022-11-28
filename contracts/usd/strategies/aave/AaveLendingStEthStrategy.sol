@@ -435,94 +435,102 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         address _eulerAddress = EULER_ADDRESS;
         require(msg.sender == _eulerAddress, "invalid call");
         (
-            uint256 _depositAmount,
-            uint256 _borrowAmount,
-            uint256 _redeemAStETHAmount,
-            uint256 _redeemATokenAmount,
-            uint256 _repayBorrowAmount,
+            uint256 _operationCode,
+            uint256[] memory _customParams,
             uint256 _flashLoanAmount,
             uint256 _origBalance
-        ) = abi.decode(data, (uint256, uint256, uint256, uint256, uint256, uint256, uint256));
-        uint256 _wethAmount = balanceOfToken(W_ETH);
-        require(_wethAmount >= _origBalance + _flashLoanAmount, "not received enough");
+        ) = abi.decode(data, (uint256, uint256[], uint256, uint256));
+        address _wETH = W_ETH;
+        uint256 _wETHAmount = balanceOfToken(_wETH);
+        require(_wETHAmount >= _origBalance + _flashLoanAmount, "not received enough");
         ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
-        uint256 _typeMax = type(uint256).max;
-        if (_depositAmount > 0) {
-            address _asset = ST_ETH;
-            uint256 _amount = 0;
-            if (_depositAmount == _typeMax) {
-                IWeth(W_ETH).withdraw(_wethAmount);
-                ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _wethAmount}(
-                    0,
-                    1,
-                    _wethAmount,
-                    0
-                );
-                _amount = balanceOfToken(_asset);
-            } else {
-                _amount = _depositAmount;
-            }
-            _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
-        }
-        if (_repayBorrowAmount > 0) {
-            _aaveLendingPool.repay(
-                W_ETH,
-                _repayBorrowAmount,
-                uint256(DataTypes.InterestRateMode.VARIABLE),
-                address(this)
-            );
-        }
-        if (_borrowAmount > 0) {
-            _aaveLendingPool.borrow(
-                W_ETH,
-                _borrowAmount,
-                uint256(DataTypes.InterestRateMode.VARIABLE),
-                0,
-                address(this)
-            );
-        }
-        if (_redeemAStETHAmount > 0) {
-            address stETH = ST_ETH;
-            _aaveLendingPool.withdraw(stETH, _redeemAStETHAmount, address(this));
-            uint256 _stETHAmount = balanceOfToken(stETH);
-            ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange(1, 0, _stETHAmount, 0);
-            IWeth(W_ETH).deposit{value: address(this).balance}();
-        }
-        if (_redeemATokenAmount > 0) {
-            address _want = wants[0];
-            _aaveLendingPool.withdraw(_want, _redeemATokenAmount, address(this));
-            uint256 _tokenAmount = balanceOfToken(_want);
-
-            uint256 _wETHAmount = balanceOfToken(W_ETH);
-            if (_wETHAmount > _flashLoanAmount) {
-                IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
-                    IUniswapV3.ExactInputSingleParams(
-                        W_ETH,
-                        _want,
-                        500,
-                        address(this),
-                        block.timestamp,
-                        _wETHAmount - _flashLoanAmount,
+        // 0 - Leverage/Deleveraging; 1 - redeem
+        if (_operationCode < 1) {
+            //_customParams = [_borrowAmount,_depositAmount]
+            uint256 _borrowAmount = _customParams[0];
+            uint256 _depositAmount = _customParams[1];
+            if (_depositAmount > 0) {
+                address _asset = ST_ETH;
+                uint256 _amount = 0;
+                if (_depositAmount == type(uint256).max) {
+                    IWeth(_wETH).withdraw(_wETHAmount);
+                    ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _wETHAmount}(
                         0,
+                        1,
+                        _wETHAmount,
                         0
-                    )
-                );
-            } else if (_wETHAmount < _flashLoanAmount) {
-                IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
-                    IUniswapV3.ExactOutputSingleParams(
-                        _want,
-                        W_ETH,
-                        500,
-                        address(this),
-                        block.timestamp,
-                        _flashLoanAmount - _wETHAmount,
-                        _tokenAmount,
-                        0
-                    )
+                    );
+                    _amount = balanceOfToken(_asset);
+                } else {
+                    _amount = _depositAmount;
+                }
+                _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
+            }
+            if (_borrowAmount > 0) {
+                _aaveLendingPool.borrow(
+                    _wETH,
+                    _borrowAmount,
+                    uint256(DataTypes.InterestRateMode.VARIABLE),
+                    0,
+                    address(this)
                 );
             }
+        } else {
+            //_customParams = [_redeemAstETHAmount,_redeemATokenAmount,_repayBorrowAmount]
+            uint256 _redeemAStETHAmount = _customParams[0];
+            uint256 _redeemATokenAmount = _customParams[1];
+            uint256 _repayBorrowAmount = _customParams[2];
+            if (_repayBorrowAmount > 0) {
+                _aaveLendingPool.repay(
+                    _wETH,
+                    _repayBorrowAmount,
+                    uint256(DataTypes.InterestRateMode.VARIABLE),
+                    address(this)
+                );
+            }
+            if (_redeemAStETHAmount > 0) {
+                address _stETH = ST_ETH;
+                _aaveLendingPool.withdraw(_stETH, _redeemAStETHAmount, address(this));
+                uint256 _stETHAmount = balanceOfToken(_stETH);
+                ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange(1, 0, _stETHAmount, 0);
+                IWeth(_wETH).deposit{value: address(this).balance}();
+            }
+            if (_redeemATokenAmount > 0) {
+                address _want = wants[0];
+                _aaveLendingPool.withdraw(_want, _redeemATokenAmount, address(this));
+                uint256 _tokenAmount = balanceOfToken(_want);
+
+                uint256 _wETHAmount = balanceOfToken(_wETH);
+                if (_wETHAmount > _flashLoanAmount) {
+                    IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
+                        IUniswapV3.ExactInputSingleParams(
+                            _wETH,
+                            _want,
+                            500,
+                            address(this),
+                            block.timestamp,
+                            _wETHAmount - _flashLoanAmount,
+                            0,
+                            0
+                        )
+                    );
+                } else if (_wETHAmount < _flashLoanAmount) {
+                    IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
+                        IUniswapV3.ExactOutputSingleParams(
+                            _want,
+                            _wETH,
+                            500,
+                            address(this),
+                            block.timestamp,
+                            _flashLoanAmount - _wETHAmount,
+                            _tokenAmount,
+                            0
+                        )
+                    );
+                }
+            }
         }
-        IERC20Upgradeable(W_ETH).safeTransfer(_eulerAddress, _flashLoanAmount);
+        IERC20Upgradeable(_wETH).safeTransfer(_eulerAddress, _flashLoanAmount);
     }
 
     function _getAssetsPrices(address _asset1, address _asset2)
@@ -545,16 +553,23 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         uint256 _redeemATokenAmount,
         uint256 _repayBorrowAmount
     ) internal {
-        bytes memory _params = abi.encodePacked(
-            uint256(0),
-            uint256(0),
-            _redeemAstETHAmount,
-            _redeemATokenAmount,
-            _repayBorrowAmount,
-            _repayBorrowAmount,
+        // 0 - Leverage/Deleveraging; 1 - redeem
+        uint256 _operationCode = 1;
+        uint256[] memory _customParams = new uint256[](3);
+        //_redeemAstETHAmount
+        _customParams[0] = _redeemAstETHAmount;
+        //_redeemATokenAmount
+        _customParams[1] = _redeemATokenAmount;
+        //_repayBorrowAmount
+        _customParams[2] = _repayBorrowAmount;
+        uint256 _flashLoanAmount = _repayBorrowAmount;
+        bytes memory _params = abi.encode(
+            _operationCode,
+            _customParams,
+            _flashLoanAmount,
             balanceOfToken(W_ETH)
         );
-        IEulerDToken(W_ETH_EULER_D_TOKEN).flashLoan(_repayBorrowAmount, _params);
+        IEulerDToken(W_ETH_EULER_D_TOKEN).flashLoan(_flashLoanAmount, _params);
     }
 
     /// @notice Rebalance the collateral of this strategy
@@ -566,18 +581,21 @@ contract AaveLendingStEthStrategy is BaseStrategy {
     ) internal {
         ICurveLiquidityFarmingPool _curvePool = ICurveLiquidityFarmingPool(_curvePoolAddress);
         if (_remainingAmount > 0) {
-            uint256 _borrowAmount = _remainingAmount;
-            uint256 _depositAmount = type(uint256).max;
-            bytes memory _params = abi.encodePacked(
-                _depositAmount,
-                _borrowAmount,
-                uint256(0),
-                uint256(0),
-                uint256(0),
-                _borrowAmount,
+            // 0 - Leverage/Deleveraging; 1 - redeem
+            uint256 _operationCode = 0;
+            uint256[] memory _customParams = new uint256[](2);
+            //uint256 _borrowAmount = _remainingAmount;
+            _customParams[0] = _remainingAmount;
+            //uint256 _depositAmount = type(uint256).max;
+            _customParams[1] = type(uint256).max;
+            uint256 _flashLoanAmount = _remainingAmount;
+            bytes memory _params = abi.encode(
+                _operationCode,
+                _customParams,
+                _flashLoanAmount,
                 balanceOfToken(W_ETH)
             );
-            IEulerDToken(W_ETH_EULER_D_TOKEN).flashLoan(_borrowAmount, _params);
+            IEulerDToken(W_ETH_EULER_D_TOKEN).flashLoan(_flashLoanAmount, _params);
         } else if (_overflowAmount > 0) {
             uint256 _repayBorrowAmount = _curvePool.get_dy(1, 0, _overflowAmount);
             uint256 _redeemAStETHAmount = _overflowAmount;
