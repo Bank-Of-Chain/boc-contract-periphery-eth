@@ -328,75 +328,9 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-        uint256 _redeemAstETHAmount;
-        uint256 _redeemATokenAmount;
-        uint256 _repayBorrowAmount;
-        uint256 _newDebtAmount;
-        uint256 _newCollateralAmount;
-        uint256 _stETHPrice;
-        uint256 _leverage = leverage;
-        uint256 _bps = BPS;
-        {
-            uint256 _tokenPrice;
-            (_stETHPrice, _tokenPrice) = _getAssetsPrices(ST_ETH, wants[0]);
-            uint256 _withdrawSharesCopy = _withdrawShares;
-            uint256 _totalSharesCopy = _totalShares;
-            address _aToken = aToken;
-            uint256 _collateralAStETHTokenAmount = balanceOfToken(A_ST_ETH);
-            uint256 _collateralATokenAmount = balanceOfToken(_aToken);
-            _redeemAstETHAmount =
-                (_collateralAStETHTokenAmount * _withdrawSharesCopy) /
-                _totalSharesCopy;
-            _redeemATokenAmount =
-                (_collateralATokenAmount * _withdrawSharesCopy) /
-                _totalSharesCopy;
-            uint256 _redeemAstETHAmountCopy = _redeemAstETHAmount;
-            uint256 _redeemATokenAmountCopy = _redeemATokenAmount;
-            uint256 _debtAmount = balanceOfToken(DEBT_W_ETH);
-            _repayBorrowAmount = (_debtAmount * _withdrawSharesCopy) / _totalSharesCopy;
-            _newDebtAmount = (_debtAmount - _repayBorrowAmount) * _leverage;
-            _newCollateralAmount =
-                (((_collateralAStETHTokenAmount - _redeemAstETHAmountCopy) * _stETHPrice) /
-                    1e18 +
-                    ((_collateralATokenAmount - _redeemATokenAmountCopy) * _tokenPrice) /
-                    decimalUnitOfToken(_aToken)) *
-                (_leverage - _bps);
-        }
-
-        address _curvePoolAddress = CURVE_POOL_ADDRESS;
-        if (_newDebtAmount > _newCollateralAmount) {
-            //(_debtAmount-x*_exchangeRate)/(_collateralAmountInETH- x * _stETHPrice) = (leverage-BPS)/leverage
-            //stETH to ETH
-            uint256 _exchangeRate = ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
-                1,
-                0,
-                1e18
-            );
-            uint256 _decreaseAmount = (_newDebtAmount - _newCollateralAmount) /
-                ((_leverage * _exchangeRate) / 1e18 - ((_leverage - _bps) * _stETHPrice) / 1e18);
-            if (_decreaseAmount > 0) {
-                _repayBorrowAmount =
-                    _repayBorrowAmount +
-                    ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(1, 0, _decreaseAmount);
-                _redeemAstETHAmount = _redeemAstETHAmount + _decreaseAmount;
-            }
-        } else if (_newDebtAmount < _newCollateralAmount) {
-            //(_debtAmount+x)/(_collateralAmountInETH+_exchangeRate * x) = (leverage-BPS)/leverage
-            //ETH to stETH
-            uint256 _exchangeRate = ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
-                0,
-                1,
-                1e18
-            );
-            uint256 _increaseAmount = (_newCollateralAmount - _newDebtAmount) /
-                (_leverage - ((_leverage - _bps) * _exchangeRate) / 1e18);
-            if (_increaseAmount > 0) {
-                _repayBorrowAmount = _repayBorrowAmount - _increaseAmount;
-                _redeemAstETHAmount =
-                    _redeemAstETHAmount -
-                    ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(0, 1, _increaseAmount);
-            }
-        }
+        uint256 _redeemAstETHAmount = (balanceOfToken(A_ST_ETH) * _withdrawShares) / _totalShares;
+        uint256 _redeemATokenAmount = (balanceOfToken(aToken) * _withdrawShares) / _totalShares;
+        uint256 _repayBorrowAmount = (balanceOfToken(DEBT_W_ETH) * _withdrawShares) / _totalShares;
         _repay(_redeemAstETHAmount, _redeemATokenAmount, _repayBorrowAmount);
     }
 
@@ -444,37 +378,28 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         uint256 _wETHAmount = balanceOfToken(_wETH);
         require(_wETHAmount >= _origBalance + _flashLoanAmount, "not received enough");
         ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
-        // 0 - Leverage/Deleveraging; 1 - redeem
+        // 0 - deposit stETH wantToken; 1 - withdraw stETH wantToken
         if (_operationCode < 1) {
+            IWeth(_wETH).withdraw(_wETHAmount);
+            ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _wETHAmount}(
+                0,
+                1,
+                _wETHAmount,
+                0
+            );
+            address _asset = ST_ETH;
+            uint256 _amount = balanceOfToken(_asset);
+            _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
+
             //_customParams = [_borrowAmount,_depositAmount]
             uint256 _borrowAmount = _customParams[0];
-            uint256 _depositAmount = _customParams[1];
-            if (_depositAmount > 0) {
-                address _asset = ST_ETH;
-                uint256 _amount = 0;
-                if (_depositAmount == type(uint256).max) {
-                    IWeth(_wETH).withdraw(_wETHAmount);
-                    ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _wETHAmount}(
-                        0,
-                        1,
-                        _wETHAmount,
-                        0
-                    );
-                    _amount = balanceOfToken(_asset);
-                } else {
-                    _amount = _depositAmount;
-                }
-                _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
-            }
-            if (_borrowAmount > 0) {
-                _aaveLendingPool.borrow(
-                    _wETH,
-                    _borrowAmount,
-                    uint256(DataTypes.InterestRateMode.VARIABLE),
-                    0,
-                    address(this)
-                );
-            }
+            _aaveLendingPool.borrow(
+                _wETH,
+                _borrowAmount,
+                uint256(DataTypes.InterestRateMode.VARIABLE),
+                0,
+                address(this)
+            );
         } else {
             //_customParams = [_redeemAstETHAmount,_redeemATokenAmount,_repayBorrowAmount]
             uint256 _redeemAStETHAmount = _customParams[0];
@@ -495,39 +420,38 @@ contract AaveLendingStEthStrategy is BaseStrategy {
                 ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange(1, 0, _stETHAmount, 0);
                 IWeth(_wETH).deposit{value: address(this).balance}();
             }
+            address _want = wants[0];
             if (_redeemATokenAmount > 0) {
-                address _want = wants[0];
                 _aaveLendingPool.withdraw(_want, _redeemATokenAmount, address(this));
-                uint256 _tokenAmount = balanceOfToken(_want);
+            }
 
-                uint256 _wETHAmount = balanceOfToken(_wETH);
-                if (_wETHAmount > _flashLoanAmount) {
-                    IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
-                        IUniswapV3.ExactInputSingleParams(
-                            _wETH,
-                            _want,
-                            500,
-                            address(this),
-                            block.timestamp,
-                            _wETHAmount - _flashLoanAmount,
-                            0,
-                            0
-                        )
-                    );
-                } else if (_wETHAmount < _flashLoanAmount) {
-                    IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
-                        IUniswapV3.ExactOutputSingleParams(
-                            _want,
-                            _wETH,
-                            500,
-                            address(this),
-                            block.timestamp,
-                            _flashLoanAmount - _wETHAmount,
-                            _tokenAmount,
-                            0
-                        )
-                    );
-                }
+            uint256 _wETHAmount = balanceOfToken(_wETH);
+            if (_wETHAmount > _flashLoanAmount) {
+                IUniswapV3(UNISWAP_V3_ROUTER).exactInputSingle(
+                    IUniswapV3.ExactInputSingleParams(
+                        _wETH,
+                        _want,
+                        500,
+                        address(this),
+                        block.timestamp,
+                        _wETHAmount - _flashLoanAmount,
+                        0,
+                        0
+                    )
+                );
+            } else if (_wETHAmount < _flashLoanAmount) {
+                IUniswapV3(UNISWAP_V3_ROUTER).exactOutputSingle(
+                    IUniswapV3.ExactOutputSingleParams(
+                        _want,
+                        _wETH,
+                        500,
+                        address(this),
+                        block.timestamp,
+                        _flashLoanAmount - _wETHAmount,
+                        balanceOfToken(_want),
+                        0
+                    )
+                );
             }
         }
         IERC20Upgradeable(_wETH).safeTransfer(_eulerAddress, _flashLoanAmount);
@@ -553,7 +477,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
         uint256 _redeemATokenAmount,
         uint256 _repayBorrowAmount
     ) internal {
-        // 0 - Leverage/Deleveraging; 1 - redeem
+        // 0 - deposit stETH wantToken; 1 - withdraw stETH wantToken
         uint256 _operationCode = 1;
         uint256[] memory _customParams = new uint256[](3);
         //_redeemAstETHAmount
@@ -581,7 +505,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
     ) internal {
         ICurveLiquidityFarmingPool _curvePool = ICurveLiquidityFarmingPool(_curvePoolAddress);
         if (_remainingAmount > 0) {
-            // 0 - Leverage/Deleveraging; 1 - redeem
+            // 0 - deposit stETH wantToken; 1 - withdraw stETH wantToken
             uint256 _operationCode = 0;
             uint256[] memory _customParams = new uint256[](2);
             //uint256 _borrowAmount = _remainingAmount;

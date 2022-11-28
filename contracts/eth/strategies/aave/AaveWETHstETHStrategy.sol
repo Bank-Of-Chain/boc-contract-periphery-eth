@@ -243,67 +243,9 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         uint256 _totalShares,
         uint256 _outputCode
     ) internal override {
-        uint256 _collateralITokenAmount = balanceOfToken(A_ST_ETH);
-        uint256 _redeemAmount = (_collateralITokenAmount * _withdrawShares) / _totalShares;
-        uint256 _debtAmount = balanceOfToken(DEBT_W_ETH);
-        uint256 _repayBorrowAmount = (_debtAmount * _withdrawShares) / _totalShares;
-        if (_redeemAmount > 0) {
-            uint256 _stETHPrice = IPriceOracleGetter(aaveProvider.getPriceOracle()).getAssetPrice(
-                ST_ETH
-            );
-            uint256 _leverage = leverage;
-            uint256 _bps = BPS;
-            uint256 _newDebtAmount = (_debtAmount - _repayBorrowAmount) * _leverage;
-            //(_newDebtAmount-x)/(_newCollateralAmount-_exchangeRate * x) = (leverage-BPS)/leverage
-            uint256 _newCollateralAmount = (((_collateralITokenAmount - _redeemAmount) *
-                _stETHPrice) / 1e18) * (_leverage - _bps);
-            address _curvePoolAddress = CURVE_POOL_ADDRESS;
-            if (_newDebtAmount > _newCollateralAmount) {
-                //(_debtAmount-x*_exchangeRate)/(_collateralAmountInETH- x * _stETHPrice) = (leverage-BPS)/leverage
-                //stETH to ETH
-                uint256 _exchangeRate = ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
-                    1,
-                    0,
-                    1e18
-                );
-                uint256 _decreaseAmount = (_newDebtAmount - _newCollateralAmount) /
-                    ((_leverage * _exchangeRate) /
-                        1e18 -
-                        ((_leverage - _bps) * _stETHPrice) /
-                        1e18);
-                if (_decreaseAmount > 0) {
-                    _repayBorrowAmount =
-                        _repayBorrowAmount +
-                        ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
-                            1,
-                            0,
-                            _decreaseAmount
-                        );
-                    _redeemAmount = _redeemAmount + _decreaseAmount;
-                }
-            } else if (_newDebtAmount < _newCollateralAmount) {
-                //(_debtAmount+x)/(_collateralAmountInETH+_exchangeRate * x) = (leverage-BPS)/leverage
-                //ETH to stETH
-                uint256 _exchangeRate = ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
-                    0,
-                    1,
-                    1e18
-                );
-                uint256 _increaseAmount = (_newCollateralAmount - _newDebtAmount) /
-                    (_leverage - ((_leverage - _bps) * _exchangeRate) / 1e18);
-                if (_increaseAmount > 0) {
-                    _repayBorrowAmount = _repayBorrowAmount - _increaseAmount;
-                    _redeemAmount =
-                        _redeemAmount -
-                        ICurveLiquidityFarmingPool(_curvePoolAddress).get_dy(
-                            0,
-                            1,
-                            _increaseAmount
-                        );
-                }
-            }
-            _repay(_redeemAmount, _repayBorrowAmount);
-        }
+        uint256 _redeemAmount = (balanceOfToken(A_ST_ETH) * _withdrawShares) / _totalShares;
+        uint256 _repayBorrowAmount = (balanceOfToken(DEBT_W_ETH) * _withdrawShares) / _totalShares;
+        _repay(_redeemAmount, _repayBorrowAmount);
     }
 
     /// @notice Returns the info of borrow.
@@ -354,34 +296,26 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         require(_wethAmount >= _origBalance + _flashLoanAmount, "not received enough");
         ILendingPool _aaveLendingPool = ILendingPool(aaveProvider.getLendingPool());
 
-        // 0 - Leverage/Deleveraging; 1 - redeem
+        // 0 - deposit stETH; 1 - withdraw stETH
         if (_operationCode < 1) {
-            if (_depositOrRedeemAmount > 0) {
-                address _asset = _stETH;
-                uint256 _amount = 0;
-                if (_depositOrRedeemAmount == type(uint256).max) {
-                    IWeth(_wETH).withdraw(_wethAmount);
-                    ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _wethAmount}(
-                        0,
-                        1,
-                        _wethAmount,
-                        0
-                    );
-                    _amount = balanceOfToken(_asset);
-                } else {
-                    _amount = _depositOrRedeemAmount;
-                }
-                _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
-            }
-            if (_borrowOrRepayBorrowAmount > 0) {
-                _aaveLendingPool.borrow(
-                    _wETH,
-                    _borrowOrRepayBorrowAmount,
-                    uint256(DataTypes.InterestRateMode.VARIABLE),
-                    0,
-                    address(this)
-                );
-            }
+            IWeth(_wETH).withdraw(_wethAmount);
+            ICurveLiquidityFarmingPool(CURVE_POOL_ADDRESS).exchange{value: _wethAmount}(
+                0,
+                1,
+                _wethAmount,
+                0
+            );
+            address _asset = _stETH;
+            uint256 _amount = balanceOfToken(_asset);
+            _aaveLendingPool.deposit(_asset, _amount, address(this), 0);
+
+            _aaveLendingPool.borrow(
+                _wETH,
+                _borrowOrRepayBorrowAmount,
+                uint256(DataTypes.InterestRateMode.VARIABLE),
+                0,
+                address(this)
+            );
         } else {
             if (_borrowOrRepayBorrowAmount > 0) {
                 _aaveLendingPool.repay(
@@ -403,7 +337,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
 
     /// @notice repayBorrow and redeem collateral
     function _repay(uint256 _redeemAmount, uint256 _repayBorrowAmount) internal {
-        // 0 - Leverage/Deleveraging; 1 - redeem
+        // 0 - deposit stETH; 1 - withdraw stETH
         uint256 _operationCode = 1;
         bytes memory _params = abi.encodePacked(
             _operationCode,
@@ -426,7 +360,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
         if (_remainingAmount > 0) {
             uint256 _borrowAmount = _remainingAmount;
             uint256 _depositAmount = type(uint256).max;
-            // 0 - Leverage/Deleveraging; 1 - redeem
+            // 0 - deposit stETH; 1 - withdraw stETH
             uint256 _operationCode = 0;
             bytes memory _params = abi.encodePacked(
                 _operationCode,
