@@ -6,6 +6,9 @@ const aaveStrategies = [
         lossLimitRatio: 100,
         addToVault: true,
         customParams: [
+            6700,//_borrowFactor
+            6900,//_borrowFactorMax
+            6500 //_borrowFactorMin
         ]
     }
 ];
