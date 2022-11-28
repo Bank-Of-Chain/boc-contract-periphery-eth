@@ -127,8 +127,8 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
 
     /// @notice Sets `_borrowCount` to `borrowCount`
     /// @param _borrowCount The new value of `borrowCount`
-    /// Requirements: only keeper can call
-    function setBorrowCount(uint256 _borrowCount) external isKeeper {
+    /// Requirements: only vault manager can call
+    function setBorrowCount(uint256 _borrowCount) external isVaultManager {
         require(_borrowCount <= 10 && _borrowCount > 0, "setting output the range");
         borrowCount = _borrowCount;
         _updateAllLeverage(_borrowCount);
