@@ -100,18 +100,19 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         address _harvester,
         string memory _name,
         address _underlyingToken,
+        uint256 _borrowCount,
         uint256 _borrowFactor,
         uint256 _borrowFactorMax,
         uint256 _borrowFactorMin
     ) external initializer {
-        borrowCount = 10;
+        borrowCount = _borrowCount;
         borrowFactor = _borrowFactor;
         borrowFactorMax = _borrowFactorMax;
         borrowFactorMin = _borrowFactorMin;
 
-        leverage = _calLeverage(_borrowFactor, 10000, 10);
-        leverageMax = _calLeverage(_borrowFactorMax, 10000, 10);
-        leverageMin = _calLeverage(_borrowFactorMin, 10000, 10);
+        leverage = _calLeverage(_borrowFactor, 10000, _borrowCount);
+        leverageMax = _calLeverage(_borrowFactorMax, 10000, _borrowCount);
+        leverageMin = _calLeverage(_borrowFactorMin, 10000, _borrowCount);
 
         address[] memory _wants = new address[](1);
         _wants[0] = _underlyingToken;
