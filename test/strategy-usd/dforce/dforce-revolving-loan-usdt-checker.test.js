@@ -7,7 +7,7 @@ const DForceRevolvingLoanStrategy = hre.artifacts.require('DForceRevolvingLoanSt
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 
 describe('【DForceRevolvingLoanUsdtStrategy Strategy Checker】', function () {
-  checker.check('DForceRevolvingLoanUsdtStrategy',async function (strategyAddress) {},async function (strategyAddress,customAddressArray) {
+  checker.check('DForceRevolvingLoanUsdtStrategy',async function (strategyAddress) {},null,async function (strategyAddress,customAddressArray) {
     // const aTokenContract = await ERC20.at('0x1982b2F5814301d4e9a8b0201555376e62F82428');
     const strategy = await DForceRevolvingLoanStrategy.at(strategyAddress);
     const accounts = await ethers.getSigners();

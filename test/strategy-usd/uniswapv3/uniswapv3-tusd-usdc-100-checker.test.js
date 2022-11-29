@@ -21,7 +21,7 @@ describe('【UniswapV3TusdUsdc100Strategy Strategy Checker】', function () {
             wantToken.approve(mockUniswapV3Router.address, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
             await mockUniswapV3Router.swap('0x39529E96c28807655B5856b3d342c6225111770e', i === 0 ? true : false, new BigNumber(10).pow(6).multipliedBy(new BigNumber(10).pow(wantTokenDecimals)), {"from": investor});
         }
-    }, async function (strategy,customAddressArray) {
+    }, null,async function (strategy,customAddressArray) {
         const accounts = await ethers.getSigners();
         const investor = accounts[1].address;
         keeper = accounts[19].address;
