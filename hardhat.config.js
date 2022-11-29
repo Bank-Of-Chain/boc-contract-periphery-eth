@@ -58,7 +58,7 @@ const config = {
             },
             forking: {
                 url: 'https://eth-mainnet.alchemyapi.io/v2/' + keys.alchemyKey.dev,
-                blockNumber: 15925084, // <-- edit here
+                blockNumber: 16024061, // <-- edit here
             },
             blockGasLimit: DEFAULT_BLOCK_GAS_LIMIT,
             timeout: 1800000,
@@ -70,7 +70,7 @@ const config = {
             // GasPrice used when performing blocking, in wei
             // gasPrice: 100 * 10 ** 9,
             timeout: 1800000,
-
+            accounts: process.env.ACCOUNT_PRIVATE_KEY ? [`${process.env.ACCOUNT_PRIVATE_KEY}`] : undefined,
             /*
               notice no mnemonic here? it will just use account 0 of the hardhat node to deploy
               (you can put in a mnemonic here to set the deployer locally)
@@ -92,7 +92,7 @@ const config = {
             url: `https://eth-mainnet.g.alchemy.com/v2/ZYgaLj6aguvs_FkgM-2dKhBR9ZXEGC9X`,
             accounts: process.env.ACCOUNT_PRIVATE_KEY ? [`${process.env.ACCOUNT_PRIVATE_KEY}`] : undefined,
             // The gasPrice used when performing the blocking, in wei, for the release, 80Gwei is used
-            gasPrice: 10 * 10 ** 9,
+            gasPrice: 15 * 10 ** 9,
             timeout: 2000000000,
             timeoutBlocks: 10000
         },

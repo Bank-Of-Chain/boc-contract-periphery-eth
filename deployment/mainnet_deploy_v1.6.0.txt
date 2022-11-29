@@ -32,6 +32,9 @@
 │     DForceLendDaiStrategy     │ '0x26b98C61658625Af4a0F4965bf3676d4D66e03d0' │
 │    DForceLendUsdcStrategy     │ '0xC348591EaB025B2ec421dBB9efF0C1F173E296c0' │
 │    DForceLendUsdtStrategy     │ '0xe6FF2785bf41143e4179d1DEAd2E775088374ede' │
+│ DForceRevolvingLoanDaiStrategy│ '0xc374D8655F6c2178E2Ab3450232f9B4067561867' │
+│DForceRevolvingLoanUsdtStrategy│ '0x3f3aDC3be5b027F9ceecc7953565ba1dfc604B4D' │
+│DForceRevolvingLoanUsdcStrategy│ '0xB1DDc0af35AA7e05Bd73455f1f662f832CbA8B71' │
 │      DodoDaiUsdtStrategy      │ '0xD3Fc8F66CAde1003b2d40F647D3EcB5a0c2331f3' │
 │     DodoUsdtUsdcStrategy      │ '0x365b28e3d04018A116Ecc087D03ad86e0e4f44Db' │
 │ UniswapV3BusdUsdc500Strategy  │ '0xBB470de15a5433557F9348C807258a762301E313' │
@@ -66,6 +69,7 @@
 │  UniswapV2StEthWEthStrategy   │ '0x6f72c9fD9d50524716DdDC55fDD41942e37D47CC' │
 │ UniswapV3RethEth3000Strategy  │ '0x3c1A3bf0A77460985a797011F46CbF2521E1793F' │
 │ StakeWiseEthSeth23000Strategy │ '0xE933639733c212265Ed7a243A061e705D0410CA5' │
+│DForceRevolvingLoanETHStrategy │ '0xABDaFf32d04780E38c7F9Aedb7c7CAf8D9C68041' │
 │      YearnV2YETHStrategy      │ '0x8A4AE6dE0164D6E7D5154A88Ae004c8298bb8d71' │
 │      PriceOracleConsumer      │ '0xc542b8c1b38BD87D6aFc0346f041b2FAC8301467' │
 │           ETHVault            │ '0x8f0Cb368C63fbEDF7a90E43fE50F7eb8B9411746' │

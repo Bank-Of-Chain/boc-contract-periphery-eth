@@ -50,7 +50,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     uint256 public borrowFactor;
 
     // minimum amount to be liquidation
-    uint256 public constant SELL_FLOOR = 1e16;
+    uint256 public constant SELL_FLOOR = 1e17;
     uint256 public constant BPS = 10000;
     address public constant BOOSTER = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
     address public constant REWARD_CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
@@ -155,7 +155,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
 
     /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
-        return "1.0.0";
+        return "1.0.1";
     }
 
     // ==== External === //
@@ -644,13 +644,10 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
             //The excess _borrowToken is exchanged for U
             uint256 _profit = balanceOfToken(_borrowToken);
             if (_profit > 0) {
-                IUniswapV2Router2(SUSHI_ROUTER_ADDR).swapExactTokensForTokens(
-                    _profit,
-                    0,
-                    rewardRoutes[_borrowToken],
-                    address(this),
-                    block.timestamp
-                );
+                IERC20Upgradeable(_borrowToken).safeApprove(curveUsdcIbforexPool, 0);
+                IERC20Upgradeable(_borrowToken).safeApprove(curveUsdcIbforexPool, _profit);
+                // swap ibToken to USDC
+                ICurveMini(curveUsdcIbforexPool).exchange(0, 1, _profit, 0);
                 uint256 _usdcBalance = balanceOfToken(USDC);
                 IUniswapV2Router2(UNI_ROUTER_ADDR).swapExactTokensForTokens(
                     _usdcBalance,
