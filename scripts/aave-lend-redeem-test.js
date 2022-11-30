@@ -5,6 +5,8 @@ const {reportOracle} = require('./mock-lidoOracle');
 
 const {
     topUpUsdtByAddress,
+    topUpWETHByAddress,
+    topUpWstEthByAddress,
     topUpUsdcByAddress,
     topUpDaiByAddress,
     topUpLusdByAddress,
@@ -14,15 +16,16 @@ const {
 } = require('../utils/top-up-utils');
 
 const IVault = hre.artifacts.require('boc-contract-core/contracts/vault/IVault.sol:IVault');
-
 const IDForcePriceOracle = hre.artifacts.require('IDForcePriceOracle');
 const IDForceController = hre.artifacts.require('IDForceController');
 const MockPriceModel = hre.artifacts.require('MockPriceModel');
 const IStrategy = hre.artifacts.require('IStrategy');
+const EulerRevolvingLoanStrategy = hre.artifacts.require('EulerRevolvingLoanStrategy');
 const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 
 const {
-    ETH_ADDRESS,
+    wstETH_ADDRESS,
+    WETH_ADDRESS,
     USDT_ADDRESS,
     USDC_ADDRESS,
     DAI_ADDRESS,
@@ -79,8 +82,32 @@ const main = async () => {
     await topUpMimByAddress(mimAmount, vaultAddress);
     const busdAmount = new BigNumber(1000_000 * 10 ** 18);
     await topUpBusdByAddress(busdAmount, vaultAddress);
+    const wethAmount = new BigNumber(1000_000 * 10 ** 18);
+    await topUpWETHByAddress(wethAmount, ethiVaultAddress);
+    const wstethAmount = new BigNumber(1000_000 * 10 ** 18);
+    await topUpWstEthByAddress(wstethAmount, ethiVaultAddress);
     console.log(`top up successfully`);
 
+    // const eulerRevolvingLoanStrategyContract = await EulerRevolvingLoanStrategy.at('0xFCFE742e19790Dd67a627875ef8b45F17DB1DaC6');
+    // const eulContract = await ERC20.at('0xd9fcd98c322942075a5c3860693e9f4f03aae07b');
+    //
+    // console.log("before claim",(await eulContract.balanceOf('0xDb29eC3Fb265A03943bfEdBDF4eE9D9867B368e8')).toString());
+    //
+    // await eulerRevolvingLoanStrategyContract.claim('0xDb29eC3Fb265A03943bfEdBDF4eE9D9867B368e8','0xd9fcd98c322942075a5c3860693e9f4f03aae07b',new BigNumber('497785343330298145256'),['0x400b9b2297978587c1cd5b4fadcf3178b9877480136ea2636fbabfa4fb9f0927',
+    //     '0x9b470c59b050d69b9d2771a7aca9b67e7af7b790f2a92da06b44e54dd5f2652c',
+    //     '0x2cd60e7b560ab7ef045ee8288b58ca5d138cb98b5258d066c3c7f9af75f5df5c',
+    //     '0x7f0b3b6e90ca7d5be8f37b42a9383823d9fec3ce09c33e53ea619f4deeecbbf2',
+    //     '0x5506bc91b352a144b03569a87cabe11e5d97b9b045b04544fa673cdf2a3859c0',
+    //     '0x1c4aae302076285a9ecfb90c3545c948c731ac81a122c826c40187ca85d71fa7',
+    //     '0xff184685dfff8643cf01e4a60e9dca04acd2398fd491959af7651360e1e7d9fb',
+    //     '0x77429b1acf8f45b202b02688fa794e4b98e286b997d7ac283bf50102b10f4e31',
+    //     '0x802bda5b2f51bce02f877c1adff1908e9a8ec1cc34a088f9bc9e1c84517366e7',
+    //     '0x8066296b3da0d977260df342e43a37cde13732861d2a2fa9262de66154fe7c88',
+    //     '0xd058a4936c3526b77c03713d54004e63a0ea91121228898e562104fe26759a3a',
+    //     '0xe7ec33504f89c1a4530a01ded0b1804ff4232d9e985470afce1b4a5c2c7a7a9d',
+    //     '0x6574e63efc4f82be8fb41a0f48740b41d7bd2ef6fb24915cd2d5aab3f72a3c68'],'0x0000000000000000000000000000000000000000');
+    //
+    // console.log("after claim",(await eulContract.balanceOf('0xDb29eC3Fb265A03943bfEdBDF4eE9D9867B368e8')).toString());
 
     // let priceOracle = await IDForcePriceOracle.at("0xb4De37b03f7AcE98FB795572B18aE3CFae85A628");
     // let _controller = await IDForceController.at("0x8B53Ab2c0Df3230EA327017C91Eb909f815Ad113");
@@ -109,7 +136,6 @@ const main = async () => {
         } }
 
     let exchangeTokens = [exchangeToken];
-
 
     let strategyAddress = '0xbe18A1B61ceaF59aEB6A9bC81AB4FB87D56Ba167';
     let estimationGas;
@@ -140,14 +166,13 @@ const main = async () => {
     }
 
     exchangeToken = {fromToken: DAI_ADDRESS,toToken: DAI_ADDRESS,fromAmount: daiAmount.dividedBy(2).toFixed(),exchangeParam: {
-            platform: '0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5',
+            platform: '0xbf2ad38fd09F37f50f723E35dd84EEa1C282c5C9',
             method: 0,
             encodeExchangeArgs: "0x",
             slippage: 0,
             oracleAdditionalSlippage: 0,
         } }
     exchangeTokens = [exchangeToken];
-
     strategyAddress = '0xFCFE742e19790Dd67a627875ef8b45F17DB1DaC6';
     for(let i = 0; i < 30; i++){
         console.log("DAI",i);
@@ -172,7 +197,6 @@ const main = async () => {
 
         console.log("DAI redeem estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
     }
-
     exchangeToken = {fromToken: USDT_ADDRESS,toToken: USDT_ADDRESS,fromAmount: usdtAmount.dividedBy(2).toFixed(),exchangeParam: {
             platform: '0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5',
             method: 0,
@@ -181,7 +205,6 @@ const main = async () => {
             oracleAdditionalSlippage: 0,
         } }
     exchangeTokens = [exchangeToken];
-
     strategyAddress = '0x398E4948e373Db819606A459456176D31C3B1F91';
     for(let i = 0; i < 30; i++){
         console.log("USDT",i);
@@ -199,7 +222,6 @@ const main = async () => {
             lossLimitRatio,
             enforceChangeLimit,
         } = state
-
         estimationGas = await vaultContract.redeem.estimateGas(strategyAddress, totalDebt,0);
         tx =  await vaultContract.redeem(strategyAddress, totalDebt,0,{gas:new BigNumber(estimationGas.toString()).multipliedBy(120).dividedBy(100).toFixed(),from: keeper});
         console.log("USDT redeem estimationGas=",estimationGas.toString());
@@ -207,40 +229,72 @@ const main = async () => {
 
         console.log("USDT redeem estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
     }
-    exchangeToken = {fromToken: ETH_ADDRESS,toToken: ETH_ADDRESS,fromAmount: ethAmount.dividedBy(2).toFixed(),exchangeParam: {
-            platform: '0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5',
+    exchangeToken = {fromToken: WETH_ADDRESS,toToken: WETH_ADDRESS,fromAmount: wethAmount.dividedBy(2).toFixed(),exchangeParam: {
+            platform: '0xbf2ad38fd09F37f50f723E35dd84EEa1C282c5C9',
             method: 0,
             encodeExchangeArgs: "0x",
             slippage: 0,
             oracleAdditionalSlippage: 0,
         } }
-    // exchangeTokens = [exchangeToken];
-    // strategyAddress = '0x06b3244b086cecC40F1e5A826f736Ded68068a0F';
-    // const ethiVaultContract = await IVault.at(ethiVaultAddress);
-    // const beforeBalance = await balance.current(ethiVaultContract.address)
-    // console.log("vault ethAmount",beforeBalance.toString());
-    // for(let i = 0; i < 30; i++){
-    //     console.log("ETH",i);
-    //     estimationGas = await ethiVaultContract.lend.estimateGas(strategyAddress, exchangeTokens);
-    //     tx = await ethiVaultContract.lend(strategyAddress, exchangeTokens,{gas:4000000,from:keeper});
-    //     console.log("ETH lend estimationGas=",estimationGas.toString());
-    //     console.log("ETH lend gasUsed=",tx.receipt.gasUsed);
-    //     console.log("ETH lend estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
-    //     await reportOracle(1,60)
-    //     const state = await ethiVaultContract.strategies(strategyAddress,{from:keeper});
-    //     const {
-    //         lastReport,
-    //         totalDebt,
-    //         profitLimitRatio,
-    //         lossLimitRatio,
-    //         enforceChangeLimit,
-    //     } = state
-    //     estimationGas = await ethiVaultContract.redeem.estimateGas(strategyAddress, totalDebt,0);
-    //     tx =  await ethiVaultContract.redeem(strategyAddress, totalDebt,0,{gas:new BigNumber(estimationGas.toString()).multipliedBy(120).dividedBy(100).toFixed(),from: keeper});
-    //     console.log("ETH redeem estimationGas=",estimationGas.toString());
-    //     console.log("ETH redeem gasUsed=",tx.receipt.gasUsed);
-    //     console.log("ETH redeem estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
-    // }
+    exchangeTokens = [exchangeToken];
+    strategyAddress = '0x4f42528B7bF8Da96516bECb22c1c6f53a8Ac7312';
+    const ethiVaultContract = await IVault.at(ethiVaultAddress);
+    const wethContract = await ERC20.at(WETH_ADDRESS);
+    console.log("ethiVaultContract weth=",(await wethContract.balanceOf(ethiVaultContract.address)).toString());
+    for(let i = 0; i < 30; i++){
+        console.log("WETH",i);
+        estimationGas = await ethiVaultContract.lend.estimateGas(strategyAddress, exchangeTokens);
+        tx = await ethiVaultContract.lend(strategyAddress, exchangeTokens,{gas:4000000,from:keeper});
+        console.log("WETH lend estimationGas=",estimationGas.toString());
+        console.log("WETH lend gasUsed=",tx.receipt.gasUsed);
+        console.log("WETH lend estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
+        await reportOracle(1,60)
+        const state = await ethiVaultContract.strategies(strategyAddress,{from:keeper});
+        const {
+            lastReport,
+            totalDebt,
+            profitLimitRatio,
+            lossLimitRatio,
+            enforceChangeLimit,
+        } = state
+        estimationGas = await ethiVaultContract.redeem.estimateGas(strategyAddress, totalDebt,0);
+        tx =  await ethiVaultContract.redeem(strategyAddress, totalDebt,0,{gas:new BigNumber(estimationGas.toString()).multipliedBy(120).dividedBy(100).toFixed(),from: keeper});
+        console.log("WETH redeem estimationGas=",estimationGas.toString());
+        console.log("WETH redeem gasUsed=",tx.receipt.gasUsed);
+        console.log("WETH redeem estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
+    }
+    exchangeToken = {fromToken: wstETH_ADDRESS,toToken: wstETH_ADDRESS,fromAmount: wstethAmount.dividedBy(2).toFixed(),exchangeParam: {
+            platform: '0xbf2ad38fd09F37f50f723E35dd84EEa1C282c5C9',
+            method: 0,
+            encodeExchangeArgs: "0x",
+            slippage: 0,
+            oracleAdditionalSlippage: 0,
+        } }
+    exchangeTokens = [exchangeToken];
+    strategyAddress = '0x8f119cd256a0FfFeed643E830ADCD9767a1d517F';
+
+    for(let i = 0; i < 30; i++){
+        console.log("WstETH",i);
+        estimationGas = await ethiVaultContract.lend.estimateGas(strategyAddress, exchangeTokens);
+        tx = await ethiVaultContract.lend(strategyAddress, exchangeTokens,{gas:4000000,from:keeper});
+        console.log("WstETH lend estimationGas=",estimationGas.toString());
+        console.log("WstETH lend gasUsed=",tx.receipt.gasUsed);
+        console.log("WstETH lend estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
+        await reportOracle(1,60)
+        const state = await ethiVaultContract.strategies(strategyAddress,{from:keeper});
+        const {
+            lastReport,
+            totalDebt,
+            profitLimitRatio,
+            lossLimitRatio,
+            enforceChangeLimit,
+        } = state
+        estimationGas = await ethiVaultContract.redeem.estimateGas(strategyAddress, totalDebt,0);
+        tx =  await ethiVaultContract.redeem(strategyAddress, totalDebt,0,{gas:new BigNumber(estimationGas.toString()).multipliedBy(120).dividedBy(100).toFixed(),from: keeper});
+        console.log("WstETH redeem estimationGas=",estimationGas.toString());
+        console.log("WstETH redeem gasUsed=",tx.receipt.gasUsed);
+        console.log("WstETH redeem estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
+    }
 }
 
 main()
