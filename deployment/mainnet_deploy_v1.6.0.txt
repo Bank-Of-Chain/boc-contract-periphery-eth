@@ -37,6 +37,9 @@
 │DForceRevolvingLoanUsdcStrategy│ '0xB1DDc0af35AA7e05Bd73455f1f662f832CbA8B71' │
 │      DodoDaiUsdtStrategy      │ '0xD3Fc8F66CAde1003b2d40F647D3EcB5a0c2331f3' │
 │     DodoUsdtUsdcStrategy      │ '0x365b28e3d04018A116Ecc087D03ad86e0e4f44Db' │
+│ EulerRevolvingLoanDaiStrategy │ '0xbC7BE1EE3217b3221e0f46174E6a2fbE4b8D332E' │
+│ EulerRevolvingLoanUsdtStrategy│ '0xC12c630B9Ef5Be696E24b6Cb3EfE58b7B8b06de3' │
+│ EulerRevolvingLoanUsdcStrategy│ '0xF8EA0d34B9f47B68d3163b465204c10C142977d4' │
 │ UniswapV3BusdUsdc500Strategy  │ '0xBB470de15a5433557F9348C807258a762301E313' │
 │  UniswapV3DaiUsdc100Strategy  │ '0x0760e5A243c780f3Bd728AA02CdF2Cc1a5D18C8e' │
 │  UniswapV3DaiUsdc500Strategy  │ '0x11e419023b1E5ea1D8F39b797C7Fe16F81958435' │
@@ -66,10 +69,12 @@
 │     AuraREthWEthStrategy      │ '0x34152B0eEf70423B51556e0DCA1b8d142b6EB0f9' │
 │   ConvexrETHwstETHStrategy    │ '0x1B9DeB21E39062d4Af7670719F5743909762cD09' │
 │      ConvexStETHStrategy      │ '0x36566097A321D3D90c04Dfa31920e94137e4555E' │
+│DForceRevolvingLoanETHStrategy │ '0xABDaFf32d04780E38c7F9Aedb7c7CAf8D9C68041' │
+│EulerRevolvingLoanWETHStrategy │ '0x69860614C49C61Ea7aEaD9553320bABD4E37C492' │
+│EulerRevolvingLoanWstETHStrategy│ '0x5C95891d5fc0d8506d2a175D2F038070511D964E' │
 │  UniswapV2StEthWEthStrategy   │ '0x6f72c9fD9d50524716DdDC55fDD41942e37D47CC' │
 │ UniswapV3RethEth3000Strategy  │ '0x3c1A3bf0A77460985a797011F46CbF2521E1793F' │
 │ StakeWiseEthSeth23000Strategy │ '0xE933639733c212265Ed7a243A061e705D0410CA5' │
-│DForceRevolvingLoanETHStrategy │ '0xABDaFf32d04780E38c7F9Aedb7c7CAf8D9C68041' │
 │      YearnV2YETHStrategy      │ '0x8A4AE6dE0164D6E7D5154A88Ae004c8298bb8d71' │
 │      PriceOracleConsumer      │ '0xc542b8c1b38BD87D6aFc0346f041b2FAC8301467' │
 │           ETHVault            │ '0x8f0Cb368C63fbEDF7a90E43fE50F7eb8B9411746' │
