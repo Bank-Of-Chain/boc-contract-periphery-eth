@@ -31,7 +31,7 @@ describe('【AaveDaiLendingStEthStrategy Strategy Checker】', function() {
         console.log("harvest astETH:",receivedAstETHAmount.toString());
 
         await aTokenContract.transfer(strategyAddress,receivedAstETHAmount.toString(),{from:keeper});
-    },async function (strategyAddress,customAddressArray) {
+    },null,async function (strategyAddress,customAddressArray) {
 
         const mockPriceOracleAddress = customAddressArray[0];
         const mockPriceOracle = await MockAavePriceOracleConsumer.at(mockPriceOracleAddress);
