@@ -1,4 +1,5 @@
 const { upgrades, ethers } = require("hardhat");
+const {default: BigNumber} = require("bignumber.js");
 
 const IStrategy = hre.artifacts.require('IStrategy');
 
@@ -36,25 +37,33 @@ const main = async () => {
         const overrides = {};
         const constract = await adminArtifacts.deploy(...contractArgs, overrides);
         console.log(`${contractInfo.vaultAdminArtifact} deployed, address=`, constract.address);
+        console.log('stat setAdminImpl');
         await vaultContract.setAdminImpl(constract.address);
+        console.log('completed setAdminImpl');
 
-        //Fork
-        if (network == 'localhost'){
-            const trackedValueBeforeRedeem = await vaultContract.valueOfTrackedTokens();
-            const strategies = await vaultContract.getStrategies();
-            for (let i = 0;i < strategies.length;i++) {
-                let strategyAddr = strategies[i];
-                let strategyInfo = await vaultContract.strategies(strategyAddr);
-                console.log(strategyInfo.toString());
-                if (strategyInfo.totalDebt > 0){
-                    await vaultContract.redeem(strategyAddr,strategyInfo.totalDebt,0);
-                    let strategy = await IStrategy.at(strategyAddr);
-                    console.log('redeem %s finish.',await strategy.name());
-                }
-            }
-            const trackedValueAfterRedeem = await vaultContract.valueOfTrackedTokens();
-            console.log('trackedValueBeforeRedeem:%d,trackedValueAfterRedeem:%d',trackedValueBeforeRedeem,trackedValueAfterRedeem);
-        }
+        // //Fork
+        // if (network == 'localhost'){
+        //     const accounts = await ethers.getSigners();
+        //     const keeper = accounts[19].address;
+        //     const trackedValueBeforeRedeem = await vaultContract.valueOfTrackedTokens();
+        //     const strategies = await vaultContract.getStrategies();
+        //     await vaultContract.reportByKeeper(strategies,{from: keeper});
+        //     for (let i = 0;i < strategies.length;i++) {
+        //         let strategyAddr = strategies[i];
+        //         let strategy = await IStrategy.at(strategyAddr);
+        //         await strategy.harvest();
+        //         console.log('strategy %s (lastReport,totalDebt,profitLimitRatio,lossLimitRatio,enforceChangeLimit,lastClaim)=',await strategy.name());
+        //         let strategyInfo = await vaultContract.strategies(strategyAddr);
+        //         console.log(strategyInfo.lastReport.toString(),strategyInfo.totalDebt.toString(),strategyInfo.profitLimitRatio.toString(),strategyInfo.lossLimitRatio.toString(),strategyInfo.enforceChangeLimit.toString(),strategyInfo.lastClaim.toString());
+        //         if (strategyInfo.totalDebt > 1e16){
+        //             const estimationGas = await vaultContract.redeem.estimateGas(strategyAddr,strategyInfo.totalDebt,0,{from: keeper});
+        //             await vaultContract.redeem(strategyAddr,strategyInfo.totalDebt,0,{gas:new BigNumber(estimationGas.toString()).multipliedBy(120).dividedBy(100).toFixed(0,2)});
+        //             console.log('redeem %s finish.',await strategy.name());
+        //         }
+        //     }
+        //     const trackedValueAfterRedeem = await vaultContract.valueOfTrackedTokens();
+        //     console.log('trackedValueBeforeRedeem:%d,trackedValueAfterRedeem:%d',trackedValueBeforeRedeem,trackedValueAfterRedeem);
+        // }
     }
 
     console.log('=========contract upgrade completed==========');

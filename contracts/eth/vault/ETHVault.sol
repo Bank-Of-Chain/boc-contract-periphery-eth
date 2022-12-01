@@ -1336,11 +1336,6 @@ contract ETHVault is ETHVaultStorage {
         return _totalAssetInVault() + totalDebt;
     }
 
-    /// @notice Send funds to the pool
-    /// @dev Users are able to submit their funds by transacting to the fallback function.
-    /// Unlike vanilla Eth2.0 Deposit contract, accepting only 32-Ether transactions, Lido
-    /// accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
-    /// depositBufferedEther() and pushes them to the ETH2 Deposit contract.
     receive() external payable {}
 
     /// @dev Falldown to the admin implementation

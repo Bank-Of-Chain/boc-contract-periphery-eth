@@ -31,6 +31,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     /// @param profitLimitRatio The limited ratio of profit
     /// @param lossLimitRatio The limited ratio for loss
     /// @param enforceChangeLimit The switch of enforce change Limit
+    /// @param lastClaim The last claim timestamp
     struct StrategyParams {
         uint256 lastReport;
         uint256 totalDebt;
