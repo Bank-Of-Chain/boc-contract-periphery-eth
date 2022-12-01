@@ -362,11 +362,10 @@ contract ETHVault is ETHVaultStorage {
                 }
             }
             {
-                IETHStrategy _ethStrategy = IETHStrategy(_strategy);
                 if (_ethAmount > 0) {
-                    _ethStrategy.borrow{value: _ethAmount}(_wants, _toAmounts);
+                    IETHStrategy(_strategy).borrow{value: _ethAmount}(_wants, _toAmounts);
                 } else {
-                    _ethStrategy.borrow(_wants, _toAmounts);
+                    IETHStrategy(_strategy).borrow(_wants, _toAmounts);
                 }
             }
             {
