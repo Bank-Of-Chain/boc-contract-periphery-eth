@@ -37,6 +37,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
         uint256 profitLimitRatio;
         uint256 lossLimitRatio;
         bool enforceChangeLimit;
+        uint256 lastClaim;
     }
 
     /// @param strategy The new strategy to add
@@ -67,12 +68,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     /// @param _asset The address of the asset depositing
     /// @param _amount The amount of the asset depositing
     /// @param _mintAmount The amount of the asset minting
-    event Mint(
-        address _account, 
-        address _asset, 
-        uint256 _amount, 
-        uint256 _mintAmount
-    );
+    event Mint(address _account, address _asset, uint256 _amount, uint256 _mintAmount);
 
     /// @param _account The owner of token burning
     /// @param _amounts The amount of the USDi token burning
@@ -90,10 +86,10 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     );
 
     /// @param  _platform The platform used for the exchange
-    /// @param _srcAsset The address of asset exchange from 
-    /// @param _srcAmount The amount of asset exchange from 
-    /// @param _distAsset The address of asset exchange to 
-    /// @param _distAmount The amount of asset exchange to 
+    /// @param _srcAsset The address of asset exchange from
+    /// @param _srcAmount The amount of asset exchange from
+    /// @param _distAsset The address of asset exchange to
+    /// @param _distAmount The amount of asset exchange to
     event Exchange(
         address _platform,
         address _srcAsset,
@@ -104,8 +100,8 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
 
     /// @param _strategy The specified strategy to redeem
     /// @param _debtChangeAmount The amount to redeem in ETH
-    /// @param _assets The address list of asset redeeming 
-    /// @param _amounts The amount list of asset redeeming 
+    /// @param _assets The address list of asset redeeming
+    /// @param _amounts The amount list of asset redeeming
     event Redeem(
         address _strategy,
         uint256 _debtChangeAmount,
@@ -214,7 +210,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     /// @param _transferValue The total value to transfer on this adjust position
     /// @param _redeemValue The total value to redeem on this adjust position
     /// @param _totalDebt The all strategy asset value
-    /// @param _totalValueOfAfterAdjustPosition The total asset value Of vault after adjust position 
+    /// @param _totalValueOfAfterAdjustPosition The total asset value Of vault after adjust position
     /// @param _totalValueOfBeforeAdjustPosition The total asset value Of vault before adjust position
     event EndAdjustPosition(
         uint256 _transferValue,
@@ -225,7 +221,7 @@ contract ETHVaultStorage is Initializable, ReentrancyGuardUpgradeable, AccessCon
     );
 
     /// @param _pegTokenAmount The amount of the pegged token
-    /// @param _assets The address list of asset transfer from vault buffer to vault 
+    /// @param _assets The address list of asset transfer from vault buffer to vault
     /// @param _amounts The amount list of asset transfer from vault buffer to vault
     event PegTokenSwapCash(uint256 _pegTokenAmount, address[] _assets, uint256[] _amounts);
 
