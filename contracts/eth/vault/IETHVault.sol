@@ -305,6 +305,17 @@ interface IETHVault {
     ) external returns (uint256);
 
     /// @dev Report the current asset of strategy caller
+    /// @param _strategies The address list of strategies to report
+    /// Requirement: only keeper call
+    /// Emits a {StrategyReported} event.
+    function reportByKeeper(address[] memory _strategies) external;
+
+    /// @dev Report the current asset of strategy caller
+    /// Requirement: only the strategy caller is active
+    /// Emits a {StrategyReported} event.
+    function reportWithoutClaim() external;
+
+    /// @dev Report the current asset of strategy caller
     /// @param _rewardTokens The reward token list
     /// @param _claimAmounts The claim amount list
     /// Emits a {StrategyReported} event.
