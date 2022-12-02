@@ -12,7 +12,6 @@ import "./../../external/uniswapV3/INonfungiblePositionManager.sol";
 abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    event UniV3Initialized(address _token0, address _token1, uint24 _fee);
     event UniV3NFTPositionAdded(uint256 indexed _tokenId, uint128 _liquidity, uint256 _amount0, uint256 _amount1);
     event UniV3NFTPositionRemoved(uint256 indexed _tokenId);
     event UniV3NFTCollect(uint256 _nftId, uint256 _amount0, uint256 _amount1);
@@ -40,7 +39,6 @@ abstract contract UniswapV3LiquidityActionsMixin is AssetHelpers {
         // Approve the NFT manager once for the max of each token
         IERC20Upgradeable(token0).safeApprove(address(nonfungiblePositionManager), type(uint256).max);
         IERC20Upgradeable(token1).safeApprove(address(nonfungiblePositionManager), type(uint256).max);
-        emit UniV3Initialized(token0, token1, fee);
     }
 
     function __collectAll(uint256 _nftId) internal returns (uint256, uint256){

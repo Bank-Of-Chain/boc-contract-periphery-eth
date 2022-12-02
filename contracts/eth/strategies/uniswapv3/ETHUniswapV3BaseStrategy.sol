@@ -241,14 +241,6 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         }
     }
 
-    /// @notice Collect by the Strategy
-    /// @return _assets The list of the reward token
-    /// @return _amounts The list of the reward amount claimed
-    function collect() internal returns (address[] memory _assets, uint256[] memory _amounts) {
-        (, _assets, _amounts) = claimRewards();
-        emit UniV3Claim(_assets, _amounts);
-    }
-
     /// @inheritdoc ETHBaseClaimableStrategy
     function swapRewardsToWants() internal virtual override returns(address[] memory _wantTokens,uint256[] memory _wantAmounts){}
 
@@ -341,7 +333,8 @@ abstract contract ETHUniswapV3BaseStrategy is ETHBaseClaimableStrategy, UniswapV
         if (_report) {
             harvest();
         } else {
-            collect();
+            (, address[] memory _assets, uint256[] memory _amounts) = claimRewards();
+            emit UniV3Claim(_assets, _amounts);
         }
 
         // Withdraw all current liquidity
