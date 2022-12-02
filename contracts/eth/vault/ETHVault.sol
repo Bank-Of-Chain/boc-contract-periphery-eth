@@ -58,7 +58,7 @@ contract ETHVault is ETHVaultStorage {
 
     /// @notice Version of vault
     function getVersion() external pure returns (string memory) {
-        return "1.1.0";
+        return "1.1.1";
     }
 
     /// @notice Minting ETHi supported assets
@@ -155,17 +155,31 @@ contract ETHVault is ETHVaultStorage {
                 uint256 _balance = _balanceOfToken(_trackedAsset, address(this));
                 if (_balance > 0) {
                     _totalValueInVault =
-                    _totalValueInVault +
-                    _calculateAssetValue(_assetPrices, _assetDecimals, i, _trackedAsset, _balance);
+                        _totalValueInVault +
+                        _calculateAssetValue(
+                            _assetPrices,
+                            _assetDecimals,
+                            i,
+                            _trackedAsset,
+                            _balance
+                        );
                 }
                 _balance = transferFromVaultBufferAssetsMap[_trackedAsset];
                 if (_balance > 0) {
                     _totalTransferValue =
-                    _totalTransferValue +
-                    _calculateAssetValue(_assetPrices, _assetDecimals, i, _trackedAsset, _balance);
+                        _totalTransferValue +
+                        _calculateAssetValue(
+                            _assetPrices,
+                            _assetDecimals,
+                            i,
+                            _trackedAsset,
+                            _balance
+                        );
                 }
             }
-            _pegTokenPrice = ((_totalValueInVault + totalDebt - _totalTransferValue) * 1e18) / _totalSupply;
+            _pegTokenPrice =
+                ((_totalValueInVault + totalDebt - _totalTransferValue) * 1e18) /
+                _totalSupply;
         }
         return _pegTokenPrice;
     }
@@ -175,7 +189,7 @@ contract ETHVault is ETHVaultStorage {
         require(strategySet.contains(_strategy), "strategy not exist");
     }
 
-    /// @notice Estimate the pending share amount that can be minted 
+    /// @notice Estimate the pending share amount that can be minted
     /// @param _asset Address of the asset being deposited
     /// @param _amount Amount of the asset being deposited
     /// @return The share Amount estimated
@@ -226,7 +240,7 @@ contract ETHVault is ETHVaultStorage {
         address[] memory _trackedAssets = _getTrackedAssets();
         uint256[] memory _assetPrices = new uint256[](_trackedAssets.length);
         uint256[] memory _assetDecimals = new uint256[](_trackedAssets.length);
-        (uint256 _sharesAmount, uint256 _actualAsset) = _replayToVault(
+        (uint256 _sharesAmount, uint256 _actualAsset) = _repayToVault(
             _amount,
             _accountBalance,
             _trackedAssets,
@@ -258,7 +272,7 @@ contract ETHVault is ETHVaultStorage {
     /// @notice Redeem the funds from specified strategy.
     /// @param _strategy The specified strategy to redeem
     /// @param _amount The amount to redeem in USD
-    /// @param _outputCode The code of output 
+    /// @param _outputCode The code of output
     function redeem(
         address _strategy,
         uint256 _amount,
@@ -321,38 +335,46 @@ contract ETHVault is ETHVaultStorage {
                 }
             }
         }
-
-        uint256 _minAmount = _toAmounts[_minProductIndex];
-        uint256 _minAspect = _ratios[_minProductIndex];
-        uint256 _lendValue;
-        uint256 _ethAmount;
-        for (uint256 i = 0; i < _toAmounts.length; i++) {
-            uint256 _actualAmount = _toAmounts[i];
-            if (_actualAmount > 0) {
-                if (!_isWantRatioIgnorable && _ratios[i] > 0) {
-                    _actualAmount = (_ratios[i] * _minAmount) / _minAspect;
-                    _toAmounts[i] = _actualAmount;
-                }
-                if (_wants[i] == NativeToken.NATIVE_TOKEN) {
-                    _lendValue += _actualAmount;
-                    _ethAmount = _actualAmount;
-                } else {
-                    _lendValue += IPriceOracleConsumer(priceProvider).valueInEth(
-                        _wants[i],
-                        _actualAmount
-                    );
-                    IERC20Upgradeable(_wants[i]).safeTransfer(_strategy, _actualAmount);
+        {
+            uint256 _lendValue;
+            uint256 _ethAmount;
+            {
+                uint256 _minAmount = _toAmounts[_minProductIndex];
+                uint256 _minAspect = _ratios[_minProductIndex];
+                for (uint256 i = 0; i < _toAmounts.length; i++) {
+                    uint256 _actualAmount = _toAmounts[i];
+                    if (_actualAmount > 0) {
+                        if (!_isWantRatioIgnorable && _ratios[i] > 0) {
+                            _actualAmount = (_ratios[i] * _minAmount) / _minAspect;
+                            _toAmounts[i] = _actualAmount;
+                        }
+                        if (_wants[i] == NativeToken.NATIVE_TOKEN) {
+                            _lendValue += _actualAmount;
+                            _ethAmount = _actualAmount;
+                        } else {
+                            _lendValue += IPriceOracleConsumer(priceProvider).valueInEth(
+                                _wants[i],
+                                _actualAmount
+                            );
+                            IERC20Upgradeable(_wants[i]).safeTransfer(_strategy, _actualAmount);
+                        }
+                    }
                 }
             }
+            {
+                if (_ethAmount > 0) {
+                    IETHStrategy(_strategy).borrow{value: _ethAmount}(_wants, _toAmounts);
+                } else {
+                    IETHStrategy(_strategy).borrow(_wants, _toAmounts);
+                }
+            }
+            {
+                address[] memory _rewardTokens;
+                uint256[] memory _claimAmounts;
+                _report(_strategy, _rewardTokens, _claimAmounts, _lendValue, 1);
+            }
+            emit LendToStrategy(_strategy, _wants, _toAmounts, _lendValue);
         }
-        IETHStrategy _ethStrategy = IETHStrategy(_strategy);
-        if (_ethAmount > 0) {
-            _ethStrategy.borrow{value: _ethAmount}(_wants, _toAmounts);
-        } else {
-            _ethStrategy.borrow(_wants, _toAmounts);
-        }
-        _report(_strategy, new address[](0), new uint256[](0), _lendValue);
-        emit LendToStrategy(_strategy, _wants, _toAmounts, _lendValue);
     }
 
     function exchange(
@@ -377,6 +399,28 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /// @dev Report the current asset of strategy caller
+    /// @param _strategies The address list of strategies to report
+    /// Requirement: only keeper call
+    /// Emits a {StrategyReported} event.
+    function reportByKeeper(address[] memory _strategies) external isKeeper {
+        address[] memory _rewardTokens;
+        uint256[] memory _claimAmounts;
+        uint256 _strategiesLength = _strategies.length;
+        for (uint256 i = 0; i < _strategiesLength; i++) {
+            _report(_strategies[i], _rewardTokens, _claimAmounts, 0, 2);
+        }
+    }
+
+    /// @dev Report the current asset of strategy caller
+    /// Requirement: only the strategy caller is active
+    /// Emits a {StrategyReported} event.
+    function reportWithoutClaim() external isActiveStrategy(msg.sender) {
+        address[] memory _rewardTokens;
+        uint256[] memory _claimAmounts;
+        _report(msg.sender, _rewardTokens, _claimAmounts, 0, 2);
+    }
+
+    /// @dev Report the current asset of strategy caller
     /// @param _rewardTokens The reward token list
     /// @param _claimAmounts The claim amount list
     /// Requirement: only the strategy caller is active
@@ -385,7 +429,7 @@ contract ETHVault is ETHVaultStorage {
         external
         isActiveStrategy(msg.sender)
     {
-        _report(msg.sender, _rewardTokens, _claimAmounts, 0);
+        _report(msg.sender, _rewardTokens, _claimAmounts, 0, 0);
     }
 
     /// @notice start  Adjust  Position
@@ -882,7 +926,7 @@ contract ETHVault is ETHVaultStorage {
         return _actualAmount;
     }
 
-    function _replayToVault(
+    function _repayToVault(
         uint256 _amount,
         uint256 _accountBalance,
         address[] memory _trackedAssets,
@@ -1146,11 +1190,17 @@ contract ETHVault is ETHVaultStorage {
         emit Exchange(_exchangeParam.platform, _fromToken, _amount, _toToken, _exchangeAmount);
     }
 
+    /// @notice Report the current asset of strategy
+    /// @param _strategy The strategy address
+    /// @param _rewardTokens The reward token list
+    /// @param _claimAmounts The claim amount list
+    /// @param _type 0-harvest(claim); 1-lend; 2-report(without claim);
     function _report(
         address _strategy,
         address[] memory _rewardTokens,
         uint256[] memory _claimAmounts,
-        uint256 _lendValue
+        uint256 _lendValue,
+        uint256 _type
     ) private {
         StrategyParams memory _strategyParam = strategies[_strategy];
         uint256 _lastStrategyTotalDebt = _strategyParam.totalDebt + _lendValue;
@@ -1193,9 +1243,8 @@ contract ETHVault is ETHVaultStorage {
         totalDebt = totalDebt + _nowStrategyTotalDebt + _lendValue - _lastStrategyTotalDebt;
 
         strategies[_strategy].lastReport = block.timestamp;
-        uint256 _type = 0;
-        if (_lendValue > 0) {
-            _type = 1;
+        if (_type == 0) {
+            strategies[_strategy].lastClaim = block.timestamp;
         }
         emit StrategyReported(
             _strategy,
@@ -1286,11 +1335,6 @@ contract ETHVault is ETHVaultStorage {
         return _totalAssetInVault() + totalDebt;
     }
 
-    /// @notice Send funds to the pool
-    /// @dev Users are able to submit their funds by transacting to the fallback function.
-    /// Unlike vanilla Eth2.0 Deposit contract, accepting only 32-Ether transactions, Lido
-    /// accepts payments of any size. Submitted Ethers are stored in Buffer until someone calls
-    /// depositBufferedEther() and pushes them to the ETH2 Deposit contract.
     receive() external payable {}
 
     /// @dev Falldown to the admin implementation

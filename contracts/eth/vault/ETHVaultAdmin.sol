@@ -23,7 +23,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
         emit SetEmergencyShutdown(_active);
     }
 
-    /// @dev Sets adjustPositionPeriod true when adjust position occurs, 
+    /// @dev Sets adjustPositionPeriod true when adjust position occurs,
     ///   cannot remove add asset/strategy and cannot mint/burn.
     /// Requirements: only keeper can call
     function setAdjustPositionPeriod(bool _adjustPositionPeriod) external isKeeper {
@@ -85,7 +85,10 @@ contract ETHVaultAdmin is ETHVaultStorage {
 
     /// @dev Sets the exchangeManagerAddress that can receive a portion of yield.
     /// Requirements: only governance role can call
-    function setExchangeManagerAddress(address _exchangeManagerAddress) external onlyRole(BocRoles.GOV_ROLE) {
+    function setExchangeManagerAddress(address _exchangeManagerAddress)
+        external
+        onlyRole(BocRoles.GOV_ROLE)
+    {
         require(_exchangeManagerAddress != address(0), "exchangeManager ad is 0");
         exchangeManager = _exchangeManagerAddress;
         emit ExchangeManagerAddressChanged(_exchangeManagerAddress);
@@ -228,7 +231,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
         emit RemoveStrategies(_strategies);
     }
 
-    /// @dev Forced to remove the '_strategy' 
+    /// @dev Forced to remove the '_strategy'
     /// Requirements: only governance or delegate role can call
     function forceRemoveStrategy(address _strategy) external onlyGovOrDelegate {
         _removeStrategy(_strategy, true);
@@ -271,7 +274,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     // Internal function
-    
+
     function _addStrategy(
         address strategy,
         uint256 _profitLimitRatio,
@@ -283,7 +286,8 @@ contract ETHVaultAdmin is ETHVaultStorage {
             totalDebt: 0,
             profitLimitRatio: _profitLimitRatio,
             lossLimitRatio: _lossLimitRatio,
-            enforceChangeLimit: true
+            enforceChangeLimit: true,
+            lastClaim: block.timestamp
         });
         strategySet.add(strategy);
     }
@@ -324,7 +328,6 @@ contract ETHVaultAdmin is ETHVaultStorage {
         strategySet.remove(_addr);
         _removeStrategyFromQueue(_addr);
     }
-
 
     function _removeStrategyFromQueue(address _strategy) internal {
         for (uint256 i = 0; i < withdrawQueue.length; i++) {
