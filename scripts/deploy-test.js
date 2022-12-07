@@ -57,7 +57,6 @@ const MockPriceModel = 'MockPriceModel';
 const TestAdapter = 'TestAdapter';
 const AggregatedDerivativePriceFeed = 'AggregatedDerivativePriceFeed';
 const Harvester = 'Harvester';
-const Dripper = 'Dripper';
 const USDT_ADDRESS = 'USDT_ADDRESS';
 const Verification = 'Verification';
 const USD_INITIAL_ASSET_LIST = [
@@ -100,7 +99,6 @@ const addressMap = {
     [Treasury]: '',
     [USDVault]: '',
     [Harvester]: '',
-    [Dripper]: '',
     [USDT_ADDRESS]: MFC_PRODUCTION.USDT_ADDRESS,
     [USDVaultAdmin]: '',
     //----------------ETH---------------------------
@@ -561,8 +559,6 @@ const main = async () => {
                     await modify_apollo_config('boc.networks.ethi.verificationAddress', addressMap[key], clusterName, host);
                 } else if (key == 'Harvester') {
                     await modify_apollo_config('boc.networks.eth.harvester', addressMap[key], clusterName, host);
-                } else if (key == 'Dripper') {
-                    await modify_apollo_config('boc.networks.eth.dripper', addressMap[key], clusterName, host);
                 } else if (key == 'HarvestHelper') {
                     await modify_apollo_config('boc.networks.ethi.harvestHelpAddress', addressMap[key], clusterName, host);
                 } else {
@@ -689,7 +685,6 @@ const deploy_usd = async () => {
     let vault;
     let vaultBuffer;
     let pegToken;
-    let dripper;
 
     const network = hre.network.name;
     const MFC = network === 'localhost' || network === 'hardhat' ? MFC_TEST : MFC_PRODUCTION
@@ -809,13 +804,8 @@ const deploy_usd = async () => {
         await cVault.setVaultBufferAddress(addressMap[USDVaultBuffer]);
     }
 
-    if (isEmpty(addressMap[Dripper])) {
-        dripper = await deployProxyBase(Dripper, [AccessControlProxy, USDVault, USDT_ADDRESS]);
-        await dripper.setDripDuration(7 * 24 * 60 * 60);
-    }
-
     if (isEmpty(addressMap[Harvester])) {
-        harvester = await deployProxyBase(Harvester, [AccessControlProxy, Dripper, USDT_ADDRESS, USDVault]);
+        harvester = await deployProxyBase(Harvester, [AccessControlProxy, USDVault, USDT_ADDRESS, USDVault]);
     }
 
     const allArray = [];

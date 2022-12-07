@@ -37,7 +37,6 @@ const IVault = hre.artifacts.require("IVault");
 const Harvester = hre.artifacts.require("Harvester");
 // Treasury
 const Treasury = hre.artifacts.require("Treasury")
-const Dripper = hre.artifacts.require("Dripper")
 const PegToken = hre.artifacts.require("PegToken")
 const ERC20 = hre.artifacts.require("@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20")
 
@@ -190,15 +189,11 @@ async function setupCoreProtocolWithMockValueInterpreter (
     await vault.addAsset(MFC.USDT_ADDRESS);
     await vault.addAsset(MFC.DAI_ADDRESS);
 
-    const dripper = await Dripper.new()
-    await dripper.initialize(accessControlProxy.address, vault.address, MFC.USDT_ADDRESS)
-
-    await dripper.setDripDuration(3600 * 12)
 
     const harvester = await Harvester.new()
     await harvester.initialize(
         accessControlProxy.address,
-        dripper.address,
+        vault.address,
         MFC.USDT_ADDRESS,
         vault.address,
     )
@@ -269,7 +264,6 @@ async function setupCoreProtocolWithMockValueInterpreter (
         pegToken,
         treasury,
         harvester,
-        dripper,
         testAdapter,
         underlying,
         valueInterpreter,
