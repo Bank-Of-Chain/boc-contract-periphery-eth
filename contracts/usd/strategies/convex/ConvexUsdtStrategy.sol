@@ -3,6 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "./ConvexBaseStrategy.sol";
 import "../../../external/compound/ICToken.sol";
@@ -11,7 +12,7 @@ import "../../../external/curve/ICurveLiquidityPool.sol";
 /// @title ConvexUsdtStrategy
 /// @notice Investment strategy for investing USDT via Convex 
 /// @author Bank of Chain Protocol Inc
-contract ConvexUsdtStrategy is ConvexBaseStrategy {
+contract ConvexUsdtStrategy is Initializable, ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address private constant cDAI = address(0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643);
     address private constant cUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);

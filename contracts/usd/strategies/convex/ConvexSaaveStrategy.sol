@@ -3,6 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../../../external/curve/ICurveLiquidityPool.sol";
 
@@ -11,7 +12,7 @@ import "./ConvexBaseStrategy.sol";
 /// @title ConvexSaaveStrategy
 /// @notice Investment strategy for investing stablecoins to SAAVE via Convex 
 /// @author Bank of Chain Protocol Inc
-contract ConvexSaaveStrategy is ConvexBaseStrategy {
+contract ConvexSaaveStrategy is Initializable, ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private constant STKAAVE = address(0x4da27a545c0c5B758a6BA100e3a049001de870f5);
@@ -24,7 +25,7 @@ contract ConvexSaaveStrategy is ConvexBaseStrategy {
         address _vault,
         address _harvester,
         string memory _name
-    ) public {
+    ) public initializer{
         address[] memory _wants = new address[](2);
         // the oder is same with underlying coins
         // DAI

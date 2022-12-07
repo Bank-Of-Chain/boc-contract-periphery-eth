@@ -6,11 +6,12 @@ import "../../../external/compound/ICToken.sol";
 import "../../../external/curve/ICurveLiquidityPool.sol";
 import "../../../external/curve/ICurveLiquidityCustomPool.sol";
 import "../../../external/yearn/IYearnVault.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /// @title ConvexPaxStrategy
 /// @notice Investment strategy for investing stablecoins to Pax via Convex 
 /// @author Bank of Chain Protocol Inc
-contract ConvexPaxStrategy is ConvexBaseStrategy {
+contract ConvexPaxStrategy is Initializable, ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
