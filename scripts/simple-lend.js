@@ -88,6 +88,7 @@ const main = async () => {
     const strategyAddresses = await bocVault.getStrategies();
     console.log('strategyAddresses', strategyAddresses);
     let amountPerToken = new BigNumber(1000);
+    let amounts = [];
     for(let i = 0; i < strategyAddresses.length; i++) {
         let strategyAddress = strategyAddresses[i];
         const strategy = await IStrategy.at(strategyAddress);
@@ -98,21 +99,10 @@ const main = async () => {
             const assetContract = await ERC20.at(asset);
             const precision = new BigNumber(10 ** (await assetContract.decimals()));
             let amountString = amountPerToken.multipliedBy(precision);
-            exchangeTokens.push({
-                fromToken: asset,
-                toToken: asset,
-                fromAmount: amountString.toFixed(),
-                exchangeParam: {
-                    platform: '0x0000000000000000000000000000000000000000',
-                    method: 0,
-                    encodeExchangeArgs: '0x',
-                    slippage: 0,
-                    oracleAdditionalSlippage: 0,
-                }
-            });
+            amounts.push(amountString.toFixed(0,2));
         }
         console.log('exchangeTokens===========', exchangeTokens);
-        await bocVault.lend(strategyAddress, exchangeTokens);
+        await bocVault.lend(strategyAddress, wantsInfo._assets, amounts);
         console.log(`invest strategy ${strategyAddress} successfully`);
     }
 }

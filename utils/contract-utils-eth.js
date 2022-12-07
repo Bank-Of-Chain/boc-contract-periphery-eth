@@ -151,7 +151,7 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
     const wants = await getStrategiesWants(vault.address);
     if (wants.indexOf(MFC.ETH_ADDRESS) === -1) {
         const amount = new BigNumber(1e18).multipliedBy(4000);
-        await topUpETHByAddress(amount, testAdapter.address);
+        await topUpEthByAddress(amount, testAdapter.address);
     }
     for (const want of wants) {
         let decimals;

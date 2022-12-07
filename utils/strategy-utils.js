@@ -45,6 +45,7 @@ const getStrategyDetails = async vaultAddress => {
                 profitLimitRatio,
                 lossLimitRatio,
                 enforceChangeLimit,
+                lastClaim,
             } = state
             return {
                 address: item,
@@ -56,6 +57,7 @@ const getStrategyDetails = async vaultAddress => {
                 profitLimitRatio,
                 lossLimitRatio,
                 enforceChangeLimit,
+                lastClaim,
                 wantBalances,
                 balanceOfWants,
             }

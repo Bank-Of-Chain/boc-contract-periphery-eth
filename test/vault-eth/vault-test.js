@@ -4,7 +4,7 @@ const {ethers} = require("hardhat");
 const {solidity} = require("ethereum-waffle");
 const {utils} = require("ethers");
 const MFC = require("../../config/mainnet-fork-test-config");
-const {topUpUsdtByAddress, topUpUsdcByAddress, topUpDaiByAddress, topUpSTETHByAddress} = require('../../utils/top-up-utils');
+const {topUpSTETHByAddress, topUpWETHByAddress, topUpEthByAddress} = require('../../utils/top-up-utils');
 const Utils = require('../../utils/assert-utils');
 const {
     getBestSwapInfo
@@ -44,8 +44,8 @@ const EthOneInchV4Adapter = hre.artifacts.require('OneInchV4Adapter');
 const EthParaSwapV5Adapter = hre.artifacts.require('ParaSwapV5Adapter');
 
 const VaultAdmin = hre.artifacts.require('ETHVaultAdmin');
-const MockS3CoinStrategy = hre.artifacts.require('MockS3CoinStrategy');
-
+const MockS3CoinETHStrategy = hre.artifacts.require('MockS3CoinETHStrategy');
+const Mock3rdEthPool = hre.artifacts.require('Mock3rdEthPool');
 
 const EXCHANGE_EXTRA_PARAMS = {
     oneInchV4: {
@@ -60,7 +60,6 @@ const EXCHANGE_EXTRA_PARAMS = {
     }
 }
 
-
 describe("Vault", function () {
     let accounts;
     let governance;
@@ -71,11 +70,13 @@ describe("Vault", function () {
     let tokenDecimals;
     let ethiDecimals;
     let stethDecimals;
+    let wethDecimals;
     let depositAmount
     let daiDepositAmount
     let daiDecimals;
     let usdcDepositAmount
     let stethDepositAmount
+    let wethDepositAmount
     let usdcDecimals;
     // let testAdapter;
     let mockS3CoinStrategy;
@@ -90,6 +91,7 @@ describe("Vault", function () {
     let underlying;
     let usdcToken;
     let stethToken;
+    let wethToken;
     let underlyingAddress;
     let priceOracleConsumer;
     let treasuryAddress;
@@ -103,14 +105,17 @@ describe("Vault", function () {
         usdcToken = await ERC20.at(MFC.USDC_ADDRESS);
         stethToken = await ERC20.at(MFC.DAI_ADDRESS);
         stethToken = await ERC20.at(MFC.stETH_ADDRESS);
+        wethToken = await ERC20.at(MFC.WETH_ADDRESS);
         tokenDecimals = new BigNumber(await token.decimals());
         usdcDecimals = new BigNumber(await usdcToken.decimals());
         daiDecimals = new BigNumber(await stethToken.decimals());
         stethDecimals = new BigNumber(await stethToken.decimals());
+        wethDecimals = new BigNumber(await wethToken.decimals());
         depositAmount = new BigNumber(10).pow(tokenDecimals).multipliedBy(1000);
         usdcDepositAmount = new BigNumber(10).pow(usdcDecimals).multipliedBy(1000);
         daiDepositAmount = new BigNumber(10).pow(daiDecimals).multipliedBy(1000);
         stethDepositAmount = new BigNumber(10).pow(stethDecimals).multipliedBy(1000);
+        wethDepositAmount = new BigNumber(10).pow(wethDecimals).multipliedBy(1000);
         await ethers.getSigners().then((resp) => {
             accounts = resp;
             governance = accounts[0].address;
@@ -119,8 +124,12 @@ describe("Vault", function () {
             keeper = accounts[19].address;
         });
        
+        await topUpEthByAddress(wethDepositAmount, farmer1);
+        await topUpEthByAddress(wethDepositAmount, farmer2);
         await topUpSTETHByAddress(stethDepositAmount, farmer1);
         await topUpSTETHByAddress(stethDepositAmount, farmer2);
+        await topUpWETHByAddress(wethDepositAmount, farmer1);
+        await topUpWETHByAddress(wethDepositAmount, farmer2);
         stethDepositAmount = new BigNumber(await stethToken.balanceOf(farmer1));
         console.log('stethDepositAmount:%s',stethDepositAmount);
 
@@ -157,11 +166,14 @@ describe("Vault", function () {
         vaultAdmin = await VaultAdmin.new();
         await vault.setAdminImpl(vaultAdmin.address, {from: governance});
 
+        console.log('deploy Mock3rdEthPool');
+        const mock3rdEthPool = await Mock3rdEthPool.new();
 
-        console.log('mockS3CoinStrategy');
-        // mockS3CoinStrategy
-        mockS3CoinStrategy = await MockS3CoinStrategy.new();
-        await mockS3CoinStrategy.initialize(vault.address);
+        console.log('MockS3CoinETHStrategy');
+        // MockS3CoinETHStrategy
+        mockS3CoinStrategy = await MockS3CoinETHStrategy.new();
+        await mockS3CoinStrategy.initialize(vault.address, mock3rdEthPool.address);
+
 
         console.log('deploy PegToken');
         pegToken = await PegToken.new();
@@ -217,7 +229,7 @@ describe("Vault", function () {
         console.log("Balance of eth of farmer1 before investing:",new BigNumber(await balance.current(farmer1)).toFixed());
 
         //deposit with ETH
-        const ethAmount = new BigNumber(10).pow(18).multipliedBy(10).toFixed();
+        const ethAmount = new BigNumber(10).pow(18).multipliedBy(1000).toFixed();
         const tx  = await iVault.mint(MFC.ETH_ADDRESS, ethAmount, 0, {from: farmer1,value: ethAmount});
         const gasUsed = tx.receipt.gasUsed;
         console.log('mint gasUsed: %d', gasUsed);
@@ -237,11 +249,18 @@ describe("Vault", function () {
 
     it('Verify：Vault can be invested in other assets normally', async function () {
         await iVault.addAsset(MFC.stETH_ADDRESS, {from: governance});
-       
+        await iVault.addAsset(MFC.WETH_ADDRESS, {from: governance});
+
         await stethToken.approve(iVault.address, 0, {
             from: farmer1
         });
         await stethToken.approve(iVault.address, stethDepositAmount, {
+            from: farmer1
+        });
+        await wethToken.approve(iVault.address, 0, {
+            from: farmer1
+        });
+        await wethToken.approve(iVault.address, wethDepositAmount, {
             from: farmer1
         });
 
@@ -251,6 +270,7 @@ describe("Vault", function () {
         console.log("Balance of ETH of farmer1 before investing:",new BigNumber(await balance.current(farmer1)).toFixed());
 
         await iVault.mint(MFC.stETH_ADDRESS, stethDepositAmount, 0, {from: farmer1});
+        await iVault.mint(MFC.WETH_ADDRESS, wethDepositAmount, 0, {from: farmer1});
         console.log("Balance of stETH of farmer1 after investment:", new BigNumber(await stethToken.balanceOf(farmer1)).toFixed());
         const balanceOf = new BigNumber(await pegToken.balanceOf(farmer1)).toFixed();
         console.log("Balance of ETHi of farmer1 after investment", balanceOf);
@@ -303,49 +323,18 @@ describe("Vault", function () {
 
         const beforeETH = new BigNumber(await balance.current(iVault.address)).toFixed();
         const beforestETH = new BigNumber(await stethToken.balanceOf(iVault.address)).toFixed();
+        const beforeWETH = new BigNumber(await wethToken.balanceOf(iVault.address)).toFixed();
         console.log("Balance of ETH of vault before lend:", beforeETH);
         console.log("Balance of stETH of vault before lend:", beforestETH);
+        console.log("Balance of WETH of vault before lend:", beforeWETH);
         console.log("totalAssets before lend:%d,totalValue：%s", new BigNumber(await iVault.totalAssets()).toFixed(), new BigNumber(await iVault.totalValue()).toFixed());
         console.log("totalDebt before lend:%d,totalValueInStrategies：%s", new BigNumber(await iVault.totalDebt()).toFixed(), new BigNumber(await iVault.totalValueInStrategies()).toFixed());
         console.log("valueOfTrackedTokens before lend:%d,totalValueInVault：%s", new BigNumber(await iVault.valueOfTrackedTokens()).toFixed(), new BigNumber(await iVault.totalValueInVault()).toFixed());
         
-        let tokens = [MFC.stETH_ADDRESS, MFC.ETH_ADDRESS];
-        let amounts = [beforestETH, beforeETH];
-        let exchangeArray = await Promise.all(
-            map(tokens, async (tokenItem, index) => {
-                const exchangeAmounts = amounts[index].toString();
+        let tokens = [MFC.ETH_ADDRESS, MFC.stETH_ADDRESS, MFC.WETH_ADDRESS];
+        let amounts = [beforeETH, beforestETH, beforeWETH];
 
-                // 根据key获取value，不可写错
-                let platformAdapter = {
-                    paraswap: exchangePlatformAdapters.paraswap,
-                    oneInchV4: exchangePlatformAdapters.oneInchV4
-                };
-                // const SWAP_INFO = await getBestSwapInfo({
-                //     address: tokenItem,
-                //     symbol: 'ETH',
-                //     decimals: 18
-                // }, {
-                //     address: tokenItem,
-                //     symbol: 'ETH',
-                //     decimals: 18
-                // }, exchangeAmounts, 100, 500, platformAdapter, EXCHANGE_EXTRA_PARAMS);
-
-                return {
-                    fromToken: tokenItem,
-                    toToken: tokenItem,
-                    fromAmount: exchangeAmounts,
-                    exchangeParam: {                        
-                        platform: exchangePlatformAdapters.paraswap,
-                        method: 0,
-                        encodeExchangeArgs: '0x',
-                        slippage: 100,
-                        oracleAdditionalSlippage: 0
-                    }
-                }
-            })
-        );
-
-        await iVault.lend(mockS3CoinStrategy.address, exchangeArray,{from: keeper});
+        await iVault.lend(mockS3CoinStrategy.address, tokens, amounts, {from: keeper});
 
         console.log("totalAssets after lend:%d,totalValue：%s", new BigNumber(await iVault.totalAssets()).toFixed(), new BigNumber(await iVault.totalValue()).toFixed());
         console.log("totalDebt after lend:%d,totalValueInStrategies：%s", new BigNumber(await iVault.totalDebt()).toFixed(), new BigNumber(await iVault.totalValueInStrategies()).toFixed());
@@ -378,7 +367,9 @@ describe("Vault", function () {
         console.log("Number of ETHi withdraw:%s", new BigNumber(_amount).toFixed());
 
         const beforeBalance = new BigNumber(await balance.current(farmer1)).toFixed();
-        await iVault.burn(_amount, 0, {from: farmer1});
+        let _redeemFeeBps = await iVault.redeemFeeBps();
+        let _trusteeFeeBps = await iVault.trusteeFeeBps();
+        await iVault.burn(_amount, 0, _redeemFeeBps, _trusteeFeeBps, {from: farmer1});
         const afterBalance = new BigNumber(await balance.current(farmer1)).toFixed();
 
         console.log("Balance of stETH of vault after withdraw:%s", new BigNumber(await stethToken.balanceOf(iVault.address)).toFixed());
@@ -404,9 +395,13 @@ describe("Vault", function () {
     it('Verify: Vault can be properly reported', async function () {
         const beforeETHI = new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed();
         console.log("Balance of ETHi of treasury before report", new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed());
-        await mockS3CoinStrategy.harvest({from:keeper,value:2*(10**18)});
+        await mockS3CoinStrategy.harvest({from:keeper});
+        await stethToken.transfer(mockS3CoinStrategy.address, new BigNumber(100).toFixed(), {
+            from: farmer1,
+        });
         console.log("before rebase PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
-        await iVault.rebase({from:keeper});
+        let _trusteeFeeBps = await iVault.trusteeFeeBps();
+        await iVault.rebase(_trusteeFeeBps, {from:keeper});
         console.log("after rebase PegTokenPrice:%s", new BigNumber(await iVault.getPegTokenPrice()).toFixed());
         const afterETHI = new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed();
         console.log("Balance of ETHi of treasury after report:", new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed());
@@ -470,27 +465,10 @@ describe("Vault", function () {
 
         beforeETH = new BigNumber(await balance.current(iVault.address)).toFixed();
         console.log("(ETH,stETH)=(%s,%s)", new BigNumber(await balance.current(iVault.address)).toFixed(), new BigNumber(await stethToken.balanceOf(iVault.address)).toFixed());
-        let tokens = [MFC.ETH_ADDRESS, MFC.stETH_ADDRESS];
-        let amounts = [new BigNumber(await balance.current(iVault.address)).toFixed(), new BigNumber(await stethToken.balanceOf(iVault.address)).toFixed()];
-        let exchangeArray = await Promise.all(
-            map(tokens, async (tokenItem, index) => {
-                const exchangeAmounts = amounts[index].toString();
-                return {
-                    fromToken: tokenItem,
-                    toToken: tokenItem,
-                    fromAmount: exchangeAmounts,
-                    exchangeParam: {
-                        platform: exchangePlatformAdapters.paraswap,
-                        method: 0,
-                        encodeExchangeArgs: '0x',
-                        slippage: 0,
-                        oracleAdditionalSlippage: 0
-                    }
-                }
-            })
-        );
+        let tokens = [MFC.ETH_ADDRESS, MFC.stETH_ADDRESS, MFC.WETH_ADDRESS];
+        let amounts = [new BigNumber(await balance.current(iVault.address)).toFixed(), new BigNumber(await stethToken.balanceOf(iVault.address)).toFixed(),new BigNumber(await wethToken.balanceOf(iVault.address)).toFixed()];
 
-        await iVault.lend(mockS3CoinStrategy.address, exchangeArray);
+        await iVault.lend(mockS3CoinStrategy.address, tokens, amounts, {from: keeper});
 
         console.log("totalAssets after lend:%s,totalValue：%s", new BigNumber(await iVault.totalAssets()).toFixed(), new BigNumber(await iVault.totalValue()).toFixed());
         console.log("totalDebt after lend:%s,totalValueInStrategies：%s", new BigNumber(await iVault.totalDebt()).toFixed(), new BigNumber(await iVault.totalValueInStrategies()).toFixed());
@@ -516,10 +494,38 @@ describe("Vault", function () {
         console.log("valueOfTrackedTokensIncludeVaultBuffer after end Adjust Position:%s,totalAssetsIncludeVaultBuffer：%s", new BigNumber(await iVault.valueOfTrackedTokensIncludeVaultBuffer()).toFixed(), new BigNumber(await iVault.totalAssetsIncludeVaultBuffer()).toFixed());
     });
 
+    it('Verify：report by strategy and keeper', async function (){
+        let estimatedTotalAssets = await mockS3CoinStrategy.estimatedTotalAssets();
+        let strategyParams =  await iVault.strategies(mockS3CoinStrategy.address);
+        const firstTotalDebt = strategyParams.totalDebt;
+        console.log("before reportWithoutClaim",estimatedTotalAssets.toString(),strategyParams.totalDebt.toString());
+        await stethToken.transfer(mockS3CoinStrategy.address, new BigNumber(1000).toFixed(), {
+            from: farmer1,
+        });
+        await mockS3CoinStrategy.reportWithoutClaim();
+        estimatedTotalAssets = await mockS3CoinStrategy.estimatedTotalAssets();
+        strategyParams =  await iVault.strategies(mockS3CoinStrategy.address);
+        const secondTotalDebt = strategyParams.totalDebt;
+        console.log("after reportWithoutClaim",estimatedTotalAssets.toString(),strategyParams.totalDebt.toString());
+        await stethToken.transfer(mockS3CoinStrategy.address, new BigNumber(1000).toFixed(), {
+            from: farmer1,
+        });
+        await iVault.reportByKeeper([mockS3CoinStrategy.address]);
+        estimatedTotalAssets = await mockS3CoinStrategy.estimatedTotalAssets();
+        strategyParams =  await iVault.strategies(mockS3CoinStrategy.address);
+        const thirdTotalDebt = strategyParams.totalDebt;
+        console.log("after reportByKeeper",estimatedTotalAssets.toString(),strategyParams.totalDebt.toString());
+        Utils.assertBNGt(secondTotalDebt, firstTotalDebt);
+        Utils.assertBNGt(thirdTotalDebt, secondTotalDebt);
+    });
+
     it('Verify：burn from strategy', async function (){
-        await iVault.rebase();
+        let _redeemFeeBps = await iVault.redeemFeeBps();
+        let _trusteeFeeBps = await iVault.trusteeFeeBps();
+        await iVault.rebase(_trusteeFeeBps);
         const treasuryLp =  new BigNumber(await pegToken.balanceOf(treasuryAddress)).toFixed();
         await treasury.withdraw(pegToken.address, governance, new BigNumber(treasuryLp).toFixed(), {from: governance});
+
 
         console.log("totalValueInStrategies before withdraw: %s",new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed());
         console.log("totalAssets before withdraw: %s",new BigNumber(await iVault.totalAssets()).toFixed());
@@ -527,13 +533,13 @@ describe("Vault", function () {
         console.log("Balance of ETHi of farmer2 before withdraw: %s", new BigNumber(await pegToken.balanceOf(farmer2)).toFixed());
         console.log("Balance of ETHi of governance before withdraw: %s", new BigNumber(await pegToken.balanceOf(governance)).toFixed());
         let _amount =  new BigNumber(await pegToken.balanceOf(farmer1)).toFixed();
-        await iVault.burn(_amount, 0, {from: farmer1});
+        await iVault.burn(_amount, 0, _redeemFeeBps, _trusteeFeeBps, {from: farmer1});
         console.log("totalValueInStrategies after farmer1 withdraw: %s",new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed());
         _amount =  new BigNumber(await pegToken.balanceOf(governance)).toFixed();
-        await iVault.burn(_amount, 0, {from: governance});
+        await iVault.burn(_amount, 0, _redeemFeeBps, _trusteeFeeBps, {from: governance});
         console.log("totalValueInStrategies after governance withdraw: %s",new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed());
         _amount =  new BigNumber(await pegToken.balanceOf(farmer2)).minus(new BigNumber(10).pow(15)).plus(10).toFixed();
-        await iVault.burn(_amount, 0, {from: farmer2});
+        await iVault.burn(_amount, 0, _redeemFeeBps, _trusteeFeeBps, {from: farmer2});
         const totalValueInStrategies = new BigNumber(await iVault.totalAssets()).minus(new BigNumber(await iVault.valueOfTrackedTokens())).toFixed();
         console.log("totalValueInStrategies after withdraw: %s",totalValueInStrategies);
         console.log("totalAssets after withdraw: %s",new BigNumber(await iVault.totalAssets()).toFixed());
