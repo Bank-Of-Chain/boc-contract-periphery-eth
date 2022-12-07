@@ -68,7 +68,6 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
   let vaultBuffer;
   let pegToken;
   let underlying;
-  let dripper;
   let harvester;
   let treasury;
   let valueInterpreter;
@@ -151,7 +150,6 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
       vaultBuffer = resp.vaultBuffer;
       pegToken = resp.pegToken;
       underlying = resp.underlying;
-      dripper = resp.dripper;
       harvester = resp.harvester;
       treasury = resp.treasury;
       valueInterpreter = resp.valueInterpreter;
@@ -161,7 +159,6 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
     // await vault.setTrusteeFeeBps(0);
     await vault.setRedeemFeeBps(0);
     await vault.setRebaseThreshold(1);
-    await dripper.setDripDuration(3600 * 12);
 
     await valueInterpreter.setPrice(MFC.USDT_ADDRESS, new BigNumber(10).pow(18));
     await valueInterpreter.setPrice(MFC.USDC_ADDRESS, new BigNumber(10).pow(18));

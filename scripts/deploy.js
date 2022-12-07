@@ -44,7 +44,6 @@ const ExchangeAggregator = 'ExchangeAggregator';
 const AccessControlProxy = 'AccessControlProxy';
 const AggregatedDerivativePriceFeed = 'AggregatedDerivativePriceFeed';
 const Harvester = 'Harvester';
-const Dripper = 'Dripper';
 const USDT_ADDRESS = 'USDT_ADDRESS';
 const Verification = 'Verification';
 const USD_INITIAL_ASSET_LIST = [
@@ -87,7 +86,6 @@ const addressMap = {
     [ValueInterpreter]: '0xE4153088577C2D634CB4b3451Aa4ab7E7281ef1f',
     [USDVault]: '0x30D120f80D60E7b58CA9fFaf1aaB1815f000B7c3',
     [Harvester]: '0x238ECCBf7532B9e622372981e6707B7e88392e60',
-    [Dripper]: '',
     [USDT_ADDRESS]: MFC_PRODUCTION.USDT_ADDRESS,
     [USDVaultAdmin]: '0x2D90Cb03031a45773E95eAdd49465A636C547631',
     [USDPegToken]: '0x83131242843257bc6C43771762ba467346Efb2CF',
@@ -522,7 +520,6 @@ const deploy_usd = async () => {
     let vault;
     let vaultBuffer;
     let pegToken;
-    let dripper;
 
     const network = hre.network.name;
     const MFC = network === 'localhost' || network === 'hardhat' ? MFC_TEST : MFC_PRODUCTION
@@ -607,10 +604,6 @@ const deploy_usd = async () => {
         await cVault.setVaultBufferAddress(addressMap[USDVaultBuffer]);
     }
 
-    // if (isEmpty(addressMap[Dripper])) {
-    //     dripper = await deployProxyBase(Dripper, [AccessControlProxy, USDVault, USDT_ADDRESS]);
-    //     await dripper.setDripDuration(7 * 24 * 60 * 60);
-    // }
 
     if (isEmpty(addressMap[Harvester])) {
         harvester = await deployProxyBase(Harvester, [AccessControlProxy, USDVault, USDT_ADDRESS, USDVault]);

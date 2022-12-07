@@ -40,7 +40,6 @@ const AccessControlProxy = 'AccessControlProxy';
 const AggregatedDerivativePriceFeed = 'AggregatedDerivativePriceFeed';
 const OneInchV4Adapter = 'OneInchV4Adapter';
 const Harvester = 'Harvester';
-const Dripper = 'Dripper';
 const USDT_ADDRESS = 'USDT_ADDRESS';
 const Verification = 'Verification';
 const INITIAL_ASSET_LIST = [
@@ -80,7 +79,6 @@ const addressMap = {
     [USDi]: '',
 	[Vault]: '',
 	[Harvester]: '',
-	[Dripper]: '',
 	[USDT_ADDRESS]: MFC_PRODUCTION.USDT_ADDRESS,
 	[VaultAdmin]: '',
 }
@@ -324,7 +322,6 @@ describe('Vault deploy gas Test', function () {
     let exchangeAggregator;
 	let pegToken;
     let harvester;
-    let dripper;
 
     const network = hre.network.name;
 	const MFC = network === 'localhost' || network === 'hardhat' ? MFC_TEST : MFC_PRODUCTION
@@ -437,13 +434,9 @@ describe('Vault deploy gas Test', function () {
 		await cVault.setVaultBufferAddress(addressMap[VaultBuffer]);
 	}
 
-	if (isEmpty(addressMap[Dripper])) {
-	    dripper = await deployProxyBase(Dripper, [AccessControlProxy, Vault, USDT_ADDRESS]);
-	    await dripper.setDripDuration(7 * 24 * 60 * 60);
-	}
 
 	if (isEmpty(addressMap[Harvester])) {
-		harvester = await deployProxyBase(Harvester, [AccessControlProxy, Dripper, USDT_ADDRESS, Vault]);
+		harvester = await deployProxyBase(Harvester, [AccessControlProxy, Vault, USDT_ADDRESS, Vault]);
 	}
 
 	const allArray = [];

@@ -7,7 +7,6 @@ import "boc-contract-core/contracts/vault/VaultBuffer.sol";
 import "boc-contract-core/contracts/vault/VaultAdmin.sol";
 import "boc-contract-core/contracts/token/PegToken.sol";
 import "boc-contract-core/contracts/harvester/Harvester.sol";
-import "boc-contract-core/contracts/harvester/Dripper.sol";
 import "boc-contract-core/contracts/price-feeds/primitives/ChainlinkPriceFeed.sol";
 import "boc-contract-core/contracts/price-feeds/derivatives/AggregatedDerivativePriceFeed.sol";
 import "boc-contract-core/contracts/price-feeds/ValueInterpreter.sol";

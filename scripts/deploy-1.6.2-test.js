@@ -49,7 +49,6 @@ const MockValueInterpreter = 'MockValueInterpreter';
 const TestAdapter = 'TestAdapter';
 const AggregatedDerivativePriceFeed = 'AggregatedDerivativePriceFeed';
 const Harvester = 'Harvester';
-const Dripper = 'Dripper';
 const USDT_ADDRESS = 'USDT_ADDRESS';
 const Verification = 'Verification';
 const USD_INITIAL_ASSET_LIST = [
@@ -94,7 +93,6 @@ const addressMap = {
     [ValueInterpreter]: '0xE4153088577C2D634CB4b3451Aa4ab7E7281ef1f',
     [USDVault]: '0x30D120f80D60E7b58CA9fFaf1aaB1815f000B7c3',
     [Harvester]: '0x238ECCBf7532B9e622372981e6707B7e88392e60',
-    [Dripper]: '',
     [USDT_ADDRESS]: MFC_PRODUCTION.USDT_ADDRESS,
     [USDVaultAdmin]: '0x2D90Cb03031a45773E95eAdd49465A636C547631',
     [USDPegToken]: '0x83131242843257bc6C43771762ba467346Efb2CF',
@@ -502,9 +500,7 @@ const main = async () => {
                     await modify_apollo_config('boc.networks.ethi.verificationAddress', addressMap[key], clusterName, host);
                 } else if (key == 'Harvester') {
                     await modify_apollo_config('boc.networks.eth.harvester', addressMap[key], clusterName, host);
-                } else if (key == 'Dripper') {
-                    await modify_apollo_config('boc.networks.eth.dripper', addressMap[key], clusterName, host);
-                } else if (key == 'HarvestHelper') {
+                }  else if (key == 'HarvestHelper') {
                     await modify_apollo_config('boc.networks.ethi.harvestHelpAddress', addressMap[key], clusterName, host);
                 } else {
                     await modify_apollo_config(`boc.networks.eth.${key}`, addressMap[key], clusterName, host);
