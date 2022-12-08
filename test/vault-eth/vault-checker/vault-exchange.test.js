@@ -127,7 +127,7 @@ describe('【Vault unit exchange】', function () {
         //     map(fromTokenArray, async (fromToken, index) => {
         //         const exchangeAmounts = amountArray[index].toString();
 
-                // 根据key获取value，不可写错
+                // get value by key
                 let platformAdapter = {
                     // paraswap: exchangePlatformAdapters.paraswap,
                     oneInchV4: exchangePlatformAdapters.oneInchV4
@@ -200,7 +200,7 @@ describe('【Vault unit exchange】', function () {
         //     map(fromTokenArray, async (fromToken, index) => {
         //         const exchangeAmounts = amountArray[index].toString();
 
-        // 根据key获取value，不可写错
+        // get value by key
         let platformAdapter = {
             // paraswap: exchangePlatformAdapters.paraswap,
             oneInchV4: exchangePlatformAdapters.oneInchV4

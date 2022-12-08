@@ -29,6 +29,7 @@ contract MockVault is AccessControlMixin {
         uint256 profitLimitRatio;
         uint256 lossLimitRatio;
         bool enforceChangeLimit;
+        uint256 lastClaim;
     }
 
     /// @param _strategy The strategy for reporting
@@ -57,7 +58,7 @@ contract MockVault is AccessControlMixin {
 
     /// @notice Mock function for burning
     /// @param _amount Amount of USDi to burn
-    function burn(uint256 _amount) external {}
+    function burn(uint256 _amount, uint256 _minimumAmount, uint256 _redeemFeeBps, uint256 _trusteeFeeBps) external {}
 
     /// @notice Allocate funds in Vault to strategies.
     /// @param _strategy The specified strategy to lend
@@ -99,7 +100,7 @@ contract MockVault is AccessControlMixin {
     /// @param _claimAmounts The claim amount list
     /// Emits a {StrategyReported} event.
     function report(address[] memory _rewardTokens, uint256[] memory _claimAmounts) external {
-        _report(msg.sender, _rewardTokens, _claimAmounts, 0);
+        _report(msg.sender, _rewardTokens, _claimAmounts, 0, 0);
         emit StrategyReported(msg.sender, 0, 0, 0, 0, _rewardTokens, _claimAmounts, 0);
     }
 
@@ -107,7 +108,8 @@ contract MockVault is AccessControlMixin {
         address _strategy,
         address[] memory _rewardTokens,
         uint256[] memory _claimAmounts,
-        uint256 _lendValue
+        uint256 _lendValue,
+        uint256 _type
     ) private {
         StrategyParams memory _strategyParam = strategies[_strategy];
         uint256 _lastStrategyTotalDebt = _strategyParam.totalDebt + _lendValue;
@@ -125,9 +127,8 @@ contract MockVault is AccessControlMixin {
         totalDebt = totalDebt + _nowStrategyTotalDebt + _lendValue - _lastStrategyTotalDebt;
 
         strategies[_strategy].lastReport = block.timestamp;
-        uint256 _type = 0;
-        if (_lendValue > 0) {
-            _type = 1;
+        if (_type == 0) {
+            strategies[_strategy].lastClaim = block.timestamp;
         }
         emit StrategyReported(
             _strategy,

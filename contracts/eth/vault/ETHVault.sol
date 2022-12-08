@@ -42,18 +42,18 @@ contract ETHVault is ETHVaultStorage {
     }
 
     modifier whenNotEmergency() {
-        require(!emergencyShutdown, "ES");
+        require(!emergencyShutdown, "ES");//emergency shutdown
         _;
     }
 
     modifier whenNotAdjustPosition() {
-        require(!adjustPositionPeriod, "AD");
+        require(!adjustPositionPeriod, "AD");//AdjustPosition
         _;
     }
 
     /// @dev Verifies that the rebasing is not paused.
     modifier whenNotRebasePaused() {
-        require(!rebasePaused, "RP");
+        require(!rebasePaused, "RP");//Rebase Paused
         _;
     }
 
@@ -72,14 +72,19 @@ contract ETHVault is ETHVaultStorage {
         return assetSet.values();
     }
 
-    /// @notice Check '_asset' is supported or not
-    function checkIsSupportAsset(address _asset) public view {
-        require(assetSet.contains(_asset), "The asset not support");
+    /// @notice Return all strategies
+    function getStrategies() external view returns (address[] memory) {
+        return strategySet.values();
     }
 
     /// @notice Assets held by Vault
     function getTrackedAssets() external view returns (address[] memory) {
         return _getTrackedAssets();
+    }
+
+    /// @notice Check '_asset' is supported or not
+    function checkIsSupportAsset(address _asset) public view {
+        require(assetSet.contains(_asset), "NS");//not support
     }
 
     /// @notice Vault holds asset value directly in ETH (1e18)
@@ -139,11 +144,6 @@ contract ETHVault is ETHVaultStorage {
         }
     }
 
-    /// @notice Return all strategies
-    function getStrategies() external view returns (address[] memory) {
-        return strategySet.values();
-    }
-
     /// @notice Get pegToken price in ETH
     /// @return  price in ETH (1e18)
     function getPegTokenPrice() external view returns (uint256) {
@@ -192,7 +192,7 @@ contract ETHVault is ETHVaultStorage {
 
     /// @notice Check '_strategy' is active or not
     function checkActiveStrategy(address _strategy) public view {
-        require(strategySet.contains(_strategy), "strategy not exist");
+        require(strategySet.contains(_strategy), "NE");//not exist
     }
 
     /// @notice Estimate the pending share amount that can be minted
@@ -215,11 +215,11 @@ contract ETHVault is ETHVaultStorage {
     ) external payable whenNotEmergency whenNotAdjustPosition nonReentrant returns (uint256) {
         uint256 _shareAmount = _estimateMint(_asset, _amount);
         if (_minimumAmount > 0) {
-            require(_shareAmount >= _minimumAmount, "Mint amount lt minimum");
+            require(_shareAmount >= _minimumAmount, "RLTM");//received less than the minimum
         }
         if (_asset == NativeToken.NATIVE_TOKEN) {
             uint256 _ethAmount = msg.value;
-            require(_ethAmount == _amount, "Amount must eq transfer value");
+            require(_ethAmount == _amount, "AI");//amount invalid
             IVaultBuffer(vaultBufferAddress).mint{value: _ethAmount}(msg.sender, _shareAmount);
         } else {
             IERC20Upgradeable(_asset).safeTransferFrom(msg.sender, vaultBufferAddress, _amount);
@@ -232,9 +232,11 @@ contract ETHVault is ETHVaultStorage {
     /// @notice burn ETHi,return ETH or ETH-equivalent tokens, like wETH,sETH,stETH,rETH etc.
     /// @param _amount Amount of ETHi to burn
     /// @param _minimumAmount The minimum ETH or ETH-equivalent tokens amounts to receive in return
+    /// @param _redeemFeeBps Redemption fee in basis points
+    /// @param _trusteeFeeBps Amount of yield collected in basis points
     /// @param _assets The address list of assets to receive
     /// @param _amounts The amount list of assets to receive
-    function burn(uint256 _amount, uint256 _minimumAmount)
+    function burn(uint256 _amount, uint256 _minimumAmount, uint256 _redeemFeeBps, uint256 _trusteeFeeBps)
         external
         whenNotEmergency
         whenNotAdjustPosition
@@ -242,13 +244,16 @@ contract ETHVault is ETHVaultStorage {
         returns (address[] memory _assets, uint256[] memory _amounts)
     {
         uint256 _accountBalance = IPegToken(pegTokenAddress).balanceOf(msg.sender);
-        require(_amount > 0 && _amount <= _accountBalance, "ETHi not enough");
+        require(_amount > 0 && _amount <= _accountBalance, "AI");//ETHi not enough,amount is invalid
+        require(_redeemFeeBps == redeemFeeBps, "RI");//redeemFeeBps invalid
+        require(_trusteeFeeBps == trusteeFeeBps, "TI");//trusteeFeeBps invalid
         address[] memory _trackedAssets = _getTrackedAssets();
         uint256[] memory _assetPrices = new uint256[](_trackedAssets.length);
         uint256[] memory _assetDecimals = new uint256[](_trackedAssets.length);
         (uint256 _sharesAmount, uint256 _actualAsset) = _repayToVault(
             _amount,
             _accountBalance,
+            _redeemFeeBps,
             _trackedAssets,
             _assetPrices,
             _assetDecimals
@@ -261,12 +266,13 @@ contract ETHVault is ETHVaultStorage {
             _assetDecimals
         );
         if (_minimumAmount > 0) {
-            require(_actuallyReceivedAmount >= _minimumAmount, "amount lower than minimum");
+            require(_actuallyReceivedAmount >= _minimumAmount, "RLTM");//received less than minimum
         }
         _burnRebaseAndEmit(
             _amount,
             _actuallyReceivedAmount,
             _sharesAmount,
+            _trusteeFeeBps,
             _assets,
             _amounts,
             _trackedAssets,
@@ -285,7 +291,7 @@ contract ETHVault is ETHVaultStorage {
         uint256 _outputCode
     ) external isKeeperOrVaultOrGovOrDelegate isActiveStrategy(_strategy) nonReentrant {
         uint256 _strategyAssetValue = strategies[_strategy].totalDebt;
-        require(_amount <= _strategyAssetValue);
+        require(_amount <= _strategyAssetValue, 'AI');//amount invalid
 
         (address[] memory _assets, uint256[] memory _amounts) = IETHStrategy(_strategy).repay(
             _amount,
@@ -310,23 +316,31 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /// @notice Allocate funds in Vault to strategies.
-    function lend(address _strategy, IExchangeAggregator.ExchangeToken[] calldata _exchangeTokens)
+    /// @param _strategy The specified strategy to lend
+    /// @param _tokens The address list of token wanted
+    /// @param _amounts The amount list of token wanted
+    function lend(address _strategy, address[] memory _tokens, uint256[] memory _amounts)
         external
         isKeeperOrVaultOrGovOrDelegate
         whenNotEmergency
         isActiveStrategy(_strategy)
         nonReentrant
     {
-        (
-            address[] memory _wants,
-            uint256[] memory _ratios,
-            uint256[] memory _toAmounts
-        ) = _checkAndExchange(_strategy, _exchangeTokens);
+        (address[] memory _wants, uint256[] memory _ratios) = IETHStrategy(_strategy).getWantsInfo();
+        uint256 _wantsLength = _wants.length;
+        require(_amounts.length == _wantsLength, "ASI");//_amounts invalid
+        require(_tokens.length == _wantsLength, "TSI");//_tokens invalid
+        {
+            for (uint256 i = 0; i < _wantsLength; i++) {
+                require(_tokens[i] == _wants[i], "TSI");//tokens invalid
+            }
+        }
+
         //Definition rule 0 means unconstrained, currencies that do not participate are not in the returned wants
         uint256 _minProductIndex;
         bool _isWantRatioIgnorable = IETHStrategy(_strategy).isWantRatioIgnorable();
-        if (!_isWantRatioIgnorable && _ratios.length > 1) {
-            for (uint256 i = 1; i < _ratios.length; i++) {
+        if (!_isWantRatioIgnorable && _wantsLength > 1) {
+            for (uint256 i = 1; i < _wantsLength; i++) {
                 if (_ratios[i] == 0) {
                     //0 is free
                     continue;
@@ -334,8 +348,8 @@ contract ETHVault is ETHVaultStorage {
                     //minProductIndex is assigned to the first index whose proportion is not 0
                     _minProductIndex = i;
                 } else if (
-                    _toAmounts[_minProductIndex] * _ratios[i] >
-                    _toAmounts[i] * _ratios[_minProductIndex]
+                    _amounts[_minProductIndex] * _ratios[i] >
+                    _amounts[i] * _ratios[_minProductIndex]
                 ) {
                     _minProductIndex = i;
                 }
@@ -345,14 +359,14 @@ contract ETHVault is ETHVaultStorage {
             uint256 _lendValue;
             uint256 _ethAmount;
             {
-                uint256 _minAmount = _toAmounts[_minProductIndex];
+                uint256 _minAmount = _amounts[_minProductIndex];
                 uint256 _minAspect = _ratios[_minProductIndex];
-                for (uint256 i = 0; i < _toAmounts.length; i++) {
-                    uint256 _actualAmount = _toAmounts[i];
+                for (uint256 i = 0; i < _wantsLength; i++) {
+                    uint256 _actualAmount = _amounts[i];
                     if (_actualAmount > 0) {
                         if (!_isWantRatioIgnorable && _ratios[i] > 0) {
                             _actualAmount = (_ratios[i] * _minAmount) / _minAspect;
-                            _toAmounts[i] = _actualAmount;
+                            _amounts[i] = _actualAmount;
                         }
                         if (_wants[i] == NativeToken.NATIVE_TOKEN) {
                             _lendValue += _actualAmount;
@@ -369,9 +383,9 @@ contract ETHVault is ETHVaultStorage {
             }
             {
                 if (_ethAmount > 0) {
-                    IETHStrategy(_strategy).borrow{value: _ethAmount}(_wants, _toAmounts);
+                    IETHStrategy(_strategy).borrow{value: _ethAmount}(_wants, _amounts);
                 } else {
-                    IETHStrategy(_strategy).borrow(_wants, _toAmounts);
+                    IETHStrategy(_strategy).borrow(_wants, _amounts);
                 }
             }
             {
@@ -379,7 +393,7 @@ contract ETHVault is ETHVaultStorage {
                 uint256[] memory _claimAmounts;
                 _report(_strategy, _rewardTokens, _claimAmounts, _lendValue, 1);
             }
-            emit LendToStrategy(_strategy, _wants, _toAmounts, _lendValue);
+            emit LendToStrategy(_strategy, _wants, _amounts, _lendValue);
         }
     }
 
@@ -393,15 +407,17 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /// @notice Change ETHi supply with Vault total assets.
-    function rebase()
+    /// @param _trusteeFeeBps Amount of yield collected in basis points
+    function rebase(uint256 _trusteeFeeBps)
         external
         whenNotEmergency
         whenNotAdjustPosition
         whenNotRebasePaused
         nonReentrant
     {
+        require(_trusteeFeeBps == trusteeFeeBps, "TI");//trusteeFeeBps invalid
         uint256 _totalAssets = _totalAssetInVault() + totalDebt;
-        _rebase(_totalAssets);
+        _rebase(_totalAssets, _trusteeFeeBps);
     }
 
     /// @dev Report the current asset of strategy caller
@@ -478,7 +494,7 @@ contract ETHVault is ETHVaultStorage {
             uint256 _totalAssets = _totalValueInVault + _totalDebt;
             uint256 _totalShares = IPegToken(pegTokenAddress).totalShares();
             if (!rebasePaused) {
-                _rebase(_totalAssets, _totalShares);
+                _rebase(_totalAssets, _totalShares, trusteeFeeBps);
             }
             IVaultBuffer(vaultBufferAddress).transferCashToVault(_trackedAssets, _transferAmounts);
         }
@@ -494,7 +510,7 @@ contract ETHVault is ETHVaultStorage {
 
     /// @notice end  Adjust Position
     function endAdjustPosition() external isKeeperOrVaultOrGovOrDelegate nonReentrant {
-        require(adjustPositionPeriod, "AD OVER");
+        require(adjustPositionPeriod, "ADO");//AdjustPosition overed
         address[] memory _trackedAssets = _getTrackedAssets();
         uint256 _trackedAssetsLength = _trackedAssets.length;
         uint256[] memory _assetPrices = new uint256[](_trackedAssetsLength);
@@ -580,7 +596,7 @@ contract ETHVault is ETHVaultStorage {
             }
             uint256 _totalShares = IPegToken(pegTokenAddress).totalShares();
             if (!rebasePaused && _totalShares > 0) {
-                _totalShares = _rebase(_totalValueOfNow - _transferAssets, _totalShares);
+                _totalShares = _rebase(_totalValueOfNow - _transferAssets, _totalShares, trusteeFeeBps);
             }
             if (_transferAssets > 0) {
                 uint256 _sharesAmount = _calculateShare(
@@ -700,8 +716,8 @@ contract ETHVault is ETHVaultStorage {
     }
 
     function _estimateMint(address _asset, uint256 _amount) private view returns (uint256) {
-        require(_amount > 0, "Amount must be gt 0");
-        require(!(IVaultBuffer(vaultBufferAddress).isDistributing()), "is distributing");
+        require(_amount > 0, "AI");//Amount invalid
+        require(!(IVaultBuffer(vaultBufferAddress).isDistributing()), "ID");//is distributing
         checkIsSupportAsset(_asset);
         uint256 _mintAmount = _amount;
         if (_asset != NativeToken.NATIVE_TOKEN) {
@@ -711,7 +727,7 @@ contract ETHVault is ETHVaultStorage {
         if (_minimumInvestmentAmount > 0) {
             require(
                 _mintAmount >= _minimumInvestmentAmount,
-                "Amount must be gt minimum Investment Amount"
+                "AI"//Amount invalid
             );
         }
         return _mintAmount;
@@ -935,6 +951,7 @@ contract ETHVault is ETHVaultStorage {
     function _repayToVault(
         uint256 _amount,
         uint256 _accountBalance,
+        uint256 _redeemFeeBps,
         address[] memory _trackedAssets,
         uint256[] memory _assetPrices,
         uint256[] memory _assetDecimals
@@ -955,8 +972,8 @@ contract ETHVault is ETHVaultStorage {
                 _sharesAmount = _actualAmount.divPreciselyScale(_underlyingUnitsPerShare, 1e27);
             }
             // Calculate redeem fee
-            if (redeemFeeBps > 0) {
-                _actualAmount = _actualAmount - (_actualAmount * redeemFeeBps) / MAX_BPS;
+            if (_redeemFeeBps > 0) {
+                _actualAmount = _actualAmount - (_actualAmount * _redeemFeeBps) / MAX_BPS;
             }
             uint256 _currentTotalSupply = _currentTotalShares.mulTruncateScale(
                 _underlyingUnitsPerShare,
@@ -1020,6 +1037,7 @@ contract ETHVault is ETHVaultStorage {
         uint256 _amount,
         uint256 _actualAmount,
         uint256 _shareAmount,
+        uint256 _trusteeFeeBps,
         address[] memory _assets,
         uint256[] memory _amounts,
         address[] memory _trackedAssets,
@@ -1038,7 +1056,7 @@ contract ETHVault is ETHVaultStorage {
                 _assetPrices,
                 _assetDecimals
             );
-            _rebase(_totalAssetInVault + totalDebt);
+            _rebase(_totalAssetInVault + totalDebt, _trusteeFeeBps);
         }
         emit Burn(msg.sender, _amount, _actualAmount, _shareAmount, _assets, _amounts);
     }
@@ -1046,12 +1064,12 @@ contract ETHVault is ETHVaultStorage {
     /// @dev Calculate the total value of assets held by the Vault and all
     ///      strategies and update the supply of ETHi, optionally sending a
     ///      portion of the yield to the trustee.
-    function _rebase(uint256 _totalAssets) internal {
+    function _rebase(uint256 _totalAssets, uint256 _trusteeFeeBps) internal {
         uint256 _totalShares = IPegToken(pegTokenAddress).totalShares();
-        _rebase(_totalAssets, _totalShares);
+        _rebase(_totalAssets, _totalShares, _trusteeFeeBps);
     }
 
-    function _rebase(uint256 _totalAssets, uint256 _totalShares) internal returns (uint256) {
+    function _rebase(uint256 _totalAssets, uint256 _totalShares, uint256 _trusteeFeeBps) internal returns (uint256) {
         if (_totalShares == 0) {
             return _totalShares;
         }
@@ -1066,11 +1084,10 @@ contract ETHVault is ETHVaultStorage {
         ) {
             // Yield fee collection
             address _treasuryAddress = treasury;
-            uint256 _trusteeFeeBps = trusteeFeeBps;
             if (_trusteeFeeBps > 0 && _treasuryAddress != address(0)) {
                 uint256 _yield = _totalAssets - _totalSupply;
                 uint256 _fee = (_yield * _trusteeFeeBps) / MAX_BPS;
-                require(_yield > _fee, "Fee must not be greater than yield");
+                require(_yield > _fee, "FMNGTY");//Fee must not be greater than yield
                 if (_fee > 0) {
                     uint256 _sharesAmount = (_fee * _totalShares) / (_totalAssets - _fee);
                     if (_sharesAmount > 0) {
@@ -1091,67 +1108,13 @@ contract ETHVault is ETHVaultStorage {
         return _totalShares;
     }
 
-    /// @notice check valid and exchange to want token
-    function _checkAndExchange(
-        address _strategy,
-        IExchangeAggregator.ExchangeToken[] calldata _exchangeTokens
-    )
-        internal
-        returns (
-            address[] memory _wants,
-            uint256[] memory _ratios,
-            uint256[] memory toAmounts
-        )
-    {
-        (_wants, _ratios) = IETHStrategy(_strategy).getWantsInfo();
-        uint256 _wantsLength = _wants.length;
-        toAmounts = new uint256[](_wantsLength);
-        uint256 _exchangeTokensLength = _exchangeTokens.length;
-        for (uint256 i = 0; i < _exchangeTokensLength; i++) {
-            bool _findToToken = false;
-            for (uint256 j = 0; j < _wantsLength; j++) {
-                if (_exchangeTokens[i].toToken == _wants[j]) {
-                    _findToToken = true;
-                    break;
-                }
-            }
-            require(_findToToken, "toToken invalid");
-        }
-
-        for (uint256 j = 0; j < _wantsLength; j++) {
-            for (uint256 i = 0; i < _exchangeTokensLength; i++) {
-                IExchangeAggregator.ExchangeToken memory _exchangeToken = _exchangeTokens[i];
-
-                // not strategy need token,skip
-                if (_wants[j] != _exchangeToken.toToken) continue;
-
-                uint256 _toAmount;
-                if (_exchangeToken.fromToken == _exchangeToken.toToken) {
-                    _toAmount = _exchangeToken.fromAmount;
-                } else {
-                    if (_exchangeToken.fromAmount > 0) {
-                        _toAmount = _exchange(
-                            _exchangeToken.fromToken,
-                            _exchangeToken.toToken,
-                            _exchangeToken.fromAmount,
-                            _exchangeToken.exchangeParam
-                        );
-                    }
-                }
-
-                toAmounts[j] = _toAmount;
-                break;
-            }
-        }
-    }
-
     function _exchange(
         address _fromToken,
         address _toToken,
         uint256 _amount,
         IExchangeAggregator.ExchangeParam memory _exchangeParam
     ) internal returns (uint256 _exchangeAmount) {
-        require(trackedAssetsMap.contains(_toToken), "!T");
+        require(trackedAssetsMap.contains(_toToken), "TTI");//toToken invalid
 
         IExchangeAdapter.SwapDescription memory _swapDescription = IExchangeAdapter
             .SwapDescription({
@@ -1191,7 +1154,7 @@ contract ETHVault is ETHVaultStorage {
                         _exchangeParam.slippage -
                         _exchangeParam.oracleAdditionalSlippage)) /
                     MAX_BPS,
-            "OL"
+            "OL"//over slip point loss
         );
         emit Exchange(_exchangeParam.platform, _fromToken, _amount, _toToken, _exchangeAmount);
     }
@@ -1231,13 +1194,13 @@ contract ETHVault is ETHVaultStorage {
                     require(
                         _gain <=
                             ((_lastStrategyTotalDebt * _strategyParam.profitLimitRatio) / MAX_BPS),
-                        "GL"
+                        "GL"//gain over the profitLimitRatio
                     );
                 } else if (_loss > 0) {
                     require(
                         _loss <=
                             ((_lastStrategyTotalDebt * _strategyParam.lossLimitRatio) / MAX_BPS),
-                        "LL"
+                        "LL"//loss over the lossLimitRatio
                     );
                 }
             }

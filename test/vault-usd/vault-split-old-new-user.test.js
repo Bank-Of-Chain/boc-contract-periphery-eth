@@ -30,6 +30,8 @@ const {
 } = require('../../utils/contract-utils-usd');
 const {
   topUpUsdtByAddress,
+  topUpUsdcByAddress,
+  topUpDaiByAddress,
   tranferBackUsdt,
 } = require('../../utils/top-up-utils');
 const {
@@ -44,7 +46,7 @@ const {
 const MFC = require('../../config/mainnet-fork-test-config');
 const {
   strategiesList
-} = require('../../config/strategy-config-usd');
+} = require('../../config/strategy-usd/strategy-config-usd');
 const { removeConsoleLog } = require("hardhat-preprocessor");
 
 const IStrategy = hre.artifacts.require('IStrategy');
@@ -78,6 +80,7 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
   let usdtAmount1 = new BigNumber(0);
   let usdtAmount2 = new BigNumber(0);
   let snapshot;
+  let oneTokenAmount;
 
   const SMALL_AMOUNT = 10;
   const LARGE_AMOUNT = 100000;
@@ -111,14 +114,14 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
       keeper = accounts[19].address;
     });
 
-    // oneTokenAmount = new BigNumber(10).pow(tokenDecimals).multipliedBy(10000);
-    // top up
-    // await topUpUsdtByAddress(oneTokenAmount, farmer1);
-    // await topUpUsdcByAddress(new BigNumber(10).pow(tokenDecimals).multipliedBy(10000), farmer1);
-    // await topUpDaiByAddress(new BigNumber(10).pow(tokenDecimals).multipliedBy(10000), farmer1);
-    // await topUpUsdtByAddress(oneTokenAmount, farmer2);
-    // await topUpUsdcByAddress(new BigNumber(10).pow(tokenDecimals).multipliedBy(10000), farmer2);
-    // await topUpDaiByAddress(new BigNumber(10).pow(tokenDecimals).multipliedBy(10000), farmer2);
+    oneTokenAmount = new BigNumber(10).pow(tokenDecimals).multipliedBy(10000);
+    //top up
+    await topUpUsdtByAddress(oneTokenAmount, farmer1);
+    await topUpUsdcByAddress(new BigNumber(10).pow(tokenDecimals).multipliedBy(10000), farmer1);
+    await topUpDaiByAddress(new BigNumber(10).pow(tokenDecimals).multipliedBy(10000), farmer1);
+    await topUpUsdtByAddress(oneTokenAmount, farmer2);
+    await topUpUsdcByAddress(new BigNumber(10).pow(tokenDecimals).multipliedBy(10000), farmer2);
+    await topUpDaiByAddress(new BigNumber(10).pow(tokenDecimals).multipliedBy(10000), farmer2);
 
     // Generate 100 accounts and top up each with 50 USDT and 10 eth
     for (let i = 0; i < acountNumber; i++) {
@@ -322,7 +325,8 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
 
     let beforeTotalSupply = new BigNumber(await pegToken.totalSupply());
 
-    await vault.rebase();
+    let _trusteeFeeBps = await vault.trusteeFeeBps();
+    await vault.rebase(_trusteeFeeBps);
     await logVaultInfo('after Harvest');
 
     totalSupply = new BigNumber(await pegToken.totalSupply());
@@ -372,7 +376,8 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
       const valueOfTrackedTokens = new BigNumber(await vault.valueOfTrackedTokens());
       console.log('valueOfTrackedTokens:%d', ethers.utils.formatEther(valueOfTrackedTokens.toFixed()));
     }
-    await vault.rebase();
+    let _trusteeFeeBps = await vault.trusteeFeeBps();
+    await vault.rebase(_trusteeFeeBps);
     await logVaultInfo('after large account redeem');
 
     for (let i = 0; i < acountNumber; i++) {
@@ -411,8 +416,8 @@ describe('[Scenario Test] Two Users Investment (One Deposit and One Withdraw)', 
 
     for (const strategyAddress of strategies) {
       const strategy = await IStrategy.at(strategyAddress);
-      console.log('lend to strategy %s %s', await strategy.name(), depositAmountInStrategy.toFixed(0));
-      await lend(strategyAddress, vault.address, depositAmountInStrategy.toFixed(0), exchangePlatformAdapters);
+      console.log('lend to strategy %s %s', await strategy.name(), depositAmountInStrategy.toFixed(0,1));
+      await lend(strategyAddress, vault.address, depositAmountInStrategy.toFixed(0,1), exchangePlatformAdapters, keeper);
     }
 
     await vault.endAdjustPosition();
