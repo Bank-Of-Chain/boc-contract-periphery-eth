@@ -94,7 +94,10 @@ const withdraw = async (
 ) => {
     const vault = await Vault.at(vaultAddress)
 
-    let tx = await vault.burn(amount, 0, {
+    let _redeemFeeBps = await vault.redeemFeeBps();
+    let _trusteeFeeBps = await vault.trusteeFeeBps();
+
+    let tx = await vault.burn(amount, 0, _redeemFeeBps, _trusteeFeeBps, {
         from: userAddress,
     })
 
@@ -121,35 +124,10 @@ const withdrawByMinimum = async (
 ) => {
     const vault = await Vault.at(vaultAddress)
 
-    const resp = await vault.burn.call(amount, assetAddress, minimum, false, [], {
-        from: userAddress,
-    })
+    let _redeemFeeBps = await vault.redeemFeeBps();
+    let _trusteeFeeBps = await vault.trusteeFeeBps();
 
-    const tokens = resp[0]
-    const amounts = resp[1]
-    const exchangeArray = await Promise.all(
-        map(tokens, async (tokenItem, index) => {
-            const exchangeAmounts = amounts[index].toString()
-            if (tokenItem === assetAddress) {
-                return
-            }
-            return {
-                fromToken: tokenItem,
-                toToken: assetAddress,
-                fromAmount: exchangeAmounts,
-                exchangeParam: {
-                    platform: exchangePlatformAdapters.testAdapter,
-                    method: 0,
-                    encodeExchangeArgs: "0x",
-                    slippage: 0,
-                    oracleAdditionalSlippage: 0,
-                },
-            }
-        }),
-    )
-    const exchangeArrayNext = filter(exchangeArray, i => !isEmpty(i))
-
-    await vault.burn(amount, assetAddress, minimum, true, exchangeArrayNext, {
+    await vault.burn(amount, minimum, _redeemFeeBps, _trusteeFeeBps, {
         from: userAddress,
     })
 }
@@ -161,12 +139,12 @@ const withdrawByMinimum = async (
  * @param {number} amount Amount of investment
  * @param {any} exchangePlatformAdapters exchange platform adapters
  */
-const lend = async (strategyAddress, vaultAddress, amount, exchangePlatformAdapters) => {
+const lend = async (strategyAddress, vaultAddress, amount, exchangePlatformAdapters,keeper) => {
     // const slipper = 30;
     // const underlying = await ERC20.at(MFC.USDT_ADDRESS);
     const vault = await Vault.at(vaultAddress)
     const strategy = await IStrategy.at(strategyAddress)
-    // 预言机
+    // oracle
     const yyj = (token, value, decimals) => value.mul(BigNumber.from(10).pow(decimals))
 
     const wantsInfo = await strategy.getWantsInfo()
@@ -213,10 +191,17 @@ const lend = async (strategyAddress, vaultAddress, amount, exchangePlatformAdapt
                 oracleAdditionalSlippage: 0,
             },
         }
-    })
-    const tx = await vault.lend(strategyAddress, nextPath).catch(error => {
-        console.error(`兑换异常：`, strategyAddress, nextPath, error)
-    })
+    });
+    let amounts = [];
+
+    for(let i = 0; i < nextPath.length; i++){
+        const item = nextPath[i];
+        console.log(i,item.fromToken,item.toToken,item.fromAmount,item.exchangeParam);
+        amounts[i] = await vault.exchange.call(item.fromToken,item.toToken,item.fromAmount,item.exchangeParam,{from: keeper});
+        await vault.exchange(item.fromToken,item.toToken,item.fromAmount,item.exchangeParam,{from: keeper});
+    }
+
+    const tx = await vault.lend(strategyAddress, wantsInfo[0],amounts);
     return tx
 }
 

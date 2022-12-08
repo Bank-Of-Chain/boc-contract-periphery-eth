@@ -97,14 +97,16 @@ contract ETHVaultAdmin is ETHVaultStorage {
     /// @dev Sets `_address` to `vaultBufferAddress`
     /// Requirements: only governance role can call
     function setVaultBufferAddress(address _address) external onlyRole(BocRoles.GOV_ROLE) {
-        require(_address != address(0), "vaultBuffer ad is 0");
+        require(_address != address(0), "VaultBuffer ad is 0");
+        require(vaultBufferAddress == address(0), "VaultBuffer ad has been set");
         vaultBufferAddress = _address;
     }
 
     /// @dev Sets `_address` to `pegTokenAddress`
     /// Requirements: only governance role can call
     function setPegTokenAddress(address _address) external onlyRole(BocRoles.GOV_ROLE) {
-        require(_address != address(0), "PegTokenAddress ad is 0");
+        require(_address != address(0), "PegToken ad is 0");
+        require(pegTokenAddress == address(0), "PegToken ad has been set");
         pegTokenAddress = _address;
     }
 
