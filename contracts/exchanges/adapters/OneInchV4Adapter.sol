@@ -43,6 +43,11 @@ contract OneInchV4Adapter is IExchangeAdapter, ExchangeHelpers {
         bytes calldata _data,
         SwapDescription calldata _sd
     ) external payable override returns (uint256) {
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+        
         bool _success;
         bytes memory _result;
         uint256 _toTokenBefore = getTokenBalance(_sd.dstToken, address(this));

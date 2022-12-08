@@ -22,6 +22,12 @@ contract ETHVault is ETHVaultStorage {
         address _exchangeManager,
         address _priceProvider
     ) public initializer {
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_treasury != address(0),"NNA");
+        require(_exchangeManager != address(0),"NNA");
+        require(_priceProvider != address(0),"NNA");
+
+        // '_accessControlProxy' will be verified in function _initAccessControl
         _initAccessControl(_accessControlProxy);
 
         treasury = _treasury;

@@ -51,6 +51,9 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         IExchangeAdapter.SwapDescription calldata _sd
     )external payable override returns (uint256){
         require(_method < swapMethodSelector.length, "ParaswapAdapter method out of range");
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.receiver != address(0),"NNA");
+
         bytes4 _selector = swapMethodSelector[_method];
         bytes memory _data = abi.encodeWithSelector(_selector, _encodedCallArgs, _sd);
         bool _success;
@@ -74,6 +77,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+        
         (Utils.SellData memory _data) = abi.decode(_encodedCallArgs, (Utils.SellData));
         __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
         __validateToTokenAddress(_data.path[_data.path.length - 1].to, _sd.dstToken);
@@ -94,6 +102,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+
         (Utils.MegaSwapSellData memory data) = abi.decode(_encodedCallArgs, (Utils.MegaSwapSellData));
 
         __validateFromTokenAmount(data.fromToken, _sd.srcToken);
@@ -118,6 +131,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+
         (Utils.SellData memory _data) = abi.decode(_encodedCallArgs, (Utils.SellData));
 
         __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
@@ -138,6 +156,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+
         (Utils.MegaSwapSellData memory _data) = abi.decode(_encodedCallArgs, (Utils.MegaSwapSellData));
 
         __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
@@ -162,6 +185,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+
         (Utils.SimpleData memory _data) = abi.decode(_encodedCallArgs, (Utils.SimpleData));
 
         __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
@@ -183,6 +211,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+
         (Utils.SimpleData memory _data) = abi.decode(_encodedCallArgs, (Utils.SimpleData));
 
         __validateFromTokenAmount(_data.fromToken, _sd.srcToken);
@@ -204,6 +237,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+
         (uint256 _amountIn,uint256 _amountOutMin,address[] memory _path) = __decodeSwapOnUniswapArgs(_encodedCallArgs);
 
         address _toToken = _path[_path.length - 1];
@@ -233,6 +271,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+
         (
         address _factory,
         bytes32 _initCode,
@@ -271,6 +314,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+
         (
         address _tokenIn,
         uint256 _amountIn,
@@ -305,6 +353,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+
         (
         address _fromToken,
         address _toToken,
@@ -343,6 +396,11 @@ contract ParaSwapV5Adapter is ParaSwapV5ActionsMixin, IExchangeAdapter {
         bytes calldata _encodedCallArgs,
         IExchangeAdapter.SwapDescription calldata _sd
     ) public payable returns (uint256){
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_sd.srcToken != address(0),"NNA");
+        require(_sd.dstToken != address(0),"NNA");
+        require(_sd.receiver != address(0),"NNA");
+        
         (
         address _fromToken,
         address _toToken,
