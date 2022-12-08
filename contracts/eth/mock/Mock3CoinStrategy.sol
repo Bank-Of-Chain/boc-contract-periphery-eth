@@ -226,7 +226,7 @@ contract MockS3CoinStrategy is Initializable, AccessControlMixin {
 
     /// @notice Removes tokens from this Strategy that are not the type of token managed by this Strategy.
     /// @param _token： The token to transfer out of this vault.
-    function sweep(address _token) external isKeeper {
+    function sweep(address _token) external isKeeperOrVaultOrGovOrDelegate {
         require(!(arrayContains(wants, _token) || arrayContains(protectedTokens(), _token)), "protected token");
         IERC20Upgradeable(_token).safeTransfer(vault.treasury(), balanceOfToken(_token));
     }

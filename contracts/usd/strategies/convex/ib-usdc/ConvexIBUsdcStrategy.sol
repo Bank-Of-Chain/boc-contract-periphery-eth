@@ -664,7 +664,7 @@ contract ConvexIBUsdcStrategy is Initializable, BaseStrategy {
 
     /// @notice Rebalance the collateral of this strategy
     /// Requirements: only keeper can call
-    function rebalance() external isKeeper {
+    function rebalance() external isKeeperOrVaultOrGovOrDelegate {
         (uint256 _space, uint256 _overflow) = borrowInfo();
         if (_space > 0) {
             exitCollateralInvestToCurvePool(_space);

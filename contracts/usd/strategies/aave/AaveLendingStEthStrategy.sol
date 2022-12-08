@@ -407,7 +407,7 @@ contract AaveLendingStEthStrategy is BaseStrategy {
 
     /// @notice Rebalance the collateral of this strategy
     /// Requirements: only keeper can call
-    function rebalance() external isKeeper {
+    function rebalance() external isKeeperOrVaultOrGovOrDelegate {
         address _lendingPoolAddress = aaveProvider.getLendingPool();
         address _tokenAddress = wants[0];
         (uint256 _stETHPrice, uint256 _tokenPrice) = _getAssetsPrices(ST_ETH, _tokenAddress);

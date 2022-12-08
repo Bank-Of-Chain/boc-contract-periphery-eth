@@ -211,7 +211,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
     /// @notice Sets `_borrowCount` to `borrowCount`
     /// @param _borrowCount The new value of `borrowCount`
     /// Requirements: only keeper can call
-    function setBorrowCount(uint256 _borrowCount) external isKeeper {
+    function setBorrowCount(uint256 _borrowCount) external isKeeperOrVaultOrGovOrDelegate {
         require(_borrowCount <= 20, "setting output the range");
         borrowCount = _borrowCount;
         _updateAllLeverage(_borrowCount);
@@ -295,7 +295,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
 
     /// @notice Rebalance the collateral of this strategy
     /// Requirements: only keeper can call
-    function rebalance() external isKeeper {
+    function rebalance() external isKeeperOrVaultOrGovOrDelegate {
         address _eToken = eToken;
         (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(
             eToken,
@@ -377,7 +377,7 @@ contract EulerRevolvingLoanStrategy is BaseStrategy {
         uint256 _claimable,
         bytes32[] calldata _proof,
         address _stake
-    ) external isKeeper returns (uint256 _claimAmount) {
+    ) external isKeeperOrVaultOrGovOrDelegate returns (uint256 _claimAmount) {
         uint256 _beforeBalance = IERC20Upgradeable(_token).balanceOf(_account);
         IEulDistributor(EUL_DISTRIBUTOR).claim(_account, _token, _claimable, _proof, _stake);
         uint256 _balanceOfEUL = IERC20Upgradeable(_token).balanceOf(_account);

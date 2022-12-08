@@ -263,7 +263,7 @@ contract AaveWETHstETHStrategy is ETHBaseStrategy {
 
     /// @notice Rebalance the collateral of this strategy
     /// Requirements: only keeper can call
-    function rebalance() external isKeeper {
+    function rebalance() external isKeeperOrVaultOrGovOrDelegate {
         address _lendingPoolAddress = aaveProvider.getLendingPool();
         IPriceOracleGetter _aaveOracle = IPriceOracleGetter(aaveProvider.getPriceOracle());
         uint256 _stETHPrice = _aaveOracle.getAssetPrice(ST_ETH);
