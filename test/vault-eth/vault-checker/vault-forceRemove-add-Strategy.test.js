@@ -88,7 +88,7 @@ describe('【Vault unit test-add/remove strategy】', function () {
                 lossLimitRatio: item['lossLimitRatio']
             });
         }
-        await vault.addStrategy(_arr, {from: governance});
+        await vault.addStrategies(_arr, {from: governance});
         let strategyNum = (await vault.getStrategies()).length;
         console.log('strategyNum:%d,strategiesList.length', strategyNum, strategiesList.length);
         Utils.assertBNEq(strategyNum, strategiesList.length);

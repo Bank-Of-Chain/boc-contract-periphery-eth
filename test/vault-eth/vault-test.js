@@ -202,10 +202,10 @@ describe("Vault", function () {
             lossLimitRatio: 100
         });
 
-        await iVault.addStrategy(addToVaultStrategies, {from: governance});
+        await iVault.addStrategies(addToVaultStrategies, {from: governance});
         let strategyAddresses = await iVault.getStrategies();
         console.log('Number of strategies before removal=', strategyAddresses.length);
-        await iVault.removeStrategy(strategyAddresses, {from: governance});
+        await iVault.removeStrategies(strategyAddresses, {from: governance});
         const length = (await iVault.getStrategies()).length;
         console.log('Number of strategies after removal=', length);
         Utils.assertBNEq(length, 0);
@@ -298,7 +298,7 @@ describe("Vault", function () {
             lossLimitRatio: 100
         });
         withdrawQueque.push(mockS3CoinStrategy.address);
-        await iVault.addStrategy(addToVaultStrategies, {from: governance});
+        await iVault.addStrategies(addToVaultStrategies, {from: governance});
         await iVault.setWithdrawalQueue(withdrawQueque, {from: governance});
 
         const beforeETH = new BigNumber(await balance.current(iVault.address)).toFixed();

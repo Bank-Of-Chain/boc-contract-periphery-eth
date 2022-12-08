@@ -377,7 +377,7 @@ const addStrategiesToUSDVault = async (vault, allArray, increaseArray) => {
 
     const nextArray = type === 1 ? allArray : increaseArray
 
-    return vault.addStrategy(nextArray.map(item => {
+    return vault.addStrategies(nextArray.map(item => {
         return {
             strategy: item.strategy,
             profitLimitRatio: item.profitLimitRatio,
@@ -446,7 +446,7 @@ const addStrategiesToETHVault = async (vault, allArray, increaseArray) => {
 
     const nextArray = type === 1 ? allArray : increaseArray
 
-    return vault.addStrategy(nextArray.map(item => {
+    return vault.addStrategies(nextArray.map(item => {
         return {
             strategy: item.strategy,
             profitLimitRatio: item.profitLimitRatio,
