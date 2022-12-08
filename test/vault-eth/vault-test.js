@@ -185,7 +185,14 @@ describe("Vault", function () {
 
         iVault = await IETHVault.at(vault.address);
         await iVault.setVaultBufferAddress(vaultBuffer.address);
+        await expect(
+            iVault.setVaultBufferAddress(vaultBuffer.address)
+        ).to.be.revertedWith("VaultBuffer ad has been set");
+
         await iVault.setPegTokenAddress(pegToken.address);
+        await expect(
+            iVault.setPegTokenAddress(pegToken.address)
+        ).to.be.revertedWith("PegToken ad has been set");
         // await iVault.setRebaseThreshold(1);
         // await iVault.setUnderlyingUnitsPerShare(new BigNumber(10).pow(18).toFixed());
         //20%
