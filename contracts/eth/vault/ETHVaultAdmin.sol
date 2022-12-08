@@ -197,7 +197,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     ///      Vault may invest funds into the strategy,
     ///      and the strategy will invest the funds in the 3rd protocol
     /// Requirements: only vault manager can call
-    function addStrategy(StrategyAdd[] memory strategyAdds) external isVaultManager {
+    function addStrategies(StrategyAdd[] memory strategyAdds) external isVaultManager {
         address[] memory _strategies = new address[](strategyAdds.length);
         for (uint256 i = 0; i < strategyAdds.length; i++) {
             StrategyAdd memory _strategyAdd = strategyAdds[i];
@@ -223,7 +223,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     /// @dev The removed policy withdraws funds from the 3rd protocol and returns to the Vault
     /// @param _strategies The address list of strategies to remove
     /// Requirements: only vault manager can call
-    function removeStrategy(address[] memory _strategies) external isVaultManager {
+    function removeStrategies(address[] memory _strategies) external isVaultManager {
         for (uint256 i = 0; i < _strategies.length; i++) {
             require(strategySet.contains(_strategies[i]), "Strategy not exist");
             _removeStrategy(_strategies[i], false);

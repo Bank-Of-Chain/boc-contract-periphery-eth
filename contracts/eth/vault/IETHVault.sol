@@ -376,11 +376,11 @@ interface IETHVault {
     /// @dev The strategy added to the strategy list,
     ///      Vault may invest funds into the strategy,
     ///      and the strategy will invest the funds in the 3rd protocol
-    function addStrategy(StrategyAdd[] memory _strategyAdds) external;
+    function addStrategies(StrategyAdd[] memory _strategyAdds) external;
 
     /// @notice Remove multi strategies from strategy list
     /// @dev The removed policy withdraws funds from the 3rd protocol and returns to the Vault
-    function removeStrategy(address[] memory _strategies) external;
+    function removeStrategies(address[] memory _strategies) external;
 
     /// @notice Forced to remove the '_strategy' 
     function forceRemoveStrategy(address _strategy) external;
