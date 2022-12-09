@@ -3,7 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "../../../external/curve/ICurveLiquidityPool.sol";
 
 import "./ConvexBaseStrategy.sol";
@@ -11,7 +11,7 @@ import "./ConvexBaseStrategy.sol";
 /// @title Convex3CrvStrategy
 /// @notice Investment strategy for investing stablecoins to 3Crv pool via Convex 
 /// @author Bank of Chain Protocol Inc
-contract Convex3CrvStrategy is ConvexBaseStrategy {
+contract Convex3CrvStrategy is Initializable, ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @notice Initialize this contract
@@ -22,7 +22,7 @@ contract Convex3CrvStrategy is ConvexBaseStrategy {
         address _vault,
         address _harvester,
         string memory _name
-    ) public {
+    ) public initializer {
         address[] memory _wants = new address[](3);
         // the oder is same with coins
         // DAI

@@ -22,6 +22,12 @@ contract ETHVault is ETHVaultStorage {
         address _exchangeManager,
         address _priceProvider
     ) public initializer {
+        //The error message "NNA" represents "The input address need be non-zero address"
+        require(_treasury != address(0),"NNA");
+        require(_exchangeManager != address(0),"NNA");
+        require(_priceProvider != address(0),"NNA");
+
+        // '_accessControlProxy' will be verified in function _initAccessControl
         _initAccessControl(_accessControlProxy);
 
         treasury = _treasury;
@@ -148,8 +154,8 @@ contract ETHVault is ETHVaultStorage {
             uint256 _trackedAssetsLength = _trackedAssets.length;
             uint256[] memory _assetPrices = new uint256[](_trackedAssetsLength);
             uint256[] memory _assetDecimals = new uint256[](_trackedAssetsLength);
-            uint256 _totalValueInVault = 0;
-            uint256 _totalTransferValue = 0;
+            uint256 _totalValueInVault;
+            uint256 _totalTransferValue;
             for (uint256 i = 0; i < _trackedAssetsLength; i++) {
                 address _trackedAsset = _trackedAssets[i];
                 uint256 _balance = _balanceOfToken(_trackedAsset, address(this));
@@ -252,7 +258,7 @@ contract ETHVault is ETHVaultStorage {
             _assetPrices,
             _assetDecimals
         );
-        uint256 _actuallyReceivedAmount = 0;
+        uint256 _actuallyReceivedAmount;
         (_assets, _amounts, _actuallyReceivedAmount) = _calculateAndTransfer(
             _actualAsset,
             _trackedAssets,
@@ -283,7 +289,7 @@ contract ETHVault is ETHVaultStorage {
         address _strategy,
         uint256 _amount,
         uint256 _outputCode
-    ) external isKeeper isActiveStrategy(_strategy) nonReentrant {
+    ) external isKeeperOrVaultOrGovOrDelegate isActiveStrategy(_strategy) nonReentrant {
         uint256 _strategyAssetValue = strategies[_strategy].totalDebt;
         require(_amount <= _strategyAssetValue, 'AI');//amount invalid
 
@@ -315,7 +321,7 @@ contract ETHVault is ETHVaultStorage {
     /// @param _amounts The amount list of token wanted
     function lend(address _strategy, address[] memory _tokens, uint256[] memory _amounts)
         external
-        isKeeper
+        isKeeperOrVaultOrGovOrDelegate
         whenNotEmergency
         isActiveStrategy(_strategy)
         nonReentrant
@@ -331,7 +337,7 @@ contract ETHVault is ETHVaultStorage {
         }
 
         //Definition rule 0 means unconstrained, currencies that do not participate are not in the returned wants
-        uint256 _minProductIndex = 0;
+        uint256 _minProductIndex;
         bool _isWantRatioIgnorable = IETHStrategy(_strategy).isWantRatioIgnorable();
         if (!_isWantRatioIgnorable && _wantsLength > 1) {
             for (uint256 i = 1; i < _wantsLength; i++) {
@@ -396,7 +402,7 @@ contract ETHVault is ETHVaultStorage {
         address _toToken,
         uint256 _amount,
         IExchangeAggregator.ExchangeParam memory _exchangeParam
-    ) external isKeeper nonReentrant returns (uint256) {
+    ) external isKeeperOrVaultOrGovOrDelegate nonReentrant returns (uint256) {
         return _exchange(_fromToken, _toToken, _amount, _exchangeParam);
     }
 
@@ -418,7 +424,7 @@ contract ETHVault is ETHVaultStorage {
     /// @param _strategies The address list of strategies to report
     /// Requirement: only keeper call
     /// Emits a {StrategyReported} event.
-    function reportByKeeper(address[] memory _strategies) external isKeeper {
+    function reportByKeeper(address[] memory _strategies) external isKeeperOrVaultOrGovOrDelegate {
         address[] memory _rewardTokens;
         uint256[] memory _claimAmounts;
         uint256 _strategiesLength = _strategies.length;
@@ -451,7 +457,7 @@ contract ETHVault is ETHVaultStorage {
     /// @notice start  Adjust  Position
     function startAdjustPosition()
         external
-        isKeeper
+        isKeeperOrVaultOrGovOrDelegate
         whenNotAdjustPosition
         whenNotEmergency
         nonReentrant
@@ -469,7 +475,7 @@ contract ETHVault is ETHVaultStorage {
             uint256 _trackedAssetsLength = _trackedAssets.length;
             uint256[] memory _assetPrices = new uint256[](_trackedAssetsLength);
             uint256[] memory _assetDecimals = new uint256[](_trackedAssetsLength);
-            uint256 _totalValueInVault = 0;
+            uint256 _totalValueInVault;
             for (uint256 i = 0; i < _trackedAssetsLength; i++) {
                 address _trackedAsset = _trackedAssets[i];
                 uint256 _amount = _vaultAmounts[i];
@@ -503,7 +509,7 @@ contract ETHVault is ETHVaultStorage {
     }
 
     /// @notice end  Adjust Position
-    function endAdjustPosition() external isKeeper nonReentrant {
+    function endAdjustPosition() external isKeeperOrVaultOrGovOrDelegate nonReentrant {
         require(adjustPositionPeriod, "ADO");//AdjustPosition overed
         address[] memory _trackedAssets = _getTrackedAssets();
         uint256 _trackedAssetsLength = _trackedAssets.length;
@@ -512,10 +518,10 @@ contract ETHVault is ETHVaultStorage {
 
         (uint256[] memory _vaultAmounts, , ) = _calculateVault(_trackedAssets, false);
 
-        uint256 _transferValue = 0;
-        uint256 _redeemValue = 0;
-        uint256 _vaultValueOfNow = 0;
-        uint256 _vaultValueOfBefore = 0;
+        uint256 _transferValue;
+        uint256 _redeemValue;
+        uint256 _vaultValueOfNow;
+        uint256 _vaultValueOfBefore;
         for (uint256 i = 0; i < _trackedAssetsLength; i++) {
             address _trackedAsset = _trackedAssets[i];
             _transferValue =
@@ -563,8 +569,8 @@ contract ETHVault is ETHVaultStorage {
         uint256 _totalValueOfBefore = _totalDebtOfBefore + _vaultValueOfBefore;
 
         {
-            uint256 _transferAssets = 0;
-            uint256 _old2LendAssets = 0;
+            uint256 _transferAssets;
+            uint256 _old2LendAssets;
             if (_vaultValueOfNow + _transferValue < _vaultValueOfBefore) {
                 _old2LendAssets = _vaultValueOfBefore - _vaultValueOfNow - _transferValue;
             }
@@ -641,7 +647,7 @@ contract ETHVault is ETHVaultStorage {
         bool _vaultBufferAboveZero = false;
         for (uint256 i = 0; i < _trackedAssetsLength; i++) {
             address _trackedAsset = _trackedAssets[i];
-            uint256 _balance = 0;
+            uint256 _balance;
             if (_dealVaultBuffer && assetSet.contains(_trackedAsset)) {
                 _balance = _balanceOfToken(_trackedAsset, vaultBufferAddress);
                 if (_balance > 0) {
@@ -841,7 +847,7 @@ contract ETHVault is ETHVaultStorage {
         uint256 _totalAssets,
         uint256 _totalShares
     ) internal view returns (uint256) {
-        uint256 _shareAmount = 0;
+        uint256 _shareAmount;
         if (_totalAssets > 0 && _totalShares > 0) {
             _shareAmount = (_amount * _totalShares) / _totalAssets;
         }
@@ -1168,8 +1174,8 @@ contract ETHVault is ETHVaultStorage {
         StrategyParams memory _strategyParam = strategies[_strategy];
         uint256 _lastStrategyTotalDebt = _strategyParam.totalDebt + _lendValue;
         uint256 _nowStrategyTotalDebt = IETHStrategy(_strategy).estimatedTotalAssets();
-        uint256 _gain = 0;
-        uint256 _loss = 0;
+        uint256 _gain;
+        uint256 _loss;
 
         if (_nowStrategyTotalDebt > _lastStrategyTotalDebt) {
             _gain = _nowStrategyTotalDebt - _lastStrategyTotalDebt;

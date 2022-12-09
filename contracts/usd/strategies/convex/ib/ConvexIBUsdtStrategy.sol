@@ -551,7 +551,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     }
 
     /// @dev Increase the amount of borrow
-    function increaseBorrow() public isKeeper {
+    function increaseBorrow() public isKeeperOrVaultOrGovOrDelegate {
         (uint256 _space, ) = borrowInfo();
         if (_space > 0) {
             //borrow forex
@@ -561,7 +561,7 @@ contract ConvexIBUsdtStrategy is Initializable, BaseStrategy {
     }
 
     /// @dev  decrease borrow
-    function decreaseBorrow() public isKeeper {
+    function decreaseBorrow() public isKeeperOrVaultOrGovOrDelegate {
         //The number of borrowing that will be out of range after redemption
         (, uint256 _overflow) = borrowInfo();
         if (_overflow > 0) {

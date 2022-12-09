@@ -20,7 +20,7 @@ contract HarvestHelper is AccessControlMixin {
     /// @notice Batch harvest from multi strategies
     /// @param _strategyAddrs The strategy list to harvest
     /// @return _totalAssets Th total asset of each strategy
-    function batchHarvest(address[] memory _strategyAddrs) external isKeeper returns (uint256[] memory _totalAssets) {
+    function batchHarvest(address[] memory _strategyAddrs) external isKeeperOrVaultOrGovOrDelegate returns (uint256[] memory _totalAssets) {
         _totalAssets = new uint256[](_strategyAddrs.length);
         for (uint256 i = 0; i < _strategyAddrs.length; i++) {
             IETHStrategy(_strategyAddrs[i]).harvest();

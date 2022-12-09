@@ -3,6 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "../../../external/curve/ICurveLiquidityPool.sol";
 
@@ -11,7 +12,7 @@ import "./ConvexBaseStrategy.sol";
 /// @title ConvexSusdStrategy
 /// @notice Investment strategy for investing SUSD via Convex 
 /// @author Bank of Chain Protocol Inc
-contract ConvexSusdStrategy is ConvexBaseStrategy {
+contract ConvexSusdStrategy is Initializable, ConvexBaseStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address private constant SNX = address(0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F);
@@ -20,7 +21,7 @@ contract ConvexSusdStrategy is ConvexBaseStrategy {
     /// @param _vault The Vault contract
     /// @param _harvester The harvester contract address
     /// @param _name The name of strategy
-    function initialize(address _vault, address _harvester,string memory _name) public {
+    function initialize(address _vault, address _harvester,string memory _name) public initializer{
         address[] memory _wants = new address[](4);
         // the oder is same with underlying coins
         // DAI

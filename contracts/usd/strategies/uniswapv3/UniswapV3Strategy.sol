@@ -418,7 +418,7 @@ contract UniswapV3Strategy is BaseStrategy, UniswapV3LiquidityActionsMixin, Reen
 
     /// @notice Rebalance the position of this strategy
     /// Requirements: only keeper can call
-    function rebalanceByKeeper() external nonReentrant isKeeper {
+    function rebalanceByKeeper() external nonReentrant isKeeperOrVaultOrGovOrDelegate {
         (, int24 _tick, , , , , ) = pool.slot0();
         require(shouldRebalance(_tick), "cannot rebalance");
         rebalance(_tick, true);

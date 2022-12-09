@@ -26,7 +26,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     /// @dev Sets adjustPositionPeriod true when adjust position occurs,
     ///   cannot remove add asset/strategy and cannot mint/burn.
     /// Requirements: only keeper can call
-    function setAdjustPositionPeriod(bool _adjustPositionPeriod) external isKeeper {
+    function setAdjustPositionPeriod(bool _adjustPositionPeriod) external isKeeperOrVaultOrGovOrDelegate {
         adjustPositionPeriod = _adjustPositionPeriod;
         emit SetAdjustPositionPeriod(_adjustPositionPeriod);
     }
@@ -199,7 +199,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     ///      Vault may invest funds into the strategy,
     ///      and the strategy will invest the funds in the 3rd protocol
     /// Requirements: only vault manager can call
-    function addStrategy(StrategyAdd[] memory strategyAdds) external isVaultManager {
+    function addStrategies(StrategyAdd[] memory strategyAdds) external isVaultManager {
         address[] memory _strategies = new address[](strategyAdds.length);
         for (uint256 i = 0; i < strategyAdds.length; i++) {
             StrategyAdd memory _strategyAdd = strategyAdds[i];
@@ -225,7 +225,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     /// @dev The removed policy withdraws funds from the 3rd protocol and returns to the Vault
     /// @param _strategies The address list of strategies to remove
     /// Requirements: only vault manager can call
-    function removeStrategy(address[] memory _strategies) external isVaultManager {
+    function removeStrategies(address[] memory _strategies) external isVaultManager {
         for (uint256 i = 0; i < _strategies.length; i++) {
             require(strategySet.contains(_strategies[i]), "Strategy not exist");
             _removeStrategy(_strategies[i], false);
@@ -248,7 +248,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     /// @dev Sets `withdrawQueue` and add `_queues` to the front of the `withdrawQueue`
     /// @param _queues The advance queue
     /// Requirements: only keeper can call
-    function setWithdrawalQueue(address[] memory _queues) external isKeeper {
+    function setWithdrawalQueue(address[] memory _queues) external isKeeperOrVaultOrGovOrDelegate {
         for (uint256 i = 0; i < _queues.length; i++) {
             address _strategy = _queues[i];
             require(strategySet.contains(_strategy), "strategy not exist");
@@ -268,7 +268,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     /// @dev Remove multi strategies from the withdrawal queue
     /// @param _strategies multi strategies to remove
     /// Requirements: only keeper can call
-    function removeStrategyFromQueue(address[] memory _strategies) external isKeeper {
+    function removeStrategyFromQueue(address[] memory _strategies) external isKeeperOrVaultOrGovOrDelegate {
         for (uint256 i = 0; i < _strategies.length; i++) {
             _removeStrategyFromQueue(_strategies[i]);
         }
@@ -345,7 +345,7 @@ contract ETHVaultAdmin is ETHVaultStorage {
     }
 
     function _organizeWithdrawalQueue() internal {
-        uint256 _offset = 0;
+        uint256 _offset;
         for (uint256 i = 0; i < withdrawQueue.length; i++) {
             address _strategy = withdrawQueue[i];
             if (_strategy == ZERO_ADDRESS) {

@@ -154,7 +154,7 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
     /// @notice Sets `_borrowCount` to `borrowCount`
     /// @param _borrowCount The new value of `borrowCount`
     /// Requirements: only keeper can call
-    function setBorrowCount(uint256 _borrowCount) external isKeeper {
+    function setBorrowCount(uint256 _borrowCount) external isKeeperOrVaultOrGovOrDelegate {
         require(_borrowCount <= 20, "setting output the range");
         borrowCount = _borrowCount;
         _updateAllLeverage(_borrowCount);
@@ -261,7 +261,7 @@ contract DForceRevolvingLoanStrategy is BaseStrategy {
 
     /// @notice Rebalance the collateral of this strategy
     /// Requirements: only keeper can call
-    function rebalance() external isKeeper {
+    function rebalance() external isKeeperOrVaultOrGovOrDelegate {
         address _iToken = iToken;
         DFiToken(_iToken).borrowBalanceCurrent(address(this));
         (uint256 _remainingAmount, uint256 _overflowAmount) = _borrowInfo(_iToken, borrowCount);

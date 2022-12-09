@@ -73,7 +73,7 @@
 
    it('Verify: Vault removes all policies properly', async function () {
     let strategyAddresses = await vault.getStrategies();
-    await vault.removeStrategy(strategyAddresses,{from:governance});
+    await vault.removeStrategies(strategyAddresses,{from:governance});
     (await getStrategyDetails(vault.address)).log();
     const length = (await vault.getStrategies()).length
     console.log('length of strategies=', length);
@@ -89,7 +89,7 @@
         lossLimitRatio: item['lossLimitRatio']
     });
     }
-    await vault.addStrategy(_arr,{from:governance});
+    await vault.addStrategies(_arr,{from:governance});
     let strategyNum = (await vault.getStrategies()).length;
     console.log('strategyNum:%d,length Of strategiesList:%d',strategyNum,strategiesList.length);
     Utils.assertBNEq(strategyNum , strategiesList.length);

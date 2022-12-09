@@ -140,7 +140,7 @@ async function setupCoreProtocol(underlyingAddress, governance, keeper, mock = t
         });
     }
     //add to vault
-    await vault.addStrategy(addToVaultStrategies, {
+    await vault.addStrategies(addToVaultStrategies, {
         from: governanceOwner
     });
     await vault.setWithdrawalQueue(withdrawQueque);
