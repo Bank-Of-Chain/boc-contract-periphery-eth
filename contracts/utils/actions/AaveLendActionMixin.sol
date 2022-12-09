@@ -7,7 +7,7 @@
     file that was distributed with this source code.
 */
 
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "boc-contract-core/contracts/library/NativeToken.sol";
