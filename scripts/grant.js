@@ -1,5 +1,5 @@
 const {
-    ethers,
+    ethers, upgrades,
 } = require('hardhat');
 const {
     impersonates
@@ -17,45 +17,79 @@ async function main() {
     await impersonates([admin])
 
     const accounts = await ethers.getSigners();
-    const nextManagement = accounts[0].address;
+    const governor = accounts[0].address;
+    const delegator = accounts[17].address;
+    const vaultManager = accounts[17].address;
     const keeper = accounts[19].address;
-
-    // get vault's accessControlProxy
-    const accessControlProxyAddress = await (await Vault.at(vaultAddress)).accessControlProxy()
-    console.log('access control proxy address：', accessControlProxyAddress)
-    // add account[0] to admin
-    const constract = await AccessControlProxy.at(accessControlProxyAddress)
-
-    const delegateRole = await constract.DELEGATE_ROLE()
-    await constract.grantRole(delegateRole, nextManagement, {
-        from: admin
-    })
-
-    const role = await constract.VAULT_ROLE()
-    console.log('Permissions：', role)
-    try {
-        await constract.grantRole(role, nextManagement, {
-            from: nextManagement
-        })
-        await constract.grantRole(role, keeper, {
-            from: nextManagement
-        })
-        console.log('Add permission successfully!')
-    } catch (e) {
-        console.log('Add permission fail!', e)
-    }
-    // Determine whether the permission is added successfully
-    console.log('Permission verification admin(isVaultOrGov)：', await constract.isVaultOrGov(admin))
-    console.log('Permission Verification nextManagement(isVaultOrGov)：', await constract.isVaultOrGov(nextManagement))
-    console.log('Permission Verification nextManagement(isGovOrDelegate)：', await constract.isGovOrDelegate(nextManagement))
 
     console.log('Transferring ownership of ProxyAdmin...');
     const proxyAdmin = await ProxyAdmin.at('0xFa738A66B5531F20673eE2189CF4C0E5CB97Cd33');
     // console.log('proxyAdmin owner', await proxyAdmin);
     // The owner of the ProxyAdmin can upgrade our contracts
-    await proxyAdmin.transferOwnership(nextManagement, {from: admin});
-    console.log('Transferred ownership of ProxyAdmin to:', nextManagement);
-    console.log('Permission Verification nextManagement(isGovOrDelegate)：', await constract.isGovOrDelegate(nextManagement))
+    await proxyAdmin.transferOwnership(governor, {from: admin});
+    console.log('Transferred ownership of ProxyAdmin to:', governor);
+
+    // get vault's accessControlProxy
+    const accessControlProxyAddress = await (await Vault.at(vaultAddress)).accessControlProxy()
+    console.log('access control proxy address：', accessControlProxyAddress)
+
+    //upgrade AccessControlProxy
+    console.log('=========AccessControlProxy upgrade starting==========');
+    const contractArtifact = await ethers.getContractFactory('AccessControlProxy');
+    await upgrades.upgradeProxy(accessControlProxyAddress, contractArtifact);
+    console.log('=========AccessControlProxy upgrade completed==========');
+
+    // add account[0] to admin
+    const constract = await AccessControlProxy.at(accessControlProxyAddress);
+
+    const govRole = await constract.DEFAULT_ADMIN_ROLE()
+    console.log('gov role permission：%s, member:', govRole, governor);
+    try {
+        await constract.grantRole(govRole, governor, {
+            from: admin
+        });
+        console.log('Add permission successfully!')
+    } catch (e) {
+        console.log('Add permission fail!', e)
+    }
+    const delegateRole = await constract.DELEGATE_ROLE()
+    console.log('delegate role permission：%s, member:', delegateRole, delegator);
+    try {
+        await constract.grantRole(delegateRole, delegator, {
+            from: admin
+        });
+        console.log('Add permission successfully!')
+    } catch (e) {
+        console.log('Add permission fail!', e)
+    }
+
+    const vaultRole = await constract.VAULT_ROLE()
+    console.log('vault role ermissions：%s, member:', vaultRole, vaultManager);
+    try {
+        await constract.grantRole(vaultRole, vaultManager, {
+            from: delegator
+        });
+        console.log('Add permission successfully!')
+    } catch (e) {
+        console.log('Add permission fail!', e)
+    }
+
+    const keeperRole = await constract.KEEPER_ROLE()
+    console.log('keeper role permissions：%s, member:', keeperRole,keeper);
+    try {
+        await constract.grantRole(keeperRole, keeper, {
+            from: delegator
+        });
+        console.log('Add permission successfully!')
+    } catch (e) {
+        console.log('Add permission fail!', e)
+    }
+    // Determine whether the permission is added successfully
+    console.log('Permission verification admin(isGovOrDelegate)：', await constract.isGovOrDelegate(admin))
+    console.log('Permission Verification governor(isGovOrDelegate)：', await constract.isGovOrDelegate(governor))
+    console.log('Permission Verification delegator(isVaultOrGovOrDelegate)：', await constract.isGovOrDelegate(delegator))
+    console.log('Permission Verification vaultManager(isVaultOrGovOrDelegate)：', await constract.isVaultOrGovOrDelegate(vaultManager))
+    console.log('Permission Verification keeper(isKeeperOrVaultOrGov)：', await constract.isKeeperOrVaultOrGov(keeper))
 }
 
 main()

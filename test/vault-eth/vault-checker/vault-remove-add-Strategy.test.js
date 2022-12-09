@@ -1,7 +1,7 @@
 /**
- * Vault 规则验证：
- * 1. 移除策略
- * 2. 添加策略
+ * Vault rule validation.
+ * 1. remove policy
+ * 2. Add Policy
  */
 
  const BigNumber = require('bignumber.js');
@@ -28,7 +28,7 @@
  const ERC20 = hre.artifacts.require('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
  
 
- describe('【Vault单元测试-添加/移除策略】', function () {
+ describe('【Vault Unit Testing - Add/Remove Policy】', function () {
    // parties in the protocol
    let accounts;
    let governance;
@@ -68,16 +68,16 @@
      await tranferBackUsdt(farmer1);
    });
 
-   it('验证：Vault可正常移除所有策略', async function () {
+   it('Verify: Vault removes all policies properly', async function () {
     let strategyAddresses = await vault.getStrategies();
     await vault.removeStrategies(strategyAddresses,{from:governance});
     (await getStrategyDetails(vault.address)).log();
     const length = (await vault.getStrategies()).length
-    console.log('策略的个数=', length);
+    console.log('length of strategies=', length);
     Utils.assertBNEq(length,0);
   });
 
-  it('验证：Vault可重新添加策略', async function () {
+  it('Verify: Vault can re-add policies', async function () {
     let _arr = new Array();
     for (let item of addToVaultStrategies){
       _arr.push({

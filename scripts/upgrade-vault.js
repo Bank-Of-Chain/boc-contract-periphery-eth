@@ -8,19 +8,32 @@ const pendingUpgradesInfo = [
     {
         vaultAddress: '0x30D120f80D60E7b58CA9fFaf1aaB1815f000B7c3',
         vaultArtifact: 'Vault',
-        vaultAdminArtifact: 'VaultAdmin'
+        vaultAdminArtifact: 'VaultAdmin',
+        iValut: 'IVault'
     },
     //ETHVault
     {
         vaultAddress: '0x8f0Cb368C63fbEDF7a90E43fE50F7eb8B9411746',
         vaultArtifact: 'ETHVault',
-        vaultAdminArtifact: 'ETHVaultAdmin'
+        vaultAdminArtifact: 'ETHVaultAdmin',
+        iValut: 'IETHVault'
     }
 ]
 
 const main = async () => {
     let network = hre.network.name;
     console.log('upgrade contract on network-%s', network);
+
+    //OneInchV4Adapter   '0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5'
+    //ParaSwapV5Adapter  '0x9a020e23814be9980D64357aE9aEa44Fc3f6A51f'
+    //AccessControlProxy '0x94c0AA94Ef3aD19E3947e58a855636b38aDe53e0'
+    const adapterArray = ['0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5', '0x9a020e23814be9980D64357aE9aEa44Fc3f6A51f'];
+    const exchangeAggregatorArtifacts = await ethers.getContractFactory('ExchangeAggregator');
+    const exchangeAggregatorContractArgs = [['0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5', '0x9a020e23814be9980D64357aE9aEa44Fc3f6A51f'],'0x94c0AA94Ef3aD19E3947e58a855636b38aDe53e0'];
+    const exchangeAggregatorOverrides = {};
+    console.log('stat deploy ExchangeAggregator');
+    const exchangeAggregatorConstract = await exchangeAggregatorArtifacts.deploy(...exchangeAggregatorContractArgs, exchangeAggregatorOverrides);
+    console.log(`ExchangeAggregatordeployed, address=`, exchangeAggregatorConstract.address);
 
     for (const contractInfo of pendingUpgradesInfo) {
         const contractArtifact = await ethers.getContractFactory(contractInfo.vaultArtifact);
@@ -40,30 +53,11 @@ const main = async () => {
         console.log('stat setAdminImpl');
         await vaultContract.setAdminImpl(constract.address);
         console.log('completed setAdminImpl');
-
-        // //Fork
-        // if (network == 'localhost'){
-        //     const accounts = await ethers.getSigners();
-        //     const keeper = accounts[19].address;
-        //     const trackedValueBeforeRedeem = await vaultContract.valueOfTrackedTokens();
-        //     const strategies = await vaultContract.getStrategies();
-        //     await vaultContract.reportByKeeper(strategies,{from: keeper});
-        //     for (let i = 0;i < strategies.length;i++) {
-        //         let strategyAddr = strategies[i];
-        //         let strategy = await IStrategy.at(strategyAddr);
-        //         await strategy.harvest();
-        //         console.log('strategy %s (lastReport,totalDebt,profitLimitRatio,lossLimitRatio,enforceChangeLimit,lastClaim)=',await strategy.name());
-        //         let strategyInfo = await vaultContract.strategies(strategyAddr);
-        //         console.log(strategyInfo.lastReport.toString(),strategyInfo.totalDebt.toString(),strategyInfo.profitLimitRatio.toString(),strategyInfo.lossLimitRatio.toString(),strategyInfo.enforceChangeLimit.toString(),strategyInfo.lastClaim.toString());
-        //         if (strategyInfo.totalDebt > 1e16){
-        //             const estimationGas = await vaultContract.redeem.estimateGas(strategyAddr,strategyInfo.totalDebt,0,{from: keeper});
-        //             await vaultContract.redeem(strategyAddr,strategyInfo.totalDebt,0,{gas:new BigNumber(estimationGas.toString()).multipliedBy(120).dividedBy(100).toFixed(0,2)});
-        //             console.log('redeem %s finish.',await strategy.name());
-        //         }
-        //     }
-        //     const trackedValueAfterRedeem = await vaultContract.valueOfTrackedTokens();
-        //     console.log('trackedValueBeforeRedeem:%d,trackedValueAfterRedeem:%d',trackedValueBeforeRedeem,trackedValueAfterRedeem);
-        // }
+        const IVault= hre.artifacts.require(contractInfo.iValut);
+        const iVault = await IVault.at(contractInfo.vaultAddress);
+        console.log("old exchangeManager = ",await iVault.exchangeManager());
+        await iVault.setExchangeManagerAddress(exchangeAggregatorConstract.address);
+        console.log("new exchangeManager = ",await iVault.exchangeManager());
     }
 
     console.log('=========contract upgrade completed==========');
