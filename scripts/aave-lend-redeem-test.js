@@ -127,15 +127,8 @@ const main = async () => {
     //     await priceOracle._setAssetPriceModel(_alliTokens[i],mockPriceModelAddress,{from: owner});
     // }
 
-    let exchangeToken = {fromToken: USDC_ADDRESS,toToken: USDC_ADDRESS,fromAmount: usdcAmount.dividedBy(2).toFixed(),exchangeParam: {
-            platform: '0xbf2ad38fd09F37f50f723E35dd84EEa1C282c5C9',
-            method: 0,
-            encodeExchangeArgs: "0x",
-            slippage: 0,
-            oracleAdditionalSlippage: 0,
-        } }
-
-    let exchangeTokens = [exchangeToken];
+    let tokens = [USDC_ADDRESS];
+    let amounts = [usdcAmount.dividedBy(2).toFixed()];
 
     let strategyAddress = '0xbe18A1B61ceaF59aEB6A9bC81AB4FB87D56Ba167';
     let estimationGas;
@@ -144,7 +137,7 @@ const main = async () => {
     let  tx;
     for(let i = 0; i < 30; i++){
         console.log("USDC",i);
-        estimationGas = await vaultContract.lend.estimateGas(strategyAddress, exchangeTokens,{from:keeper});
+        estimationGas = await vaultContract.lend.estimateGas(strategyAddress, tokens, amounts,{from:keeper});
         tx =  await vaultContract.lend(strategyAddress, exchangeTokens,{gas:4000000,from:keeper});
         console.log("USDC lend estimationGas=",estimationGas.toString());
         console.log("USDC lend gasUsed=",tx.receipt.gasUsed);
@@ -165,19 +158,14 @@ const main = async () => {
         console.log("USDC redeem estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
     }
 
-    exchangeToken = {fromToken: DAI_ADDRESS,toToken: DAI_ADDRESS,fromAmount: daiAmount.dividedBy(2).toFixed(),exchangeParam: {
-            platform: '0xbf2ad38fd09F37f50f723E35dd84EEa1C282c5C9',
-            method: 0,
-            encodeExchangeArgs: "0x",
-            slippage: 0,
-            oracleAdditionalSlippage: 0,
-        } }
-    exchangeTokens = [exchangeToken];
+    tokens = [DAI_ADDRESS];
+    amounts = [daiAmount.dividedBy(2).toFixed()];
+
     strategyAddress = '0xFCFE742e19790Dd67a627875ef8b45F17DB1DaC6';
     for(let i = 0; i < 30; i++){
         console.log("DAI",i);
         estimationGas = await vaultContract.lend.estimateGas(strategyAddress, exchangeTokens);
-        tx = await vaultContract.lend(strategyAddress, exchangeTokens,{gas:4000000,from:keeper});
+        tx = await vaultContract.lend(strategyAddress, tokens, amounts,{gas:4000000,from:keeper});
         console.log("DAI lend estimationGas=",estimationGas.toString());
         console.log("DAI lend gasUsed=",tx.receipt.gasUsed);
         console.log("DAI lend estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
@@ -197,19 +185,15 @@ const main = async () => {
 
         console.log("DAI redeem estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
     }
-    exchangeToken = {fromToken: USDT_ADDRESS,toToken: USDT_ADDRESS,fromAmount: usdtAmount.dividedBy(2).toFixed(),exchangeParam: {
-            platform: '0xe3a66514B6e0aFa08aC98607D3d7eC6B8bACd6D5',
-            method: 0,
-            encodeExchangeArgs: "0x",
-            slippage: 0,
-            oracleAdditionalSlippage: 0,
-        } }
-    exchangeTokens = [exchangeToken];
+
+    tokens = [USDT_ADDRESS];
+    amounts = [usdtAmount.dividedBy(2).toFixed()];
+
     strategyAddress = '0x398E4948e373Db819606A459456176D31C3B1F91';
     for(let i = 0; i < 30; i++){
         console.log("USDT",i);
         estimationGas = await vaultContract.lend.estimateGas(strategyAddress, exchangeTokens);
-        tx = await vaultContract.lend(strategyAddress, exchangeTokens,{gas:4000000,from:keeper});
+        tx = await vaultContract.lend(strategyAddress, tokens, amounts,{gas:4000000,from:keeper});
         console.log("USDT lend estimationGas=",estimationGas.toString());
         console.log("USDT lend gasUsed=",tx.receipt.gasUsed);
         console.log("USDT lend estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
@@ -229,14 +213,9 @@ const main = async () => {
 
         console.log("USDT redeem estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
     }
-    exchangeToken = {fromToken: WETH_ADDRESS,toToken: WETH_ADDRESS,fromAmount: wethAmount.dividedBy(2).toFixed(),exchangeParam: {
-            platform: '0xbf2ad38fd09F37f50f723E35dd84EEa1C282c5C9',
-            method: 0,
-            encodeExchangeArgs: "0x",
-            slippage: 0,
-            oracleAdditionalSlippage: 0,
-        } }
-    exchangeTokens = [exchangeToken];
+
+    tokens = [WETH_ADDRESS];
+    amounts = [wethAmount.dividedBy(2).toFixed()];
     strategyAddress = '0x4f42528B7bF8Da96516bECb22c1c6f53a8Ac7312';
     const ethiVaultContract = await IVault.at(ethiVaultAddress);
     const wethContract = await ERC20.at(WETH_ADDRESS);
@@ -244,7 +223,7 @@ const main = async () => {
     for(let i = 0; i < 30; i++){
         console.log("WETH",i);
         estimationGas = await ethiVaultContract.lend.estimateGas(strategyAddress, exchangeTokens);
-        tx = await ethiVaultContract.lend(strategyAddress, exchangeTokens,{gas:4000000,from:keeper});
+        tx = await ethiVaultContract.lend(strategyAddress, tokens, amounts,{gas:4000000,from:keeper});
         console.log("WETH lend estimationGas=",estimationGas.toString());
         console.log("WETH lend gasUsed=",tx.receipt.gasUsed);
         console.log("WETH lend estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
@@ -263,20 +242,15 @@ const main = async () => {
         console.log("WETH redeem gasUsed=",tx.receipt.gasUsed);
         console.log("WETH redeem estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
     }
-    exchangeToken = {fromToken: wstETH_ADDRESS,toToken: wstETH_ADDRESS,fromAmount: wstethAmount.dividedBy(2).toFixed(),exchangeParam: {
-            platform: '0xbf2ad38fd09F37f50f723E35dd84EEa1C282c5C9',
-            method: 0,
-            encodeExchangeArgs: "0x",
-            slippage: 0,
-            oracleAdditionalSlippage: 0,
-        } }
-    exchangeTokens = [exchangeToken];
+
+    tokens = [wstETH_ADDRESS];
+    amounts = [wstethAmount.dividedBy(2).toFixed()];
     strategyAddress = '0x8f119cd256a0FfFeed643E830ADCD9767a1d517F';
 
     for(let i = 0; i < 30; i++){
         console.log("WstETH",i);
         estimationGas = await ethiVaultContract.lend.estimateGas(strategyAddress, exchangeTokens);
-        tx = await ethiVaultContract.lend(strategyAddress, exchangeTokens,{gas:4000000,from:keeper});
+        tx = await ethiVaultContract.lend(strategyAddress, tokens, amounts,{gas:4000000,from:keeper});
         console.log("WstETH lend estimationGas=",estimationGas.toString());
         console.log("WstETH lend gasUsed=",tx.receipt.gasUsed);
         console.log("WstETH lend estimationGas/gasUsed",new BigNumber(tx.receipt.gasUsed.toString()).multipliedBy(1000).div( new BigNumber(estimationGas.toString())).toFixed());
