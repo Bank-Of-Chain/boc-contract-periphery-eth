@@ -124,7 +124,7 @@ const config = {
 
         },
             {
-                version: '0.8.3',
+                version: '0.8.17',
                 settings: {
                     optimizer: {
                         details: {
