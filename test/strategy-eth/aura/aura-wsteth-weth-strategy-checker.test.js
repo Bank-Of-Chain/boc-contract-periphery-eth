@@ -4,3 +4,11 @@ describe('【AuraWstETHWETHStrategy Strategy Checker】', function () {
     checker.check('AuraWstETHWETHStrategy', async function (strategy) {
     }, null,null,0);
 });
+describe('【AuraWstETHWETHStrategy Strategy Checker】', function () {
+    checker.check('AuraWstETHWETHStrategy', async function (strategy) {
+    }, null,null,1);
+});
+describe('【AuraWstETHWETHStrategy Strategy Checker】', function () {
+    checker.check('AuraWstETHWETHStrategy', async function (strategy) {
+    }, null,null,2);
+});

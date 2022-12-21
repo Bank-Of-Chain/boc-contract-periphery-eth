@@ -33,7 +33,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
     }
 
     IAuraBooster internal constant AURA_BOOSTER =
-        IAuraBooster(0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10);
+        IAuraBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234);
 
     IBalancerVault internal constant BALANCER_VAULT =
         IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
@@ -113,7 +113,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
     /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
-        return "1.0.0";
+        return "1.0.1";
     }
 
     /// @notice Return the pool key
@@ -123,7 +123,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
     /// @notice Return the pId
     function getPId() internal pure returns (uint256) {
-        return 3;
+        return 29;
     }
 
     /// @notice Return the LP token address of the rETH stable pool
@@ -133,7 +133,7 @@ contract AuraWstETHWETHStrategy is ETHBaseClaimableStrategy {
 
     /// @notice Return the address of the base reward pool
     function getRewardPool() internal pure returns (address) {
-        return 0xDCee1C640cC270121faF145f231fd8fF1d8d5CD4;
+        return 0xe4683Fe8F53da14cA5DAc4251EaDFb3aa614d528;
     }
 
     /// @inheritdoc ETHBaseStrategy

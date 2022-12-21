@@ -1,28 +1,37 @@
 
 const { upgrades, ethers } = require("hardhat");
 
-const stakewiseStrategyProxyAddr = '0xE933639733c212265Ed7a243A061e705D0410CA5';
-const StakeWiseEthSeth23000Strategy = hre.artifacts.require('StakeWiseEthSeth23000Strategy');
+const pendingUpgradesInfo = [
+    //AuraWstETHWETHStrategy
+    {
+        contractAddress: '0xc3C283aCc2Cf4F2917d80D496bab373f7b97D0fd',
+        contractArtifact: 'AuraWstETHWETHStrategy',
+    },
+    //AuraREthWEthStrategy
+    {
+        contractAddress: '0x34152B0eEf70423B51556e0DCA1b8d142b6EB0f9',
+        contractArtifact: 'AuraREthWEthStrategy',
+    },
+    //Aura3PoolStrategy
+    {
+        contractAddress: '0xA51ED1D803B09f4d08226F9F91e6Dcc79ec0fEB7',
+        contractArtifact: 'Aura3PoolStrategy',
+    }
+]
 
 const main = async () => {
     let network = hre.network.name;
     console.log('upgrade contract on network-%s', network);
 
-    const accounts = await ethers.getSigners();
-    const governance = accounts[0].address;
+    for (const contractInfo of pendingUpgradesInfo) {
+        const contractArtifact = await ethers.getContractFactory(contractInfo.contractArtifact);
+        const contractInstantiation = hre.artifacts.require(contractInfo.contractArtifact);
+        const instantContract = await contractInstantiation.at(contractInfo.contractAddress);
+        console.log('contract %s upgrade,current version:%s', contractInfo.contractArtifact, await instantContract.getVersion());
+        let upgraded = await upgrades.upgradeProxy(contractInfo.contractAddress, contractArtifact);
 
-    // 升级StakeWiseEthSeth23000Strategy合约
-    const stakeWiseEthSeth23000StrategyContract = await StakeWiseEthSeth23000Strategy.at(stakewiseStrategyProxyAddr);
-    const stakewiseStrategyArtifacts = await ethers.getContractFactory('StakeWiseEthSeth23000Strategy');
-    let upgraded = await upgrades.upgradeProxy(stakewiseStrategyProxyAddr, stakewiseStrategyArtifacts);
-    let statusInfo = await stakeWiseEthSeth23000StrategyContract.getStatus();
-    console.log('contract upgrade success,before baseThreshold:%s', statusInfo._baseThreshold.toString());
-    await stakeWiseEthSeth23000StrategyContract.setBaseThreshold(0,{from: governance});
-    statusInfo = await stakeWiseEthSeth23000StrategyContract.getStatus();
-    console.log('contract upgrade success,after baseThreshold:%s', statusInfo._baseThreshold.toString());
-    console.log('=========contract 升级完成==========');
-    await stakeWiseEthSeth23000StrategyContract.rebalanceByKeeper({from: governance});
-    console.log('=========rebalanceByKeeper 完成==========');
+        console.log('after upgrade instantiation version:%s', await instantContract.getVersion());
+    }
 
 }
 

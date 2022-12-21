@@ -8,10 +8,10 @@ const {yearnStrategies} = require('./strategy-config-eth-yearn');
 const {aaveStrategies} = require('./strategy-config-eth-aave');
 
 const strategiesList = [
-//     ...auraStrategies,
+    ...auraStrategies,
 //     ...convexStrategies,
 //     ...dForceStrategies,
-    ...eulerStrategies,
+//     ...eulerStrategies,
 //     ...uniswapStrategies,
 //     ...stakewiseStrategies,
 //     ...yearnStrategies,

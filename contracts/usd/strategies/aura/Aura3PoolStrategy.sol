@@ -14,6 +14,7 @@ import "../../../external/aura/IAuraBooster.sol";
 import "boc-contract-core/contracts/strategy/BaseClaimableStrategy.sol";
 import "../../enums/ProtocolEnum.sol";
 
+
 /// @title Aura3PoolStrategy
 /// @notice Investment strategy for investing stablecoins via Aura 
 /// @author Bank of Chain Protocol Inc
@@ -32,7 +33,7 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
     }
 
     IAuraBooster internal constant AURA_BOOSTER =
-        IAuraBooster(0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10);
+        IAuraBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234);
 
     IBalancerVault internal constant BALANCER_VAULT =
         IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
@@ -65,7 +66,7 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
 
     /// @notice Return the version of strategy
     function getVersion() external pure override returns (string memory) {
-        return "1.0.0";
+        return "1.0.1";
     }
 
     /// @notice Return the pool key
@@ -75,7 +76,7 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
 
     /// @notice Return the pId
     function getPId() internal pure returns (uint256) {
-        return 0;
+        return 26;
     }
 
     function getPoolLpToken() internal pure returns (address) {
@@ -84,7 +85,7 @@ contract Aura3PoolStrategy is BaseClaimableStrategy {
 
     /// @notice Return the LP token address of the rETH stable pool
     function getRewardPool() internal pure returns (address) {
-        return 0x08b8a86B9498AC249bF4B86e14C5d4187085a239;
+        return 0xD73638829aEF73BA55f040858cD5E5B9Af66CF2B;
     }
 
     /// @notice Return the underlying token list and ratio list needed by the strategy

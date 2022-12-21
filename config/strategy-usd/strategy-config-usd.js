@@ -10,10 +10,10 @@ const {yearnStrategies} = require('./strategy-config-usd-yearn');
 const {aaveStrategies} = require('./strategy-config-usd-aave');
 
 const strategiesList = [
-    // ...auraStrategies,
+    ...auraStrategies,
     // ...convexStrategies,
     // ...dForceStrategies,
-    ...eulerStrategies,
+    // ...eulerStrategies,
     // ...dodoStrategies,
     // // ...stargateStrategies,
     // // ...sushiStrategies,
